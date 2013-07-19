@@ -60,6 +60,9 @@ public class TransClassTest {
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestCompoundClass");
 		result = TransClass.createBody(target, false);
 		
+		target = ClassPool.getDefault().get("java.lang.String");
+		result = TransClass.createBody(target, false);
+		
 		System.out.println(result);
 	}
 
