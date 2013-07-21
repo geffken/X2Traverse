@@ -121,7 +121,7 @@ public class TransClass {
 		for(CtField f : target.getDeclaredFields()) {
 			CtClass tf = f.getType();
 			String fname = f.getName();
-			createVisitor(sb, tf, 0, "", fname);
+			createVisitor(sb, target, tf, fname);
 		}
 		if (hasSuperclass) {
 			sb.append("super.traverse__(t);\n");
@@ -130,11 +130,13 @@ public class TransClass {
 		return sb.toString();
 	}
 
-	protected static void createVisitor(StringBuilder sb, CtClass tf, int nesting, String index, String fname) throws NotFoundException {
+	protected static void createVisitor(StringBuilder sb, CtClass target, CtClass tf, String fname) throws NotFoundException {
+		int nesting = 0;
+		String index = "";
 		while (tf.isArray()) {
 			String var = "i" + nesting;
 			sb.append("for (int " + var + ") ");
-			index = "[" + var + "]" + index;
+			index = index + "[" + var + "]";
 			nesting++;
 			tf = tf.getComponentType();
 		}
@@ -143,9 +145,14 @@ public class TransClass {
 		} else {
 			sb.append("t.visit__(\"");
 		}
+		sb.append(target.getName());
+		sb.append('.');
 		sb.append(fname);
-		sb.append("\", this.");
-		sb.append(fname + index);
+		sb.append("\"");
+		if (!tf.isPrimitive()) {
+			sb.append(", this.");
+			sb.append(fname + index);
+		}
 		sb.append(");\n");		
 	}
 

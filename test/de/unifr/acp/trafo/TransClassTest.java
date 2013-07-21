@@ -118,15 +118,16 @@ public class TransClassTest {
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestIntClass");
 		result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
-		org.junit.Assert.assertEquals("public void traverse__(Traversal__ t) {\nt.visitPrimitive__(\"myField\", this.myField);\n}", result);
+		org.junit.Assert.assertEquals("public void traverse__(Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\n}", result);
 
 		result = TransClass.createBody(target, true);
 		if (verbose) System.out.println(result);
-		org.junit.Assert.assertEquals("public void traverse__(Traversal__ t) {\nt.visitPrimitive__(\"myField\", this.myField);\nsuper.traverse__(t);\n}", result);
+		org.junit.Assert.assertEquals("public void traverse__(Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\nsuper.traverse__(t);\n}", result);
 		
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestCompoundClass");
 		result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
+		assertEquals("public void traverse__(Traversal__ t) {\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x1\", this.x1);\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x2\", this.x2);\n}", result);
 		
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestArrayClass");
 		result = TransClass.createBody(target, false);
