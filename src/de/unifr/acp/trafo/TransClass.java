@@ -3,6 +3,7 @@ package de.unifr.acp.trafo;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -22,29 +23,38 @@ import javassist.NotFoundException;
 
 public class TransClass {
 	private static final String TRAVERSALTARGET = "de.unifr.acp.templates.TraversalTarget__";
+	private static final String OBJECT = "java.lang.Object";
 	private final CtClass traversalTargetInterface;
-	private final CtClass OBJECT;
+	private final CtClass objectClass;
 	
-	private Map<CtClass,Boolean> visited;
-	private Queue<CtClass> pending;
+	private final Map<CtClass,Boolean> visited;
+	private final Queue<CtClass> pending;
 	
-	protected TransClass(CtClass clazz) throws NotFoundException {
+	protected Map<CtClass, Boolean> getVisited() {
+		return Collections.unmodifiableMap(visited);
+	}
+
+	protected Collection<CtClass> getPending() {
+		return Collections.unmodifiableCollection(pending);
+	}
+
+	protected TransClass(String classname) throws NotFoundException {
+		CtClass clazz = ClassPool.getDefault().get(classname);
 		visited = new HashMap<CtClass,Boolean>();
 		pending = new LinkedList<CtClass>();
 		pending.add(clazz);
 		traversalTargetInterface = ClassPool.getDefault().get(TRAVERSALTARGET);
-		OBJECT = ClassPool.getDefault().get("Object");
+		objectClass = ClassPool.getDefault().get(OBJECT);
 	}
 	
 	public static void transformHierarchy(String classname) throws NotFoundException, IOException, CannotCompileException {
-		CtClass clazz = ClassPool.getDefault().get(classname);
-		TransClass tc = new TransClass(clazz);
-		tc.initializeTransform();
+		TransClass tc = new TransClass(classname);
+		tc.computeReachableClasses();
 		tc.performTransform();
 		tc.flushTransform();
 	}
 
-	protected void initializeTransform() throws NotFoundException, IOException, CannotCompileException {
+	protected void computeReachableClasses() throws NotFoundException, IOException, CannotCompileException {
 		while(!pending.isEmpty()) {
 			CtClass clazz = pending.remove();
 			doTraverse(clazz);
@@ -53,7 +63,7 @@ public class TransClass {
 	
 	protected void doTraverse(CtClass target) throws NotFoundException {
 		CtClass superclazz = target.getSuperclass();
-		boolean hasSuperclass = !superclazz.equals(OBJECT);
+		boolean hasSuperclass = !superclazz.equals(objectClass);
 		visited.put(target, hasSuperclass);
 		if (hasSuperclass) {
 			enter(superclazz);
@@ -62,6 +72,7 @@ public class TransClass {
 		for (CtField f : fs) {
 			CtClass ft = f.getType();
 			if (ft.isPrimitive()) continue;
+			if (ft.getName().matches("java\\..*")) continue;
 			enter(ft);
 		}
 	}
@@ -110,20 +121,32 @@ public class TransClass {
 		for(CtField f : target.getDeclaredFields()) {
 			CtClass tf = f.getType();
 			String fname = f.getName();
-			if (!tf.isPrimitive()) {
-				sb.append("if (this." + fname + " instanceof " + TRAVERSALTARGET + ") ");
-				sb.append("t.visit__(\"");
-				sb.append(fname);
-				sb.append("\", this.");
-				sb.append(fname);
-				sb.append(");\n");
-			}
+			createVisitor(sb, tf, 0, "", fname);
 		}
 		if (hasSuperclass) {
 			sb.append("super.traverse__(t);\n");
 		}
 		sb.append('}');
 		return sb.toString();
+	}
+
+	protected static void createVisitor(StringBuilder sb, CtClass tf, int nesting, String index, String fname) throws NotFoundException {
+		while (tf.isArray()) {
+			String var = "i" + nesting;
+			sb.append("for (int " + var + ") ");
+			index = "[" + var + "]" + index;
+			nesting++;
+			tf = tf.getComponentType();
+		}
+		if (tf.isPrimitive()) {
+			sb.append("t.visitPrimitive__(\"");
+		} else {
+			sb.append("t.visit__(\"");
+		}
+		sb.append(fname);
+		sb.append("\", this.");
+		sb.append(fname + index);
+		sb.append(");\n");		
 	}
 
 }
