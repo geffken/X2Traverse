@@ -1,6 +1,6 @@
 package de.unifr.acp.templates;
 
-public class TraversalImpl implements Traversal {
+public class TraversalImpl implements Traversal__ {
 	// instance variable to keep automaton state
 	public TraversalImpl() {
 		// initialize automaton state

@@ -3,12 +3,14 @@ package de.unifr.acp.templates;
 public class TraversalExample
 	// interface implementation needs to be added
 	implements TraversalTarget__ {
-	private int priv_int;
+
+        private int priv_int;
 	private String priv_string;
 	protected boolean prot_boolean;
 	protected String prot_string;
 	public long publ_long;
 	public Object publ_object;
+	
 	public TraversalExample(int priv_int, String priv_string,
 			boolean prot_boolean, String prot_string, long publ_long,
 			Object publ_object) {
@@ -22,10 +24,10 @@ public class TraversalExample
 	}
 
 	// method needs to be added
-	public void traverse__(Traversal t) {
+	public void traverse__(Traversal__ t) {
 		t.visit__("priv_string", priv_string);
 		t.visit__("prot_string", prot_string);
 		t.visit__("publ_object", publ_object);
-		// may have to traverse fields of the superclass
-	}
+        // may have to traverse fields of the superclass
+    }
 }
