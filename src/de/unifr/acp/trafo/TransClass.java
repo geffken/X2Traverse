@@ -22,7 +22,7 @@ import javassist.CtNewMethod;
 import javassist.NotFoundException;
 
 public class TransClass {
-    private static final String TRAVERSALTARGET = "de.unifr.acp.templates.TraversalTarget__";
+    private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
     private static final String OBJECT = "java.lang.Object";
     private final CtClass traversalTargetInterface;
     private final CtClass objectClass;
@@ -38,15 +38,29 @@ public class TransClass {
         return Collections.unmodifiableCollection(pending);
     }
 
+    /**
+     * Transformer class capable of statically adding heap traversal code to a
+     * set of reachable classes.
+     * 
+     * @param classname
+     *            the name of the class forming the starting point for the
+     *            reachable classes
+     * @throws NotFoundException
+     */
     protected TransClass(String classname) throws NotFoundException {
         CtClass clazz = ClassPool.getDefault().get(classname);
         visited = new HashMap<CtClass, Boolean>();
         pending = new LinkedList<CtClass>();
         pending.add(clazz);
-        traversalTargetInterface = ClassPool.getDefault().get(TRAVERSALTARGET);
+        traversalTargetInterface = ClassPool.getDefault().get(TRAVERSAL_TARGET);
         objectClass = ClassPool.getDefault().get(OBJECT);
     }
 
+    /**
+     * Transforms all classes that are reachable from the class corresponding
+     * to the specified classname.
+     * @param the classname of the class spanning a reachable classes tree
+     */
     public static void transformHierarchy(String classname)
             throws NotFoundException, IOException, CannotCompileException {
         TransClass tc = new TransClass(classname);
@@ -59,11 +73,19 @@ public class TransClass {
             IOException, CannotCompileException {
         while (!pending.isEmpty()) {
             CtClass clazz = pending.remove();
-            doTraverse(clazz);
+            if (!visited.containsKey(clazz)) {
+                doTraverse(clazz);
+            }
         }
     }
-
-    protected void doTraverse(CtClass target) throws NotFoundException {
+    
+    /*
+     * Helper method for <code>computeReachableClasses</code>. Traverses the
+     * specified target class and adds it to the list of visited classes. Adds
+     * all classes the class' fields to queue of pending classes, if not already
+     * visited.
+     */
+    private void doTraverse(CtClass target) throws NotFoundException {
         CtClass superclazz = target.getSuperclass();
         boolean hasSuperclass = !superclazz.equals(objectClass);
         visited.put(target, hasSuperclass);
@@ -81,21 +103,31 @@ public class TransClass {
         }
     }
 
-    protected void enter(CtClass clazz) {
-        if (visited.keySet().contains(clazz) || pending.contains(clazz)) {
+    /*
+     * Helper method for <code>computeReachableClasses</code>. Adds the
+     * specified class to queue of pending classes, if not already visited.
+     */
+    private void enter(CtClass clazz) {
+        if (visited.keySet().contains(clazz)) {
             return;
         } else {
             pending.add(clazz);
         }
     }
 
+    /*
+     * Transforms all reachable classes.
+     */
     protected void performTransform() throws NotFoundException, IOException,
             CannotCompileException {
         for (Entry<CtClass, Boolean> entry : visited.entrySet()) {
             doTransform(entry.getKey(), entry.getValue());
         }
     }
-
+    
+    /*
+     * Flushes all reachable classes back to disk.
+     */
     protected void flushTransform() throws NotFoundException, IOException,
             CannotCompileException {
         for (CtClass tc : visited.keySet()) {
@@ -108,19 +140,23 @@ public class TransClass {
 
         // add: implements TRAVERSALTARGET
         List<CtClass> targetIfs = Arrays.asList(target.getInterfaces());
-        Collection<CtClass> newTargetIfs = new LinkedList<CtClass>(targetIfs);
-        newTargetIfs.add(traversalTargetInterface);
-        target.setInterfaces(newTargetIfs.toArray(new CtClass[0]));
+        Collection<CtClass> newTargetIfs = new HashSet<CtClass>(targetIfs);
+        
+        // NOTE: Given the equality semantics of CtClass the condition is only
+        // valid if the CtClass instance representing the traversal interface is
+        // never detached from the ClassPool as this would result in a new
+        // CtClass instance representing the traversal interface to be generated
+        // by a call to ClassPool.get(...) not being equal to the old instance.
+        
+        // only generate implementation of traversal interface if not yet present
+        if (!newTargetIfs.contains(traversalTargetInterface)) {
+            newTargetIfs.add(traversalTargetInterface);
+            target.setInterfaces(newTargetIfs.toArray(new CtClass[0]));
 
-        // add: method traverse__
-        String methodbody = createBody(target, hasSuperclass);
-        CtMethod m;
-        try {
-            m = CtNewMethod.make(methodbody, target);
+            // add: method traverse__
+            String methodbody = createBody(target, hasSuperclass);
+            CtMethod m = CtNewMethod.make(methodbody, target);
             target.addMethod(m);
-        } catch (CannotCompileException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         }
     }
 
@@ -131,7 +167,7 @@ public class TransClass {
         for (CtField f : target.getDeclaredFields()) {
             CtClass tf = f.getType();
             String fname = f.getName();
-            createVisitor(sb, target, tf, fname);
+            appendVisitorCalls(sb, target, tf, fname);
         }
         if (hasSuperclass) {
             sb.append("super.traverse__(t);\n");
@@ -140,13 +176,20 @@ public class TransClass {
         return sb.toString();
     }
 
-    protected static void createVisitor(StringBuilder sb, CtClass target,
+    protected static void appendVisitorCalls(StringBuilder sb, CtClass target,
             CtClass tf, String fname) throws NotFoundException {
         int nesting = 0;
         String index = "";
         while (tf.isArray()) {
             String var = "i" + nesting;
-            sb.append("for (int " + var + ") ");
+            
+            /* generate for header */
+            sb.append("for (int " + var + "; ");
+            
+            // static type of 'this' corresponds to field's declaring class, no cast needed
+            sb.append(var + "<this."+fname+index+".length; ");
+            sb.append(var + "++");
+            sb.append(") ");
             index = index + "[" + var + "]";
             nesting++;
             tf = tf.getComponentType();
@@ -161,7 +204,8 @@ public class TransClass {
         sb.append(fname);
         sb.append("\"");
         if (!tf.isPrimitive()) {
-            sb.append(", this.");
+            // static type of 'this' corresponds to field's declaring class, no cast needed
+            sb.append(", this."); 
             sb.append(fname + index);
         }
         sb.append(");\n");

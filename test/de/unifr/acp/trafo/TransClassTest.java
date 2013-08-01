@@ -44,11 +44,6 @@ public class TransClassTest {
 	}
 
 	@Test
-	public void testEnter() {
-		fail("Not yet implemented");
-	}
-
-	@Test
 	public void testDoTransform() {
 		fail("Not yet implemented");
 	}
