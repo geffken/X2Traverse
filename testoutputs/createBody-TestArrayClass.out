@@ -1,0 +1,5 @@
+public void traverse__(Traversal__ t) {
+for (int i0; i0<this.nestedArray.length; i0++)
+for (int i1; i1<this.nestedArray[i0].length; i1++)
+t.visit__("de.unifr.acp.trafo.TestArrayClass.nestedArray", this.nestedArray[i0][i1]);
+}

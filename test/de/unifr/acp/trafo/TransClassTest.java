@@ -2,10 +2,14 @@ package de.unifr.acp.trafo;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -103,8 +107,21 @@ public class TransClassTest {
 		}
 	}
 	
+	private boolean checkFile(String result, String filename) throws FileNotFoundException {
+		String path = "testoutputs/" + filename + ".out";
+		String text = new Scanner(new File(path)).useDelimiter("\\A").next();
+		if (verbose) {
+			System.out.println("<checkFile>");
+			System.out.println(path);
+			System.out.println(text);
+			System.out.println("</checkFile>");
+			System.out.println("result.length = " +  result.length() + ". text.length = " + text.length());
+		}
+		return result.equals(text);
+	}
+
 	@Test
-	public void testCreateBody() throws NotFoundException {
+	public void testCreateBody() throws NotFoundException, FileNotFoundException {
 		CtClass target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestEmptyClass");
 		String result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
@@ -127,10 +144,12 @@ public class TransClassTest {
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestArrayClass");
 		result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
+		assertTrue(checkFile(result, "createBody-TestArrayClass"));
 		
 		target = ClassPool.getDefault().get("java.lang.String");
 		result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
+		assertTrue(checkFile(result, "createBody-String"));
 	}
 
 }

@@ -27,7 +27,7 @@ public class TransClass {
     private final CtClass traversalTargetInterface;
     private final CtClass objectClass;
 
-    private final Map<CtClass, Boolean> visited;
+    private static final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
     private final Queue<CtClass> pending;
 
     protected Map<CtClass, Boolean> getVisited() {
@@ -49,9 +49,8 @@ public class TransClass {
      */
     protected TransClass(String classname) throws NotFoundException {
         CtClass clazz = ClassPool.getDefault().get(classname);
-        visited = new HashMap<CtClass, Boolean>();
-        pending = new LinkedList<CtClass>();
-        pending.add(clazz);
+    	pending = new LinkedList<CtClass>();
+    	pending.add(clazz);
         traversalTargetInterface = ClassPool.getDefault().get(TRAVERSAL_TARGET);
         objectClass = ClassPool.getDefault().get(OBJECT);
     }
@@ -108,9 +107,7 @@ public class TransClass {
      * specified class to queue of pending classes, if not already visited.
      */
     private void enter(CtClass clazz) {
-        if (visited.keySet().contains(clazz)) {
-            return;
-        } else {
+        if (!visited.containsKey(clazz)) {
             pending.add(clazz);
         }
     }
@@ -189,7 +186,7 @@ public class TransClass {
             // static type of 'this' corresponds to field's declaring class, no cast needed
             sb.append(var + "<this."+fname+index+".length; ");
             sb.append(var + "++");
-            sb.append(") ");
+            sb.append(")\n");
             index = index + "[" + var + "]";
             nesting++;
             tf = tf.getComponentType();
