@@ -48,7 +48,14 @@ public class TransClassTest {
 	}
 
 	@Test
-	public void testDoTransform() {
+	public void testDoTransform() throws NotFoundException, ClassNotFoundException, IOException, CannotCompileException {
+	        TransClass tc = new TransClass("de.unifr.acp.trafo.TestEmptyClass");
+	        CtClass target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestEmptyClassWithAnnotatedMethod");
+	        CtClass object = ClassPool.getDefault().get("java.lang.Object");
+	        tc.doTransform(target, !target.getSuperclass().equals(object));
+	        
+	        
+	        
 		fail("Not yet implemented");
 	}
 
@@ -125,21 +132,21 @@ public class TransClassTest {
 		CtClass target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestEmptyClass");
 		String result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
-		org.junit.Assert.assertEquals("public void traverse__(Traversal__ t) {\n}", result);
+		org.junit.Assert.assertEquals("public void traverse__(de.unifr.acp.templates.Traversal__ t) {\n}", result);
 		
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestIntClass");
 		result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
-		org.junit.Assert.assertEquals("public void traverse__(Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\n}", result);
+		org.junit.Assert.assertEquals("public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\n}", result);
 
 		result = TransClass.createBody(target, true);
 		if (verbose) System.out.println(result);
-		org.junit.Assert.assertEquals("public void traverse__(Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\nsuper.traverse__(t);\n}", result);
+		org.junit.Assert.assertEquals("public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\nsuper.traverse__(t);\n}", result);
 		
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestCompoundClass");
 		result = TransClass.createBody(target, false);
 		if (verbose) System.out.println(result);
-		assertEquals("public void traverse__(Traversal__ t) {\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x1\", this.x1);\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x2\", this.x2);\n}", result);
+		assertEquals("public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x1\", this.x1);\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x2\", this.x2);\n}", result);
 		
 		target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestArrayClass");
 		result = TransClass.createBody(target, false);
