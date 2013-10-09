@@ -1,6 +1,7 @@
 package de.unifr.acp.trafo;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,11 +16,18 @@ import java.util.Set;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
+import javassist.CtBehavior;
 import javassist.CtClass;
+import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
+import javassist.bytecode.SyntheticAttribute;
+
+import de.unifr.acp.annot.Grant;
+import de.unifr.acp.fst.FST;
+import de.unifr.acp.fst.Permission;
 
 public class TransClass {
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
@@ -27,7 +35,7 @@ public class TransClass {
     private final CtClass traversalTargetInterface;
     private final CtClass objectClass;
 
-    private static final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
+    private final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
     private final Queue<CtClass> pending;
 
     protected Map<CtClass, Boolean> getVisited() {
@@ -49,6 +57,7 @@ public class TransClass {
      */
     protected TransClass(String classname) throws NotFoundException {
         CtClass clazz = ClassPool.getDefault().get(classname);
+        ClassPool.getDefault().importPackage("java.util");
     	pending = new LinkedList<CtClass>();
     	pending.add(clazz);
         traversalTargetInterface = ClassPool.getDefault().get(TRAVERSAL_TARGET);
@@ -59,9 +68,10 @@ public class TransClass {
      * Transforms all classes that are reachable from the class corresponding
      * to the specified classname.
      * @param the classname of the class spanning a reachable classes tree
+     * @throws ClassNotFoundException 
      */
     public static void transformHierarchy(String classname)
-            throws NotFoundException, IOException, CannotCompileException {
+            throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         TransClass tc = new TransClass(classname);
         tc.computeReachableClasses();
         tc.performTransform();
@@ -116,7 +126,7 @@ public class TransClass {
      * Transforms all reachable classes.
      */
     protected void performTransform() throws NotFoundException, IOException,
-            CannotCompileException {
+            CannotCompileException, ClassNotFoundException {
         for (Entry<CtClass, Boolean> entry : visited.entrySet()) {
             doTransform(entry.getKey(), entry.getValue());
         }
@@ -133,7 +143,7 @@ public class TransClass {
     }
 
     public void doTransform(CtClass target, boolean hasSuperclass)
-            throws NotFoundException, IOException, CannotCompileException {
+            throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
 
         // add: implements TRAVERSALTARGET
         List<CtClass> targetIfs = Arrays.asList(target.getInterfaces());
@@ -146,6 +156,7 @@ public class TransClass {
         // by a call to ClassPool.get(...) not being equal to the old instance.
         
         // only generate implementation of traversal interface if not yet present
+        // use traversal interface as marker for availability of other instrumentation
         if (!newTargetIfs.contains(traversalTargetInterface)) {
             newTargetIfs.add(traversalTargetInterface);
             target.setInterfaces(newTargetIfs.toArray(new CtClass[0]));
@@ -154,13 +165,312 @@ public class TransClass {
             String methodbody = createBody(target, hasSuperclass);
             CtMethod m = CtNewMethod.make(methodbody, target);
             target.addMethod(m);
+            
+            // change methods carrying contracts
+            // 1. Find all methods carrying contracts
+            // 2. For each annotated method
+            //   1. Get method annotation
+            //   2. Generate code to generate automaton for contract
+            //      (generate code to get contract string and call into automation generation library)
+            //   3. Use insertBefore() and insertAfter() to insert permission installation/deinstallation code
+            
+            // or alternatively
+            // 1. create new method with non-conflicting name derived from original method
+            //    with original method's body
+            // 2. replace method body with permission map installation,
+            //    call to new method, permission map deinstallation
+            
+            
+            // according to tutorial there's no support for generics in Javassist, thus we use raw types
+            CtField f = CtField.make("private java.util.HashMap fstMap = new java.util.HashMap();", target);
+            target.addField(f);
+            
+            // collect all methods and constructors
+            List<CtMethod> methods = Arrays.asList(target.getMethods());
+            List<CtConstructor> ctors = Arrays.asList(target.getConstructors());
+            List<CtBehavior> methodsAndCtors = new ArrayList<CtBehavior>();
+            methodsAndCtors.addAll(methods);
+            methodsAndCtors.addAll(ctors);
+            
+            for (CtBehavior methodOrCtor : methodsAndCtors) {
+                if (hasMethodGrantAnnotations(methodOrCtor)) {
+                    
+                    /* generate header and footer */
+                    
+                    // filter synthetic methods
+                    if (methodOrCtor.getMethodInfo().getAttribute(SyntheticAttribute.tag) != null) {
+                        continue;
+                    }
+                                        
+                    // generate method header
+                    
+                    // optional method grant annotation (can be null)
+                    // NOTE: method contracts include 'this' and type names as anchors
+                    Grant methodGrantAnnot = ((Grant)methodOrCtor.getAnnotation(Grant.class));
+                    
+                    // optional parameter types annotations indexed by parameter position
+                    Object[][] availParamAnnot = methodOrCtor.getAvailableParameterAnnotations();
+                    
+                    // optional parameter (1 to n) grant annotations indexed by parameter position minus one
+                    // NOTE: parameter contracts exclude anchors (formal parameter names)
+                    Grant[] paramGrantAnnots = new Grant[availParamAnnot.length];
+                    final CtClass[] parameterTypes = methodOrCtor.getParameterTypes();
+                    
+                    for (int i = 0; i < availParamAnnot.length; i++) {
+                        final Object[] oa = availParamAnnot[i];
+                        final CtClass paramType = parameterTypes[i];
+                        
+                        // we can savely ignore grant annotations on primitive formal parameters
+                        if (!paramType.isPrimitive()) {
+                            for (Object o : oa) {
+                                if (o instanceof Grant) {
+                                    paramGrantAnnots[i] = (Grant)o;
+                                    break; // there's one grant annotation per parameter only
+                                }
+                            }
+                        }
+                    }
+                    
+                    /*
+                     * We keep method contract and all parameter contracts separate.
+                     */
+                    
+                    StringBuilder sb = new StringBuilder();
+                    
+                    // uniquely identifies a method globally
+                    String longName = methodOrCtor.getLongName();
+                    
+                    // check if automata for this method already exist
+                    sb.append("String longName = \"" + longName + "\";");
+                    
+                    // FSTs indexed  by parameter position (0: FST for this & type-anchored
+                    // contracts, 1 to n: FTSs for unanchored parameter contracts)
+                    sb.append("de.unifr.acp.fst.FST[] fSTs;");
+                    sb.append("if (fstMap.containsKey(longName)) {");
+                    sb.append("  fSTs = ((de.unifr.acp.fst.FST[])fstMap.get(longName));");
+                    sb.append("}");
+                    sb.append("else {");
+                    
+                    // build array of FSTs indexed by parameter
+                    sb.append("  fSTs = new de.unifr.acp.fst.FST["+(getParameterCount(methodOrCtor)+1)+"];");
+                    for (int i=0; i<getParameterCount(methodOrCtor)+1; i++) {
+                        Grant grant = grantAnno(methodOrCtor, i);
+                        if (grant != null) {
+                            sb.append("    fSTs[" + i
+                                    + "] = new de.unifr.acp.fst.FST(\""
+                                    + methodGrantAnnot.value() + "\");");
+                        }
+                    }
+                    
+                    // cache generated automata indexed by long method name
+                    sb.append("  fstMap.put(longName, fSTs);");
+                    sb.append("}");
+                    
+                    // now we expect to have all FSTs available and cached
+                    
+                    for (int i=0; i<getParameterCount(methodOrCtor)+1; i++) {
+                        
+                        // only grant-annotated methods/parameters require any action
+                        if (grantAnno(methodOrCtor, i) == null) {
+                            continue;
+                        }
+                        
+                        if (!mightBeReferenceParameter(methodOrCtor, i)) {
+                            continue;
+                        }
+                        
+                        // TODO: factor out this code in external class, parameterize over i and allPermissions
+                        // a location permission is a Map<Object, Map<String, Permission>>
+                        sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
+                        sb.append("{");
+                        sb.append("  de.unifr.acp.fst.FST fst = fSTs["+i+"];");
+                        sb.append("  de.unifr.acp.fst.FSTRunner runner = new de.unifr.acp.fst.FSTRunner(fst);");
+                        
+                        // step to reach FST runner state that corresponds to anchor object
+                        // for explicitly anchored contracts
+                        if (i == 0) {
+                            sb.append("  runner.resetAndStep(\"this\");");
+                        }
+                        
+                        // here the runner should be in synch with the parameter object
+                        // (as far as non-static fields are concerned), the visitor implicitly joins locPerms
+                        sb.append("  de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
+                        sb.append("  ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
+
+                        // Map<Object, Map<String, de.unifr.acp.fst.Permission>>
+                        sb.append("  Map locPerms = visitor.getLocationPermissions();");
+                        
+                        // TODO: explicit representation of locations and location permissions (supporting join)
+                        // (currently it's all generic maps and implicit joins in visitor similar to Maxine implementation)
+//                        CtMethod cm = ...;
+//                        cm.instrument(new ExprEditor() {
+//                            public void edit(FieldAccess f) throws CannotCompileException {
+//                                ...
+//                            }
+//                            public void edit(NewExpr e) throws CannotCompileException {
+//                                ...
+//                            }
+//                        });
+                        
+                        
+                        
+                        sb.append("}");
+                    }
+                    
+                    // TODO: install allLocPerms and push newlocs entry on (current thread's) stack
+                    sb.append("de.unifr.acp.templates.Global.locPermsStack.push(allLocPerms);");
+                    sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
+                    
+                    // TODO: figure out how to instrument thread start/end and field access
+                    
+                    // field access can probably be instrumented using Javassist's instrument() and edit() methods 
+                    // the same holds for allocations (new)
+                    
+                    String header = sb.toString();
+                    methodOrCtor.insertBefore(header);
+                    
+                    
+                    // generate method footer
+                    sb = new StringBuilder();
+                    
+                    // TODO: uninstall allLocPerms and newlocs entry on (current thread's) stack
+                    
+                    
+                    // uninstall permission and pop newlocs entry from current thread's stack
+
+                }
+            }
         }
+    }
+    
+    private static int getParameterCount(CtBehavior methodOrCtor) {
+        return methodOrCtor.getAvailableParameterAnnotations().length;
+    }
+    
+    /**
+     * Currently is an under-approximation (might return false for primitive parameters)
+     * @param methodOrCtor
+     * @param index the parameter index
+     * @return false if non-primitive or primitive, true if primitive
+     */
+    private static boolean mightBeReferenceParameter(CtBehavior methodOrCtor, int index) {
+        if (index == 0) {
+            return true;
+        } else {
+            try {
+                return !(methodOrCtor.getParameterTypes()[index-1].isPrimitive());
+            } catch (NotFoundException e) {
+                // TODO: fix this
+                return true;
+            }
+        }
+    }
+    
+    /**
+     * Return the grant annotation for the specified parameter (1 to n) or
+     * behavior (0) if available.
+     * 
+     * @param methodOrCtor
+     *            the behavior
+     * @param index
+     *            1 to n refers to a parameter index, 0 refers to the behavior
+     *            itself
+     * @return the grant annotation if available, <code>null</code> otherwise
+     * @throws ClassNotFoundException
+     */
+    private static Grant grantAnno(CtBehavior methodOrCtor, int index)
+            throws ClassNotFoundException {
+        if (index == 0) {
+            Grant methodGrantAnnot = ((Grant) methodOrCtor
+                    .getAnnotation(Grant.class));
+            return methodGrantAnnot;
+        } else {
+
+            // optional parameter types annotations indexed by parameter position
+            Object[][] availParamAnnot = methodOrCtor
+                    .getAvailableParameterAnnotations();
+
+            final Object[] oa = availParamAnnot[index-1];
+            for (Object o : oa) {
+                if (o instanceof Grant) {
+                    // there's one grant annotation per parameter only
+                    return (Grant) o;
+                }
+            }
+            return null;
+        }
+    }
+    
+    /**
+     * @deprecated
+     */
+    private String concateSingleContracts(Grant methodGrantAnnot,
+            Grant[] paramGrantAnnots) {
+        String compositeContract;
+        // list of single contracts to form the composite contract
+        final ArrayList<String> singleContracts = new ArrayList<String>();
+        
+        // add method contract if available
+        if (methodGrantAnnot != null) {
+            singleContracts.add(methodGrantAnnot.value());
+        }
+        
+        // add anchor-prefixed parameter contracts
+        for (int i = 0; i < paramGrantAnnots.length; i++) {
+            Grant grant = paramGrantAnnots[i];
+            String[] singleParamContracts = grant.value().split(",");
+            for (String contract : singleParamContracts) {
+                singleContracts.add((i + 1) + "." + contract); // add anchor prefix
+            }
+        }
+        
+        // append comma-separated single contracts 
+        final StringBuilder compositeBuilder = new StringBuilder();
+        if (singleContracts.size() > 0) {
+            for (int i = 0; i < singleContracts.size() - 1; i++) {
+                String contract = singleContracts.get(i);
+                compositeBuilder.append(contract + ",");
+            }
+            compositeBuilder.append(singleContracts.get(singleContracts.size() -1));
+        }
+        compositeContract = compositeBuilder.toString();
+        return compositeContract;
+    }
+    
+    /**
+     * Returns true if the specified method/constructor or one of its parameters
+     * has a Grant annotation.
+     * @param methodOrCtor the method/constructor to check
+     * @return true if Grant annotation exists, false otherwise.
+     * @throws NotFoundException 
+     * @throws CannotCompileException 
+     */
+    private static boolean hasMethodGrantAnnotations(CtBehavior methodOrCtor)
+            throws NotFoundException, CannotCompileException {
+        if (methodOrCtor.hasAnnotation(Grant.class))
+            return true;
+        CtClass[] parameterTypes = methodOrCtor.getParameterTypes();
+        int i = 0;
+        for (Object[] oa : methodOrCtor.getAvailableParameterAnnotations()) {
+            CtClass paramType = parameterTypes[i++];
+
+            // we can savely ignore grant annotations on primitive formal
+            // parameters
+            if (!paramType.isPrimitive()) {
+                for (Object o : oa) {
+                    if (o instanceof Grant) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     protected static String createBody(CtClass target, boolean hasSuperclass)
             throws NotFoundException {
         StringBuilder sb = new StringBuilder();
-        sb.append("public void traverse__(Traversal__ t) {\n");
+        sb.append("public void traverse__(de.unifr.acp.templates.Traversal__ t) {\n");
         for (CtField f : target.getDeclaredFields()) {
             CtClass tf = f.getType();
             String fname = f.getName();

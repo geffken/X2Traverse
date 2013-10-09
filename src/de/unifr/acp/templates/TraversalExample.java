@@ -25,9 +25,9 @@ public class TraversalExample
 
 	// method needs to be added
 	public void traverse__(Traversal__ t) {
-		t.visit__("priv_string", priv_string);
-		t.visit__("prot_string", prot_string);
-		t.visit__("publ_object", publ_object);
+		t.visit__(this, "priv_string", priv_string);
+		t.visit__(this, "prot_string", prot_string);
+		t.visit__(this, "publ_object", publ_object);
         // may have to traverse fields of the superclass
     }
 }

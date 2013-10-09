@@ -1,0 +1,71 @@
+%{
+package de.unifr.acp.parser;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import de.unifr.acp.contract.And;
+import de.unifr.acp.contract.Concat;
+import de.unifr.acp.contract.Identifier;
+import de.unifr.acp.contract.Neg;
+import de.unifr.acp.contract.Or;
+import de.unifr.acp.contract.Path;
+import de.unifr.acp.contract.Plus;
+import de.unifr.acp.contract.QMark;
+import de.unifr.acp.contract.QMarkLit;
+import de.unifr.acp.contract.Star;
+import de.unifr.acp.contract.AtLit;
+
+public class MyParser {
+%}
+
+%token <String> identifier
+%token star
+%token qmark
+%token plus
+
+
+%type <Path> path_perms
+%type <Path> path_perm
+%type <Path> or
+%type <Path> concat
+%type <Path> neg
+%type <Path> quantifier
+%type <Path> path_lit
+%type <Path> id
+
+%start path_perms
+
+%%
+
+/* contract */
+path_perms : path_perm             {$$ = $1; }
+  | path_perms ',' path_perm       {$$ = $1.or($3); }
+  
+path_perm :        or              {$$ = $1; }
+  | path_perm '&' or               {$$ = $1.and($3); }
+  
+or :        concat                 {$$ = $1; }
+  | or '|' concat                  {$$ = $1.or($3); }
+  
+concat :        neg                {$$ = $1; }
+  | concat '.' neg                 {$$ = $1.concatenate($3); }
+  
+neg : quantifier                   {$$ = $1; }
+  | '!' neg                        {$$ = new Neg($2); }
+
+quantifier : path_lit              {$$ = $1; }
+  | quantifier star                {$$ = new Star($1); }
+  | quantifier plus                {$$ = new Plus($1); }
+  | quantifier qmark               {$$ = new QMark($1); }
+  
+path_lit : star                    {$$ = new Star(new QMarkLit()); }
+  | id                             {$$ = $1; }
+  | '(' path_perm ')'              {$$ = $2; }
+  
+id : identifier                    {$$ = new Identifier($1); }
+  | qmark                          {$$ = new QMarkLit(); }
+  | '@'                            {$$ = new AtLit(); }
+
+%%
+}
+
