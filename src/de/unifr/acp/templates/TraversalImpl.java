@@ -55,7 +55,7 @@ public class TraversalImpl implements Traversal__ {
             Permission currentPermFromMap = fp.containsKey(fieldName) ? fp
                     .get(fieldName) : Permission.NONE;
             Permission resultPerm = intersection(
-                    installedPermission(obj, fieldName),
+                    Global.installedPermission(obj, fieldName),
                     union(currentPermFromMap, newPerm));
 
             // save resulting permission
@@ -76,11 +76,6 @@ public class TraversalImpl implements Traversal__ {
             // print unexpected exception
             e.printStackTrace();
         }
-    }
-    
-    public static Permission installedPermission(Object obj, String fieldName) {
-        // ...
-        return null;
     }
     
     public static String unqualifiedFieldNameFromFieldName(

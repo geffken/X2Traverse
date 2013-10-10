@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.Set;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -24,10 +23,11 @@ import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.SyntheticAttribute;
+import javassist.expr.ExprEditor;
+import javassist.expr.FieldAccess;
+import javassist.expr.NewExpr;
 
 import de.unifr.acp.annot.Grant;
-import de.unifr.acp.fst.FST;
-import de.unifr.acp.fst.Permission;
 
 public class TransClass {
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
@@ -193,6 +193,11 @@ public class TransClass {
             methodsAndCtors.addAll(ctors);
             
             for (CtBehavior methodOrCtor : methodsAndCtors) {
+                
+                instrumentFieldAccess(methodOrCtor);
+                
+                instrumentNew(methodOrCtor);
+                
                 if (hasMethodGrantAnnotations(methodOrCtor)) {
                     
                     /* generate header and footer */
@@ -302,29 +307,15 @@ public class TransClass {
                         
                         // TODO: explicit representation of locations and location permissions (supporting join)
                         // (currently it's all generic maps and implicit joins in visitor similar to Maxine implementation)
-//                        CtMethod cm = ...;
-//                        cm.instrument(new ExprEditor() {
-//                            public void edit(FieldAccess f) throws CannotCompileException {
-//                                ...
-//                            }
-//                            public void edit(NewExpr e) throws CannotCompileException {
-//                                ...
-//                            }
-//                        });
-                        
-                        
                         
                         sb.append("}");
                     }
                     
-                    // TODO: install allLocPerms and push newlocs entry on (current thread's) stack
-                    sb.append("de.unifr.acp.templates.Global.locPermsStack.push(allLocPerms);");
+                    // install allLocPerms and push new objects set on (current thread's) stack
+                    sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
                     
                     // TODO: figure out how to instrument thread start/end and field access
-                    
-                    // field access can probably be instrumented using Javassist's instrument() and edit() methods 
-                    // the same holds for allocations (new)
                     
                     String header = sb.toString();
                     methodOrCtor.insertBefore(header);
@@ -333,14 +324,63 @@ public class TransClass {
                     // generate method footer
                     sb = new StringBuilder();
                     
-                    // TODO: uninstall allLocPerms and newlocs entry on (current thread's) stack
-                    
-                    
-                    // uninstall permission and pop newlocs entry from current thread's stack
+                    // TODO: make sure all method exits are covered (exceptions, multiple returns)
+                    // uninstall allLocPerms and newlocs entry on (current thread's) stack
+                    sb.append("de.unifr.acp.templates.Global.locPermStack.pop();");
+                    sb.append("de.unifr.acp.templates.Global.newObjectsStack.pop();");
+                    String footer = sb.toString();
+                    methodOrCtor.insertAfter(footer);
 
-                }
+                } // end if (hasMethodGrantAnnotations(methodOrCtor))
             }
         }
+    }
+    
+    private static void instrumentFieldAccess(CtBehavior methodOrCtor) throws CannotCompileException {
+        methodOrCtor.instrument(new ExprEditor() {
+            public void edit(FieldAccess f) throws CannotCompileException {
+                StringBuilder code = new StringBuilder();
+                code.append("{");
+                
+                // get active permission for location to access
+                code.append("Permission effectivePerm = Global.installedPermission("+(f.isStatic() ? "$0" : "null") + ", \""+f.getFieldName()+"\");");
+                
+                // get permission needed for this access
+                code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
+                        + (f.isReader() ? "READ_ONLY" : "WRITE_ONLY") + ");");
+
+                code.append("if (!effectivePerm.containsAll(accessPerm)) {");
+                code.append("  System.out.println(\"ACCESS VIOLATION\");");
+                code.append("}");
+                
+                if (f.isReader()) {
+                    code.append("  $_ = $proceed();");
+                } else {
+                    code.append("  $proceed($$);");
+                }
+                code.append("}");
+                
+                f.replace(code.toString());
+              }
+          });
+    }
+    
+    // TODO: consider array creation, too
+    private static void instrumentNew(CtBehavior methodOrCtor) throws CannotCompileException {
+        methodOrCtor.instrument(new ExprEditor() {
+            public void edit(NewExpr n) throws CannotCompileException {
+                StringBuilder code = new StringBuilder();
+                code.append("{");
+                // TODO: fix this code (probably impossible in Javassist, AspectJ might work using Initialization Pointcut Designators)
+                // NOTE: $_ is not assigned the new object yet, but
+                // instrumentation needs to happen before the constructor call
+                code.append("  ((Set)de.unifr.acp.templates.Global.newObjectsStack.peek()).add($_);");
+                code.append("  $_ = $proceed($$);");
+                code.append("}");
+                
+                n.replace(code.toString());
+              }
+          });        
     }
     
     private static int getParameterCount(CtBehavior methodOrCtor) {
