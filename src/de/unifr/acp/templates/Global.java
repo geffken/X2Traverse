@@ -42,6 +42,8 @@ public class Global {
      * @return the installed permission for the specified location
      */
     public static Permission installedPermission(Object obj, String fieldName) {
+        System.out.println("installedPermissions("+obj+", "+fieldName+")");
+        System.out.println("locPerms: "+locPermStack);
         Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
         if (!newObjectsStack.isEmpty()) {
             
@@ -69,5 +71,10 @@ public class Global {
             return Permission.READ_WRITE;
         }
     }
-
+    
+    public static void addNewObject(Object obj) {
+        if (!newObjectsStack.isEmpty()) {
+            newObjectsStack.peek().add(obj);
+        }
+    }
 }

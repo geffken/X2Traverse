@@ -25,13 +25,16 @@ import javassist.NotFoundException;
 import javassist.bytecode.SyntheticAttribute;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
+import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
 
 import de.unifr.acp.annot.Grant;
+import de.unifr.acp.templates.TraversalTarget__;
+
+// TODO: consider fully qualified field names
 
 public class TransClass {
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
-    private static final String OBJECT = "java.lang.Object";
     private final CtClass traversalTargetInterface;
     private final CtClass objectClass;
 
@@ -61,18 +64,18 @@ public class TransClass {
     	pending = new LinkedList<CtClass>();
     	pending.add(clazz);
         traversalTargetInterface = ClassPool.getDefault().get(TRAVERSAL_TARGET);
-        objectClass = ClassPool.getDefault().get(OBJECT);
+        objectClass = ClassPool.getDefault().get(Object.class.getName());
     }
 
     /**
      * Transforms all classes that are reachable from the class corresponding
-     * to the specified classname.
-     * @param the classname of the class spanning a reachable classes tree
+     * to the specified class name.
+     * @param className the class name of the class spanning a reachable classes tree
      * @throws ClassNotFoundException 
      */
-    public static void transformHierarchy(String classname)
+    public static void transformHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
-        TransClass tc = new TransClass(classname);
+        TransClass tc = new TransClass(className);
         tc.computeReachableClasses();
         tc.performTransform();
         tc.flushTransform();
@@ -263,7 +266,7 @@ public class TransClass {
                         if (grant != null) {
                             sb.append("    fSTs[" + i
                                     + "] = new de.unifr.acp.fst.FST(\""
-                                    + methodGrantAnnot.value() + "\");");
+                                    + grant.value() + "\");");
                         }
                     }
                     
@@ -273,6 +276,7 @@ public class TransClass {
                     
                     // now we expect to have all FSTs available and cached
                     
+                    sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
                     for (int i=0; i<getParameterCount(methodOrCtor)+1; i++) {
                         
                         // only grant-annotated methods/parameters require any action
@@ -286,7 +290,6 @@ public class TransClass {
                         
                         // TODO: factor out this code in external class, parameterize over i and allPermissions
                         // a location permission is a Map<Object, Map<String, Permission>>
-                        sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
                         sb.append("{");
                         sb.append("  de.unifr.acp.fst.FST fst = fSTs["+i+"];");
                         sb.append("  de.unifr.acp.fst.FSTRunner runner = new de.unifr.acp.fst.FSTRunner(fst);");
@@ -299,11 +302,14 @@ public class TransClass {
                         
                         // here the runner should be in synch with the parameter object
                         // (as far as non-static fields are concerned), the visitor implicitly joins locPerms
-                        sb.append("  de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
-                        sb.append("  ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
+                        sb.append("  if ($"+i+" instanceof de.unifr.acp.templates.TraversalTarget__) {");
+                        sb.append("    de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
+                        sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
 
                         // Map<Object, Map<String, de.unifr.acp.fst.Permission>>
-                        sb.append("  Map locPerms = visitor.getLocationPermissions();");
+                        sb.append("    Map allLocPerms = visitor.getLocationPermissions();");
+                        sb.append("    System.out.println(\"allLocPerms: \"+allLocPerms);");
+                        sb.append("  }");
                         
                         // TODO: explicit representation of locations and location permissions (supporting join)
                         // (currently it's all generic maps and implicit joins in visitor similar to Maxine implementation)
@@ -313,6 +319,8 @@ public class TransClass {
                     
                     // install allLocPerms and push new objects set on (current thread's) stack
                     sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
+                    sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
+                    sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
                     
                     // TODO: figure out how to instrument thread start/end and field access
@@ -338,49 +346,77 @@ public class TransClass {
     
     private static void instrumentFieldAccess(CtBehavior methodOrCtor) throws CannotCompileException {
         methodOrCtor.instrument(new ExprEditor() {
-            public void edit(FieldAccess f) throws CannotCompileException {
+            public void edit(FieldAccess expr) throws CannotCompileException {
                 StringBuilder code = new StringBuilder();
+                String qualifiedFieldName = expr.getClassName()+"."+expr.getFieldName();
                 code.append("{");
                 
                 // get active permission for location to access
-                code.append("Permission effectivePerm = Global.installedPermission("+(f.isStatic() ? "$0" : "null") + ", \""+f.getFieldName()+"\");");
+                code.append("de.unifr.acp.fst.Permission effectivePerm = de.unifr.acp.templates.Global.installedPermission($0, \""+qualifiedFieldName+"\");");
                 
                 // get permission needed for this access
                 code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
-                        + (f.isReader() ? "READ_ONLY" : "WRITE_ONLY") + ");");
+                        + (expr.isReader() ? "READ_ONLY" : "WRITE_ONLY") + ";");
 
                 code.append("if (!effectivePerm.containsAll(accessPerm)) {");
-                code.append("  System.out.println(\"ACCESS VIOLATION\");");
+                code.append("  System.out.println(\"ACCESS VIOLATION:\");");
+                code.append("  System.out.println($0);");
+                code.append("  System.out.println(\""+qualifiedFieldName+"\");");
+                code.append("  System.out.println(\"effectivePerm: \"+effectivePerm);");
+                code.append("  System.out.println(\"requiredPerm: \"+accessPerm);");
                 code.append("}");
                 
-                if (f.isReader()) {
+                if (expr.isReader()) {
                     code.append("  $_ = $proceed();");
                 } else {
                     code.append("  $proceed($$);");
                 }
                 code.append("}");
                 
-                f.replace(code.toString());
+                expr.replace(code.toString());
               }
           });
     }
     
-    // TODO: consider array creation, too
+
+    /*
+     * Instruments constructors to such that the constructed object is added to
+     * the new objects stack's top entry.
+     */
     private static void instrumentNew(CtBehavior methodOrCtor) throws CannotCompileException {
+        
+        // Apparently Javassist does not support instrumentation between new
+        // bytecode and constructor using the expression editor on new
+        // expressions (in AspectJ this might work using Initialization Pointcut
+        // Designators). Hence, we go for instrumenting the constructor.
+        
+//        if (methodOrCtor instanceof CtConstructor) {
+//            CtConstructor ctor = (CtConstructor)methodOrCtor;
+//            StringBuilder code = new StringBuilder();
+//            code.append("{");
+//            code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
+//            code.append("}");
+//            String header = code.toString();
+//            ctor.insertBefore(header);
+//        }
+    }
+    
+    /*
+     * Instrument array creation such that the new array is added to the new
+     * objects stack's top entry.
+     */
+    private static void instrumentNewArray(CtBehavior methodOrCtor) throws CannotCompileException {
         methodOrCtor.instrument(new ExprEditor() {
-            public void edit(NewExpr n) throws CannotCompileException {
+            public void edit(NewArray expr) throws CannotCompileException {
                 StringBuilder code = new StringBuilder();
                 code.append("{");
-                // TODO: fix this code (probably impossible in Javassist, AspectJ might work using Initialization Pointcut Designators)
-                // NOTE: $_ is not assigned the new object yet, but
-                // instrumentation needs to happen before the constructor call
-                code.append("  ((Set)de.unifr.acp.templates.Global.newObjectsStack.peek()).add($_);");
                 code.append("  $_ = $proceed($$);");
+                code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
                 code.append("}");
                 
-                n.replace(code.toString());
-              }
-          });        
+                expr.replace(code.toString());
+              } 
+        });
     }
     
     private static int getParameterCount(CtBehavior methodOrCtor) {
@@ -544,8 +580,10 @@ public class TransClass {
         if (tf.isPrimitive()) {
             sb.append("t.visitPrimitive__(\"");
         } else {
-            sb.append("t.visit__(\"");
+            sb.append("t.visit__(");
         }
+        sb.append("this, ");
+        sb.append('"');
         sb.append(target.getName());
         sb.append('.');
         sb.append(fname);

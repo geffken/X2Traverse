@@ -22,6 +22,11 @@ public class TraversalImpl implements Traversal__ {
     private static Set<ObjectAndFSTRunner> visitedPairs = new HashSet<ObjectAndFSTRunner>();
     Map<Object, Map<String, Permission>> locPerms;
 
+    /**
+     * Constructor.
+     * @param runner the FST runner to use for the heap traversal
+     * @param locPerms the location permission to update
+     */
     public TraversalImpl(FSTRunner runner, Map<Object, Map<String, Permission>> locPerms) {
         this.runner = runner; // initialize automaton state
         this.locPerms = locPerms;
@@ -33,9 +38,9 @@ public class TraversalImpl implements Traversal__ {
 
     @Override
     public void visit__(Object obj, String fieldName, Object fieldvalue) {
-        if (!(fieldvalue instanceof TraversalTarget__)) {
-            return;
-        }
+//        if (!(fieldvalue instanceof TraversalTarget__)) {
+//            return;
+//        }
         
         try {
             // remember automaton state
@@ -51,12 +56,12 @@ public class TraversalImpl implements Traversal__ {
 
             // calculate effective permission from installed permission,
             // this automaton's permission and permissions for this object/field
-            // from map (or NONE)
-            Permission currentPermFromMap = fp.containsKey(fieldName) ? fp
+            // from current location permission (or NONE)
+            Permission currentLocPerm = fp.containsKey(fieldName) ? fp
                     .get(fieldName) : Permission.NONE;
             Permission resultPerm = intersection(
                     Global.installedPermission(obj, fieldName),
-                    union(currentPermFromMap, newPerm));
+                    union(currentLocPerm, newPerm));
 
             // save resulting permission
             fp.put(fieldName, resultPerm);
@@ -67,7 +72,9 @@ public class TraversalImpl implements Traversal__ {
                 return; // terminate heap traversal
             } else {
                 visitedPairs.add(currentObjAndRunner);
-                ((TraversalTarget__) fieldvalue).traverse__(this);
+                if ((fieldvalue instanceof TraversalTarget__)) {
+                    ((TraversalTarget__) fieldvalue).traverse__(this);
+                }
             }
             
             // backtrack to previous automaton state
