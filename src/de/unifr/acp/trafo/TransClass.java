@@ -35,6 +35,7 @@ import de.unifr.acp.templates.TraversalTarget__;
 
 public class TransClass {
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
+    private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     private final CtClass traversalTargetInterface;
     private final CtClass objectClass;
 
@@ -164,7 +165,7 @@ public class TransClass {
             newTargetIfs.add(traversalTargetInterface);
             target.setInterfaces(newTargetIfs.toArray(new CtClass[0]));
 
-            // add: method traverse__
+            // add: method traverse__ (create body before adding new technically required fields)
             String methodbody = createBody(target, hasSuperclass);
             CtMethod m = CtNewMethod.make(methodbody, target);
             target.addMethod(m);
@@ -183,9 +184,8 @@ public class TransClass {
             // 2. replace method body with permission map installation,
             //    call to new method, permission map deinstallation
             
-            
             // according to tutorial there's no support for generics in Javassist, thus we use raw types
-            CtField f = CtField.make("private java.util.HashMap fstMap = new java.util.HashMap();", target);
+            CtField f = CtField.make("private java.util.HashMap "+FST_CACHE_FIELD_NAME+" = new java.util.HashMap();", target);
             target.addField(f);
             
             // collect all methods and constructors
@@ -254,8 +254,8 @@ public class TransClass {
                     // FSTs indexed  by parameter position (0: FST for this & type-anchored
                     // contracts, 1 to n: FTSs for unanchored parameter contracts)
                     sb.append("de.unifr.acp.fst.FST[] fSTs;");
-                    sb.append("if (fstMap.containsKey(longName)) {");
-                    sb.append("  fSTs = ((de.unifr.acp.fst.FST[])fstMap.get(longName));");
+                    sb.append("if ("+FST_CACHE_FIELD_NAME+".containsKey(longName)) {");
+                    sb.append("  fSTs = ((de.unifr.acp.fst.FST[])"+FST_CACHE_FIELD_NAME+".get(longName));");
                     sb.append("}");
                     sb.append("else {");
                     
@@ -271,7 +271,7 @@ public class TransClass {
                     }
                     
                     // cache generated automata indexed by long method name
-                    sb.append("  fstMap.put(longName, fSTs);");
+                    sb.append("  "+FST_CACHE_FIELD_NAME+".put(longName, fSTs);");
                     sb.append("}");
                     
                     // now we expect to have all FSTs available and cached
@@ -550,7 +550,9 @@ public class TransClass {
         for (CtField f : target.getDeclaredFields()) {
             CtClass tf = f.getType();
             String fname = f.getName();
-            appendVisitorCalls(sb, target, tf, fname);
+            if (!fname.equals(FST_CACHE_FIELD_NAME)) {
+                appendVisitorCalls(sb, target, tf, fname);
+            }
         }
         if (hasSuperclass) {
             sb.append("super.traverse__(t);\n");
@@ -567,7 +569,7 @@ public class TransClass {
             String var = "i" + nesting;
             
             /* generate for header */
-            sb.append("for (int " + var + "; ");
+            sb.append("for (int " + var + " = 0; ");
             
             // static type of 'this' corresponds to field's declaring class, no cast needed
             sb.append(var + "<this."+fname+index+".length; ");
@@ -578,7 +580,7 @@ public class TransClass {
             tf = tf.getComponentType();
         }
         if (tf.isPrimitive()) {
-            sb.append("t.visitPrimitive__(\"");
+            sb.append("t.visitPrimitive__(");
         } else {
             sb.append("t.visit__(");
         }
@@ -587,7 +589,7 @@ public class TransClass {
         sb.append(target.getName());
         sb.append('.');
         sb.append(fname);
-        sb.append("\"");
+        sb.append('"');
         if (!tf.isPrimitive()) {
             // static type of 'this' corresponds to field's declaring class, no cast needed
             sb.append(", this."); 

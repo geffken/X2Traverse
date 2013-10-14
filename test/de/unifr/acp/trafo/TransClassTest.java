@@ -131,20 +131,18 @@ public class TransClassTest {
             assertTrue(expected.contains(cls.getName()));
         }
     }
-
-    private boolean checkFile(String result, String filename)
-            throws FileNotFoundException {
+    
+    private String contentFromFileName(String filename) throws FileNotFoundException {
         String path = "testoutputs/" + filename + ".out";
-        String text = new Scanner(new File(path)).useDelimiter("\\A").next();
-        if (verbose) {
-            System.out.println("<checkFile>");
-            System.out.println(path);
-            System.out.println(text);
-            System.out.println("</checkFile>");
-            System.out.println("result.length = " + result.length()
-                    + ". text.length = " + text.length());
+        Scanner scanner = null;
+        try {
+            scanner = new Scanner(new File(path));
+            return scanner.useDelimiter("\\A").next();
+        } finally {
+            if (scanner != null) {
+                scanner.close();
+            }
         }
-        return result.equals(text);
     }
 
     @Test
@@ -166,7 +164,7 @@ public class TransClassTest {
             System.out.println(result);
         org.junit.Assert
                 .assertEquals(
-                        "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\n}",
+                        "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(this, \"de.unifr.acp.trafo.TestIntClass.myField\");\n}",
                         result);
 
         result = TransClass.createBody(target, true);
@@ -174,7 +172,7 @@ public class TransClassTest {
             System.out.println(result);
         org.junit.Assert
                 .assertEquals(
-                        "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(\"de.unifr.acp.trafo.TestIntClass.myField\");\nsuper.traverse__(t);\n}",
+                        "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(this, \"de.unifr.acp.trafo.TestIntClass.myField\");\nsuper.traverse__(t);\n}",
                         result);
 
         target = ClassPool.getDefault().get(
@@ -183,7 +181,7 @@ public class TransClassTest {
         if (verbose)
             System.out.println(result);
         assertEquals(
-                "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x1\", this.x1);\nt.visit__(\"de.unifr.acp.trafo.TestCompoundClass.x2\", this.x2);\n}",
+                "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visit__(this, \"de.unifr.acp.trafo.TestCompoundClass.x1\", this.x1);\nt.visit__(this, \"de.unifr.acp.trafo.TestCompoundClass.x2\", this.x2);\n}",
                 result);
 
         target = ClassPool.getDefault()
@@ -191,13 +189,13 @@ public class TransClassTest {
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
-        assertTrue(checkFile(result, "createBody-TestArrayClass"));
+        assertEquals(result, contentFromFileName("createBody-TestArrayClass"));
 
         target = ClassPool.getDefault().get("java.lang.String");
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
-        assertTrue(checkFile(result, "createBody-String"));
+        assertEquals(result, contentFromFileName("createBody-String"));
     }
 
 }
