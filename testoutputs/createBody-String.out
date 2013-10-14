@@ -1,11 +1,11 @@
-public void traverse__(Traversal__ t) {
-for (int i0; i0<this.value.length; i0++)
-t.visitPrimitive__("java.lang.String.value");
-t.visitPrimitive__("java.lang.String.offset");
-t.visitPrimitive__("java.lang.String.count");
-t.visitPrimitive__("java.lang.String.hash");
-t.visitPrimitive__("java.lang.String.serialVersionUID");
-for (int i0; i0<this.serialPersistentFields.length; i0++)
-t.visit__("java.lang.String.serialPersistentFields", this.serialPersistentFields[i0]);
-t.visit__("java.lang.String.CASE_INSENSITIVE_ORDER", this.CASE_INSENSITIVE_ORDER);
+public void traverse__(de.unifr.acp.templates.Traversal__ t) {
+for (int i0 = 0; i0<this.value.length; i0++)
+t.visitPrimitive__(this, "java.lang.String.value");
+t.visitPrimitive__(this, "java.lang.String.offset");
+t.visitPrimitive__(this, "java.lang.String.count");
+t.visitPrimitive__(this, "java.lang.String.hash");
+t.visitPrimitive__(this, "java.lang.String.serialVersionUID");
+for (int i0 = 0; i0<this.serialPersistentFields.length; i0++)
+t.visit__(this, "java.lang.String.serialPersistentFields", this.serialPersistentFields[i0]);
+t.visit__(this, "java.lang.String.CASE_INSENSITIVE_ORDER", this.CASE_INSENSITIVE_ORDER);
 }
