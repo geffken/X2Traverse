@@ -217,7 +217,7 @@ public class FST {
     
     /**
      * Convenience method that calls
-     * <code>recursivePut(path, permission, null)</code>.
+     * <code>recursivePut(path, permission, addFreshState())</code>.
      * 
      * @param path
      *            the abstract {@link Path} to generate machine states for.
@@ -226,7 +226,7 @@ public class FST {
      *            abstract path
      */
     private void recursivePut(final Path path, final Permission permission) {
-        recursivePut(path, permission, null);
+        recursivePut(path, permission, addFreshState());
     }
 
     /**
@@ -242,8 +242,7 @@ public class FST {
      *            the {@link Permission} to use for the paths matching the
      *            abstract path
      * @param nextSt
-     *            the state to link the generated transitions to; null indicates
-     *            that a fresh state should be generated as the final state
+     *            the state to link the generated transitions to
      */
     private void recursivePut(final Path path, final Permission permission, State nextSt) {
         
@@ -256,11 +255,9 @@ public class FST {
         
         // base cases
         if (path instanceof QMarkLit) {
-            nextSt = (nextSt == null) ? addFreshState() : nextSt;
             currentSt.addTransition(QUESTION_MARK, permission, nextSt);
             lastGenSt = nextSt;
         } else if (path instanceof Identifier) {
-            nextSt = (nextSt == null) ? addFreshState() : nextSt;
             currentSt.addTransition(((Identifier) path).getName(),
                     permission, nextSt);
             lastGenSt = nextSt;
@@ -309,13 +306,12 @@ public class FST {
                 recursivePut(((Star) path).getPath(), permission, currentSt);   
                 
                 // skip edge (nullable: output needs to be current permission)
-                nextSt = (nextSt == null) ? addFreshState() : nextSt;
                 currentSt.addTransition(State.EPSILON, permission, nextSt);
             } else if (path instanceof QMark) {
                 recursivePut(((Star) path).getPath(), permission, nextSt);
 
                 // skip edge (nullable: output needs to be current permission)
-                currentSt.addTransition(State.EPSILON, permission, lastGenSt);
+                currentSt.addTransition(State.EPSILON, permission, nextSt);
             } else if (path instanceof Plus) {
                 recursivePut(((Star) path).getPath(), permission, nextSt);
                 // back edge (repetitive operator)
