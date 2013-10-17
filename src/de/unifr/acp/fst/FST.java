@@ -308,12 +308,12 @@ public class FST {
                 // skip edge (nullable: output needs to be current permission)
                 currentSt.addTransition(State.EPSILON, permission, nextSt);
             } else if (path instanceof QMark) {
-                recursivePut(((Star) path).getPath(), permission, nextSt);
+                recursivePut(((QMark) path).getPath(), permission, nextSt);
 
                 // skip edge (nullable: output needs to be current permission)
                 currentSt.addTransition(State.EPSILON, permission, nextSt);
             } else if (path instanceof Plus) {
-                recursivePut(((Star) path).getPath(), permission, nextSt);
+                recursivePut(((Plus) path).getPath(), permission, nextSt);
                 // back edge (repetitive operator)
                 lastGenSt.addTransition(State.EPSILON, Permission.NONE, currentSt);
             }

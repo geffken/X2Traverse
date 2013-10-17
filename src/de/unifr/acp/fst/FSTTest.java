@@ -78,6 +78,25 @@ public class FSTTest {
         assertEquals(READ_ONLY.toString(), runner.runFromScratch("x"));
         assertEquals(READ_ONLY+","+READ_WRITE, runner.runFromScratch("x.c"));
     }
+    
+    /**
+     * Expressions containing + modifier.
+     */
+    @Test
+    public final void testRunPlus() {
+        FST machine = new FST("x.a+");
+        FSTRunner runner = new FSTRunner(machine);
+        assertEquals(READ_ONLY.toString(), runner.runFromScratch("x"));
+        assertEquals(READ_ONLY+","+READ_WRITE, runner.runFromScratch("x.a"));
+        assertEquals(READ_ONLY+","+READ_WRITE+","+READ_WRITE, runner.runFromScratch("x.a.a"));
+        assertEquals(READ_ONLY+","+READ_WRITE+","+NONE, runner.runFromScratch("x.a.b"));
+        machine = new FST("x.a+.b+");
+        runner = new FSTRunner(machine);
+        assertEquals(READ_ONLY.toString(), runner.runFromScratch("x"));
+        assertEquals(READ_ONLY+","+READ_ONLY, runner.runFromScratch("x.a"));
+        assertEquals(READ_ONLY+","+READ_ONLY+","+READ_ONLY, runner.runFromScratch("x.a.a"));
+        assertEquals(READ_ONLY+","+READ_ONLY+","+READ_WRITE, runner.runFromScratch("x.a.b"));
+    }
 
     /**
      * Expressions containing PropertyStar.
