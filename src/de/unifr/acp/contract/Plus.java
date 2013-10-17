@@ -9,4 +9,9 @@ public class Plus extends SuffixOp {
     public String name() {
         return "+";
     }
+    
+    @Override
+    public boolean isNullable() {
+        return path.isNullable();
+    }
 }

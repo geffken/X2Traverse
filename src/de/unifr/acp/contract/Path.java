@@ -9,7 +9,7 @@ package de.unifr.acp.contract;
 * PathLiteral       = AnyPath (*, ¬∅, ?*) | PropPerm | '(' PathPerm ')' { | EmptyPathSet ({}, ∅) | EmptyPathWord ('', ε) }
 * PropPerm          = RegExp (/.../) | Name | AnyProp (?, /([\s\S]*)/) | AtProp (@, /EmptyPropSet^/)
 */
-public class Path {
+abstract public class Path {
     
     public Concat concatenate(Path path) {
         return new Concat(this, path);
@@ -22,5 +22,6 @@ public class Path {
     public And and(Path path) {
         return new And(this, path);
     }
-
+    
+    abstract public boolean isNullable();
 }

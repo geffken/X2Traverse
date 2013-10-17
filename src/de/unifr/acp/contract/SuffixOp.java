@@ -16,5 +16,4 @@ public abstract class SuffixOp extends Path {
     }
     
     public abstract String name();
-    
 }

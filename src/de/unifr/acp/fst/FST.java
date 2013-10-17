@@ -10,10 +10,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import de.unifr.acp.annot.Grant;
 import de.unifr.acp.contract.Concat;
 import de.unifr.acp.contract.Identifier;
 import de.unifr.acp.contract.Or;
@@ -253,26 +255,39 @@ public class FST {
          */
         
         // base cases
-        if (path instanceof Identifier) {
+        if (path instanceof QMarkLit) {
+            nextSt = (nextSt == null) ? addFreshState() : nextSt;
+            currentSt.addTransition(QUESTION_MARK, permission, nextSt);
+            lastGenSt = nextSt;
+        } else if (path instanceof Identifier) {
             nextSt = (nextSt == null) ? addFreshState() : nextSt;
             currentSt.addTransition(((Identifier) path).getName(),
                     permission, nextSt);
-            lastGenSt = nextSt;
-        } else if (path instanceof QMarkLit) {
-            nextSt = (nextSt == null) ? addFreshState() : nextSt;
-            currentSt.addTransition(QUESTION_MARK, permission, nextSt);
             lastGenSt = nextSt;
 
         // recursive cases            
         } else if (path instanceof Concat) {
             Concat concat = (Concat) path;
+            
+//            int lastNonNullableIndex = -1;
+//            ListIterator<Path> it = concat.listIterator(concat.size());
+//            assert (concat.size() >= 1);
+//            while (it.hasPrevious()) {
+//                final int index = it.previousIndex();
+//                Path element = it.previous();
+//                if (!element.isNullable()) {
+//                    lastNonNullableIndex = index;
+//                    break;
+//                }
+//            }
             Iterator<Path> it = concat.iterator();
             while (it.hasNext()) {
+                //final int index = it.nextIndex();
                 Path element = it.next();
                 if (it.hasNext()) {
                     recursivePut(element, Permission.READ_ONLY);
                 } else {
-                    recursivePut(element, permission);
+                    recursivePut(element, permission, nextSt);
                 }
             }
         } else if (path instanceof Or) {
@@ -282,32 +297,32 @@ public class FST {
                 currentSt.addTransition(State.EPSILON,
                         Permission.NONE, startOfSingle);
                 lastGenSt = startOfSingle;
-                recursivePut(element, permission);
-                lastGenSt.addTransition(State.EPSILON,
-                        Permission.NONE, nextSt);
+                recursivePut(element, permission, nextSt);
+//                lastGenSt.addTransition(State.EPSILON,
+//                        Permission.NONE, nextSt);
             }
-            lastGenSt = nextSt;
+            //lastGenSt = nextSt;
         } else if (path instanceof SuffixOp) {
-            // this code avoids epsilon cycles altogether
+            // this code avoids epsilon (input) cycles altogether
             if (path instanceof Star) {
                 // self edge (repetitive operator)
-                recursivePut(((Star) path).getPath(), permission, currentSt);
+                recursivePut(((Star) path).getPath(), permission, currentSt);   
                 
                 // skip edge (nullable: output needs to be current permission)
                 nextSt = (nextSt == null) ? addFreshState() : nextSt;
                 currentSt.addTransition(State.EPSILON, permission, nextSt);
             } else if (path instanceof QMark) {
-                recursivePut(((Star) path).getPath(), permission);
+                recursivePut(((Star) path).getPath(), permission, nextSt);
 
                 // skip edge (nullable: output needs to be current permission)
                 currentSt.addTransition(State.EPSILON, permission, lastGenSt);
             } else if (path instanceof Plus) {
-                recursivePut(((Star) path).getPath(), permission);
+                recursivePut(((Star) path).getPath(), permission, nextSt);
                 // back edge (repetitive operator)
                 lastGenSt.addTransition(State.EPSILON, Permission.NONE, currentSt);
             }
             
-            // this code can lead to epsilon cycles with we want to avoid
+            // this code can lead to epsilon (input) cycles with we want to avoid
 //          recursivePut(((NewStar) path).getPath(), permission);            
 //            // skip edge (output needs to be this path's permission as it is nullable)
 //            if (path instanceof NewStar || path instanceof NewQMark) {

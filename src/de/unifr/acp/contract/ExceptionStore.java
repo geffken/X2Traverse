@@ -3,6 +3,11 @@ package de.unifr.acp.contract;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * What is this for?
+ * @deprecated
+ *
+ */
 public class ExceptionStore {
 	private Map<Integer,String> exceptions = new HashMap <Integer,String> ();
 

@@ -1,8 +1,5 @@
 package de.unifr.acp.contract;
 
-import java.util.Collection;
-import java.util.HashSet;
-
 public class Identifier extends Path {
     private final String name;
 
@@ -16,6 +13,11 @@ public class Identifier extends Path {
     
     public String toString() {
         return name;
+    }
+    
+    @Override
+    public boolean isNullable() {
+        return false;
     }
 
 }

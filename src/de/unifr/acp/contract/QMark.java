@@ -10,5 +10,10 @@ public class QMark extends SuffixOp {
     public String name() {
         return "?";
     }
+    
+    @Override
+    public boolean isNullable() {
+        return true;
+    }
 
 }

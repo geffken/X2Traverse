@@ -160,7 +160,6 @@ public final class FSTRunner implements Cloneable {
         Set<State> stts = new HashSet<State>();
         Permission maxPermission = Permission.NONE;
         for (State state : states) {
-            Set<State> tmpStates;
             Set<StateAndPermission> sAndPs = state.applyTransitionRelation(inputChar);
             for (StateAndPermission sAndP : sAndPs) {
                 stts.add(sAndP.getState());

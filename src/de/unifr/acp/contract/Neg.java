@@ -12,5 +12,9 @@ public class Neg extends Path {
     public String toString() {
         return "!" + path.toString();
     }
-
+    
+    @Override
+    public boolean isNullable() {
+        return !path.isNullable();
+    }
 }

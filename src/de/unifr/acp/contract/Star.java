@@ -10,5 +10,9 @@ public class Star extends SuffixOp {
     public String name() {
         return "*";
     }
-
+    
+    @Override
+    public boolean isNullable() {
+        return true;
+    }
 }

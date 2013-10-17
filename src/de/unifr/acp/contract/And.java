@@ -14,7 +14,7 @@ import java.util.ListIterator;
  */
 public class And extends Path implements Iterable<Path> {
     
-    final ArrayList<Path> list = new ArrayList<Path>();
+    private final ArrayList<Path> list = new ArrayList<Path>();
     
     public And(And or, Path path) {
         list.addAll(or.list);
@@ -47,6 +47,15 @@ public class And extends Path implements Iterable<Path> {
             result += ")";
         } else {
             result = "";
+        }
+        return result;
+    }
+
+    @Override
+    public boolean isNullable() {
+        boolean result = true;
+        for (Path path : list) {
+            result &= path.isNullable();
         }
         return result;
     }
