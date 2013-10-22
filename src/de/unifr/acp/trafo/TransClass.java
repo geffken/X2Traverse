@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -25,6 +26,7 @@ import javassist.NotFoundException;
 import javassist.bytecode.SyntheticAttribute;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
+import javassist.expr.MethodCall;
 import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
 
@@ -36,7 +38,6 @@ import de.unifr.acp.templates.TraversalTarget__;
 public class TransClass {
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
-    private final CtClass traversalTargetInterface;
     private final CtClass objectClass;
 
     private final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
@@ -64,7 +65,6 @@ public class TransClass {
         ClassPool.getDefault().importPackage("java.util");
     	pending = new LinkedList<CtClass>();
     	pending.add(clazz);
-        traversalTargetInterface = ClassPool.getDefault().get(TRAVERSAL_TARGET);
         objectClass = ClassPool.getDefault().get(Object.class.getName());
     }
 
@@ -91,6 +91,12 @@ public class TransClass {
             }
         }
     }
+    
+//    public boolean hasSuperClassOtherThan(CtClass target, CtClass standard) throws NotFoundException {
+//        CtClass superclazz = target.getSuperclass();
+//        boolean hasSuperclass = !superclazz.equals(standard);
+//        return hasSuperclass;
+//    }
     
     /*
      * Helper method for <code>computeReachableClasses</code>. Traverses the
@@ -146,7 +152,16 @@ public class TransClass {
         }
     }
 
-    public void doTransform(CtClass target, boolean hasSuperclass)
+    /**
+     * 
+     * @param target
+     * @param hasSuperclass
+     * @throws NotFoundException
+     * @throws IOException
+     * @throws CannotCompileException
+     * @throws ClassNotFoundException
+     */
+    public static void doTransform(CtClass target, boolean hasSuperclass)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
 
         // add: implements TRAVERSALTARGET
@@ -161,6 +176,7 @@ public class TransClass {
         
         // only generate implementation of traversal interface if not yet present
         // use traversal interface as marker for availability of other instrumentation
+        CtClass traversalTargetInterface = ClassPool.getDefault().get(TRAVERSAL_TARGET);
         if (!newTargetIfs.contains(traversalTargetInterface)) {
             newTargetIfs.add(traversalTargetInterface);
             target.setInterfaces(newTargetIfs.toArray(new CtClass[0]));
@@ -177,12 +193,6 @@ public class TransClass {
             //   2. Generate code to generate automaton for contract
             //      (generate code to get contract string and call into automation generation library)
             //   3. Use insertBefore() and insertAfter() to insert permission installation/deinstallation code
-            
-            // or alternatively
-            // 1. create new method with non-conflicting name derived from original method
-            //    with original method's body
-            // 2. replace method body with permission map installation,
-            //    call to new method, permission map deinstallation
             
             // according to tutorial there's no support for generics in Javassist, thus we use raw types
             CtField f = CtField.make("private java.util.HashMap "+FST_CACHE_FIELD_NAME+" = new java.util.HashMap();", target);
@@ -308,7 +318,7 @@ public class TransClass {
 
                         // Map<Object, Map<String, de.unifr.acp.fst.Permission>>
                         sb.append("    Map allLocPerms = visitor.getLocationPermissions();");
-                        sb.append("    System.out.println(\"allLocPerms: \"+allLocPerms);");
+                        //sb.append("    System.out.println(\"allLocPerms: \"+allLocPerms);");
                         sb.append("  }");
                         
                         // TODO: explicit representation of locations and location permissions (supporting join)
@@ -319,8 +329,8 @@ public class TransClass {
                     
                     // install allLocPerms and push new objects set on (current thread's) stack
                     sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
-                    sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
-                    sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
+                    //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
+                    //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
                     
                     // TODO: figure out how to instrument thread start/end and field access
@@ -328,54 +338,86 @@ public class TransClass {
                     String header = sb.toString();
                     methodOrCtor.insertBefore(header);
                     
-                    
                     // generate method footer
                     sb = new StringBuilder();
-                    
-                    // TODO: make sure all method exits are covered (exceptions, multiple returns)
-                    // uninstall allLocPerms and newlocs entry on (current thread's) stack
+
+                    // pop location permissions and new locations entry from
+                    // (current thread's) stack
                     sb.append("de.unifr.acp.templates.Global.locPermStack.pop();");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.pop();");
                     String footer = sb.toString();
-                    methodOrCtor.insertAfter(footer);
+                    
+                    // make sure all method exits are covered (exceptions, multiple returns)
+                    methodOrCtor.insertAfter(footer, true);
 
                 } // end if (hasMethodGrantAnnotations(methodOrCtor))
             }
         }
     }
     
-    private static void instrumentFieldAccess(CtBehavior methodOrCtor) throws CannotCompileException {
-        methodOrCtor.instrument(new ExprEditor() {
-            public void edit(FieldAccess expr) throws CannotCompileException {
-                StringBuilder code = new StringBuilder();
-                String qualifiedFieldName = expr.getClassName()+"."+expr.getFieldName();
-                code.append("{");
-                
-                // get active permission for location to access
-                code.append("de.unifr.acp.fst.Permission effectivePerm = de.unifr.acp.templates.Global.installedPermission($0, \""+qualifiedFieldName+"\");");
-                
-                // get permission needed for this access
-                code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
-                        + (expr.isReader() ? "READ_ONLY" : "WRITE_ONLY") + ";");
+    private static void instrumentFieldAccess(CtBehavior methodOrCtor)
+            throws CannotCompileException {
+//        final AtomicBoolean isInstrumented = new AtomicBoolean(false);
+//
+//        methodOrCtor.instrument(new ExprEditor() {
+//
+//            public void edit(MethodCall expr) throws CannotCompileException {
+//                String name = expr.getMethodName();
+//                if (name.equals(
+//                        "installedPermission")) {
+//                    isInstrumented.set(true);
+//                }
+//            }
+//        });
 
-                code.append("if (!effectivePerm.containsAll(accessPerm)) {");
-                code.append("  System.out.println(\"ACCESS VIOLATION:\");");
-                code.append("  System.out.println($0);");
-                code.append("  System.out.println(\""+qualifiedFieldName+"\");");
-                code.append("  System.out.println(\"effectivePerm: \"+effectivePerm);");
-                code.append("  System.out.println(\"requiredPerm: \"+accessPerm);");
-                code.append("}");
-                
-                if (expr.isReader()) {
-                    code.append("  $_ = $proceed();");
-                } else {
-                    code.append("  $proceed($$);");
+//        if (!isInstrumented.get()) {
+            methodOrCtor.instrument(new ExprEditor() {
+                public void edit(FieldAccess expr)
+                        throws CannotCompileException {
+                    String qualifiedFieldName = expr.getClassName() + "."
+                            + expr.getFieldName();
+
+                    // exclude standard API
+                    if (!(qualifiedFieldName.startsWith("java") || qualifiedFieldName
+                            .startsWith("javax"))) {
+                        StringBuilder code = new StringBuilder();
+                        code.append("{");
+
+                        // get active permission for location to access
+                        code.append("de.unifr.acp.fst.Permission effectivePerm = de.unifr.acp.templates.Global.installedPermission($0, \""
+                                + qualifiedFieldName + "\");");
+
+                        // get permission needed for this access
+//                        code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
+//                                + (expr.isReader() ? "READ_ONLY" : "WRITE_ONLY")
+//                                + ";");
+                        code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission.values()["
+                                + (expr.isReader() ? "1" : "2")
+                                + "];");
+
+                        code.append("if (!effectivePerm.containsAll(accessPerm)) {");
+                        code.append("  System.out.println(\"ACCESS VIOLATION:\");");
+                        code.append("  System.out.println($0);");
+                        code.append("  System.out.println(\""
+                                + qualifiedFieldName + "\");");
+                        code.append("  System.out.println(\"effectivePerm: \"+effectivePerm);");
+                        code.append("  System.out.println();");
+                        code.append("  System.out.println(\"requiredPerm: \");");
+                        code.append("  System.out.println();");
+                        code.append("}");
+
+                        if (expr.isReader()) {
+                            code.append("  $_ = $proceed();");
+                        } else {
+                            code.append("  $proceed($$);");
+                        }
+                        code.append("}");
+
+                        expr.replace(code.toString());
+                    }
                 }
-                code.append("}");
-                
-                expr.replace(code.toString());
-              }
-          });
+            });
+//        }
     }
     
 
