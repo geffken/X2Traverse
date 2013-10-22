@@ -5,7 +5,6 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +24,18 @@ public class TransClassTest {
 
     private static CtClass objectClass;
     private static final boolean verbose = true;
+    private static final String TEST_BASICS_NAME = TestBasics.class
+            .getCanonicalName();
+    private static final String TEST_ARRAY_CLASS_NAME = TestArrayClass.class
+            .getCanonicalName();
+    private static final String TEST_EMPTY_CLASS_NAME = TestEmptyClass.class
+            .getCanonicalName();
+    private static final String TEST_INT_CLASS_NAME = TestIntClass.class
+            .getCanonicalName();
+    private static final String TEST_COMPOUND_CLASS_NAME = TestCompoundClass.class
+            .getCanonicalName();
+    private static final String TREE_NODE_NAME = TreeNode.class
+            .getCanonicalName();
     
     // test data
     
@@ -59,52 +70,74 @@ public class TransClassTest {
     }
 
     @Test
-    public void testDoTransform() throws NotFoundException,
+    public void testDoTransformDoesNotThrow() throws NotFoundException,
             ClassNotFoundException, IOException, CannotCompileException {
-        TransClass tc = new TransClass("de.unifr.acp.trafo.TestClassWithAnnotatedMethod");
-        CtClass target = ClassPool.getDefault().get(
-                "de.unifr.acp.trafo.TestClassWithAnnotatedMethod");
-        tc.doTransform(target, !target.getSuperclass().equals(objectClass));
-        target.writeFile();
-        target.defrost();
+        ClassPool defaultPool = ClassPool.getDefault();
+        CtClass target = defaultPool.get(TEST_BASICS_NAME);
+        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
         
-        target = ClassPool.getDefault().get(
-                "de.unifr.acp.trafo.TestArrayClass");
-        tc.doTransform(target, !target.getSuperclass().equals(objectClass));
-        target.writeFile();
-        target.defrost();
-
-        fail("Not yet implemented");
+        target = defaultPool.get(
+                TEST_ARRAY_CLASS_NAME);
+        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
+    }
+    
+    @Test
+    public void testDoTransformAndRun() throws Throwable {
+        ClassPool defaultPool = ClassPool.getDefault();
+        CtClass target = defaultPool.get(TEST_BASICS_NAME);
+        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
+//        if (target.isModified()) {
+//            target.debugWriteFile("bin");
+//        }
+        javassist.Loader cl = new javassist.Loader(defaultPool);
+        
+        // run with javassist's class loader to enable 'reloading' of test class
+        cl.run(TEST_BASICS_NAME, new String[] {});
+    }
+    
+    @Test
+    public void testDoTransformTreeNode() throws Throwable {
+        ClassPool defaultPool = ClassPool.getDefault();
+//        CtClass target = defaultPool.get(TREE_NODE_NAME);
+//        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
+        TransClass.transformHierarchy(TREE_NODE_NAME);
+//        if (target.isModified()) {
+//            target.writeFile("bin");
+//        }
+        javassist.Loader cl = new javassist.Loader(defaultPool);
+        
+        // run with javassist's class loader to enable 'reloading' of test class
+        cl.run(TREE_NODE_NAME, new String[] { "200", "balanced", "annotated" });
     }
 
     @Test
     public void testComputeReachableClasses() throws NotFoundException,
             IOException, CannotCompileException {
-        TransClass tc = new TransClass("de.unifr.acp.trafo.TestEmptyClass");
+        TransClass tc = new TransClass(TEST_EMPTY_CLASS_NAME);
         List<String> expected = Arrays
-                .asList("de.unifr.acp.trafo.TestEmptyClass");
+                .asList(TEST_EMPTY_CLASS_NAME);
         checkMap(tc, expected);
 
-        tc = new TransClass("de.unifr.acp.trafo.TestIntClass");
-        expected = Arrays.asList("de.unifr.acp.trafo.TestIntClass");
+        tc = new TransClass(TEST_INT_CLASS_NAME);
+        expected = Arrays.asList(TEST_INT_CLASS_NAME);
         checkMap(tc, expected);
 
-        tc = new TransClass("de.unifr.acp.trafo.TestCompoundClass");
-        expected = Arrays.asList("de.unifr.acp.trafo.TestCompoundClass",
-                "de.unifr.acp.trafo.TestEmptyClass",
-                "de.unifr.acp.trafo.TestIntClass");
+        tc = new TransClass(TEST_COMPOUND_CLASS_NAME);
+        expected = Arrays.asList(TEST_COMPOUND_CLASS_NAME,
+                TEST_EMPTY_CLASS_NAME,
+                TEST_INT_CLASS_NAME);
         checkMap(tc, expected);
 
         tc = new TransClass("de.unifr.acp.trafo.TestEmptySubclass");
         expected = Arrays.asList("de.unifr.acp.trafo.TestEmptySubclass",
-                "de.unifr.acp.trafo.TestEmptyClass");
+                TEST_EMPTY_CLASS_NAME);
         checkMap(tc, expected);
 
         tc = new TransClass("de.unifr.acp.trafo.TestCompoundSubclass");
         expected = Arrays.asList("de.unifr.acp.trafo.TestCompoundSubclass",
-                "de.unifr.acp.trafo.TestEmptyClass",
-                "de.unifr.acp.trafo.TestIntClass",
-                "de.unifr.acp.trafo.TestCompoundClass");
+                TEST_EMPTY_CLASS_NAME,
+                TEST_INT_CLASS_NAME,
+                TEST_COMPOUND_CLASS_NAME);
         checkMap(tc, expected);
 
     }
@@ -149,7 +182,7 @@ public class TransClassTest {
     public void testCreateBody() throws NotFoundException,
             FileNotFoundException {
         CtClass target = ClassPool.getDefault().get(
-                "de.unifr.acp.trafo.TestEmptyClass");
+                TEST_EMPTY_CLASS_NAME);
         String result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
@@ -158,7 +191,7 @@ public class TransClassTest {
                         "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\n}",
                         result);
 
-        target = ClassPool.getDefault().get("de.unifr.acp.trafo.TestIntClass");
+        target = ClassPool.getDefault().get(TEST_INT_CLASS_NAME);
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
@@ -176,7 +209,7 @@ public class TransClassTest {
                         result);
 
         target = ClassPool.getDefault().get(
-                "de.unifr.acp.trafo.TestCompoundClass");
+                TEST_COMPOUND_CLASS_NAME);
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
@@ -185,7 +218,7 @@ public class TransClassTest {
                 result);
 
         target = ClassPool.getDefault()
-                .get("de.unifr.acp.trafo.TestArrayClass");
+                .get(TEST_ARRAY_CLASS_NAME);
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
