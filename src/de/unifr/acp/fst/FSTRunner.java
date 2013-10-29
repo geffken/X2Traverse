@@ -160,6 +160,7 @@ public final class FSTRunner implements Cloneable {
         Set<State> stts = new HashSet<State>();
         Permission maxPermission = Permission.NONE;
         for (State state : states) {
+            Set<State> tmpStates;
             Set<StateAndPermission> sAndPs = state.applyTransitionRelation(inputChar);
             for (StateAndPermission sAndP : sAndPs) {
                 stts.add(sAndP.getState());
@@ -172,7 +173,7 @@ public final class FSTRunner implements Cloneable {
          * Creates a temporary HashSet in order not to conflict with the
          * extended transitions (EPSI transitions).
          */
-        HashSet<StateAndPermission> statePermStep = new HashSet<StateAndPermission>();
+        HashSet<StateAndPermission> statePermStep = new HashSet<StateAndPermission>(stts.size());
         if (stts != null) {
             for (State st : stts) {
                 if (FSTRunner.debug) {
@@ -184,8 +185,7 @@ public final class FSTRunner implements Cloneable {
             }
         }
         
-        Set<StateAndPermission> ret = new HashSet<>();
-        ret.addAll(statePermStep);
+        Set<StateAndPermission> ret = new HashSet<>(statePermStep);
         if (stts != null) {
             transitiveEpsilonExtension(ret, stts);
         }
@@ -237,7 +237,7 @@ public final class FSTRunner implements Cloneable {
             if (set.size() == oldSize) {
                 return;
             }
-            Set<State> newStates = new HashSet<>();
+            Set<State> newStates = new HashSet<>(stateAndPerms.size());
             for (StateAndPermission sAndP : stateAndPerms) {
                 newStates.add(sAndP.getState());
                 if (FSTRunner.debug) {
@@ -284,16 +284,34 @@ public final class FSTRunner implements Cloneable {
         return transitiveEpsilonClosure(Arrays.asList(states));
     }
     
+//    private Set<State> transitiveEpsilonClosure(Collection<State> states) {
+//        Set<State> ret = new HashSet<State>(states);
+//        for (State state : states) {
+//            ret.addAll(state.applyStateTransition(State.EPSILON));
+//        }
+//        if (ret.size() != states.size()) {
+//            return transitiveEpsilonClosure(ret);
+//        }
+//        return ret;
+//    }
+    
     private Set<State> transitiveEpsilonClosure(Collection<State> states) {
-        Set<State> ret = new HashSet<State>();
-        ret.addAll(states);
-        for (State state : states) {
-            ret.addAll(state.applyStateTransition(State.EPSILON));
+        Set<State> result = new HashSet<State>(states);
+        Set<State> newStates = new HashSet<State>(result);
+        
+        while (!newStates.isEmpty()) {
+            Set<State> brandNewStates = new HashSet<State>();
+            for (State state : newStates) {
+                for (State st : state.applyStateTransition(State.EPSILON)) {
+                    if ((!result.contains(st)) && (!newStates.contains(st))) {
+                        brandNewStates.add(st);
+                    }
+                }
+            }
+            result.addAll(newStates);
+            newStates=brandNewStates;
         }
-        if (ret.size() != states.size()) {
-            return transitiveEpsilonClosure(ret);
-        }
-        return ret;
+        return result;
     }
 
     /**
