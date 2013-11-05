@@ -2,15 +2,16 @@ package de.unifr.acp.fst;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * This class represents a runner for a {@link FST}. The runner can perform a
- * step-wise run. The target automaton being run can be in multiple states
- * at once (backtracking is avoided). The runner does not mutate the underlying
- * FST (states, transitions, etc.) but is only mutable in the set of current
- * states.
+ * This class represents a runner for a non-deterministic machine {@link FST}.
+ * The runner can perform a step-wise run. The target automaton being run can be
+ * in multiple states at once (backtracking is avoided). The runner does not
+ * mutate the underlying FST (states, transitions, etc.) but is only mutable in
+ * the set of current states.
  * 
  * @author Mohammad Shahabi
  * @author geffken
@@ -26,12 +27,9 @@ public final class FSTRunner implements Cloneable {
     public static boolean debug = false;
 
     /**
-     * This is a runner for a non-deterministic machine. It can be at multiple states
-     * from the start (epsilon closure).<br>
-     * Also after any state transition the {@link State#EPSILON}
-     * transitions need to be considered.
+     * Unmodifiable set of current states.
      */
-    private HashSet<State> statusQuo = new HashSet<State>();
+    private Set<State> statusQuo = Collections.<State>emptySet();
 
     /**
      * The {@link FST} this runner is running.
@@ -46,7 +44,7 @@ public final class FSTRunner implements Cloneable {
         this.machine = fst;
         reset();
     }
-    
+
     /**
      * Get this runner's current machine states.
      * 
@@ -69,10 +67,10 @@ public final class FSTRunner implements Cloneable {
         // Checks whether the input complies with the automaton's alphabet
         if (getMachine().getInputAlphabet().valid(input)) {
             reset();
-            
+
             // the output of the executed FST
             StringBuilder output = new StringBuilder();
-            
+
             /*
              * Split the input by '.' and iteratively call step for each member.
              */
@@ -83,7 +81,7 @@ public final class FSTRunner implements Cloneable {
                 output.append(',');
             }
             String result = output.toString();
-            
+
             // removes the last ',' from the String
             result = result.substring(0, result.length() - 1);
             printResult(getMachine(), input, result);
@@ -94,7 +92,7 @@ public final class FSTRunner implements Cloneable {
         }
     }
 
-    /**
+/**
      * Convenience method.
      * 
      * Calls {@link fst.FST#step(inputChar) after a reset.
@@ -123,20 +121,21 @@ public final class FSTRunner implements Cloneable {
         for (State state : statusQuo) {
             set.addAll(step(state, inputChar));
         }
-        statusQuo = new HashSet<State>();
+        Set<State> newStatusQuo = new HashSet<State>(set.size());
         for (StateAndPermission stateAndPerm : set) {
-            statusQuo.add(stateAndPerm.getState());
+            newStatusQuo.add(stateAndPerm.getState());
         }
+        statusQuo = Collections.unmodifiableSet(newStatusQuo);
 
         Permission perm = getMaxPermission(set);
-        
+
         if (FSTRunner.debug) {
             System.out.println("The permission is: " + perm);
             System.out.println("_____________________________________________");
         }
         return perm;
     }
-    
+
     /**
      * Adds all the possible state transitions from the {@code inputState},
      * consuming {@code inputCharacter} to the possible state transitions.
@@ -145,23 +144,24 @@ public final class FSTRunner implements Cloneable {
      *            The {@link State} in which we are supposed to find possible
      *            transitions
      * @param inputChar
-     *            The (non-epsilon) input that has to be consumed on the generated
-     *            {@link FST}
+     *            The (non-epsilon) input that has to be consumed on the
+     *            generated {@link FST}
      * @return A set of {@link StateAndPermission} which are possible to take
      *         consuming the {@code inputCharacter}
      */
     private Set<StateAndPermission> step(final State inputState,
             final String inputChar) {
-        
+
         // transitive epsilon closure of inputState (ignore output permissions)
         final Set<State> states = transitiveEpsilonClosure(inputState);
-        
+
         // state set
         Set<State> stts = new HashSet<State>();
         Permission maxPermission = Permission.NONE;
         for (State state : states) {
             Set<State> tmpStates;
-            Set<StateAndPermission> sAndPs = state.applyTransitionRelation(inputChar);
+            Set<StateAndPermission> sAndPs = state
+                    .applyTransitionRelation(inputChar);
             for (StateAndPermission sAndP : sAndPs) {
                 stts.add(sAndP.getState());
                 maxPermission = Permission.union(maxPermission,
@@ -173,7 +173,8 @@ public final class FSTRunner implements Cloneable {
          * Creates a temporary HashSet in order not to conflict with the
          * extended transitions (EPSI transitions).
          */
-        HashSet<StateAndPermission> statePermStep = new HashSet<StateAndPermission>(stts.size());
+        HashSet<StateAndPermission> statePermStep = new HashSet<StateAndPermission>(
+                stts.size());
         if (stts != null) {
             for (State st : stts) {
                 if (FSTRunner.debug) {
@@ -184,7 +185,7 @@ public final class FSTRunner implements Cloneable {
                 statePermStep.add(new StateAndPermission(st, maxPermission));
             }
         }
-        
+
         Set<StateAndPermission> ret = new HashSet<>(statePermStep);
         if (stts != null) {
             transitiveEpsilonExtension(ret, stts);
@@ -212,25 +213,26 @@ public final class FSTRunner implements Cloneable {
     }
 
     /**
-     * Recursively sums up and adds all via {@link State#EPSILON}
-     * transitions transitively reachable states and permissions to the in/out
-     * parameter <code>set</code>. The added set excludes the initial state and
-     * thus is not the epsilon closure.
+     * Recursively sums up and adds all via {@link State#EPSILON} transitions
+     * transitively reachable states and permissions to the in/out parameter
+     * <code>set</code>. The added set excludes the initial state and thus is
+     * not the epsilon closure.
      * 
      * @param set
-     *            In/out parameter. The set of current {@link StateAndPermission}s
-     *            where each state is associated with the last transition's output
-     *            permission
+     *            In/out parameter. The set of current
+     *            {@link StateAndPermission}s where each state is associated
+     *            with the last transition's output permission
      * @param state
      *            The {@link State} that is to be checked for
      *            {@link State#EPSILON} transitions
      */
-    private void transitiveEpsilonExtension(
-            final Set<StateAndPermission> set, final State state) {
+    private void transitiveEpsilonExtension(final Set<StateAndPermission> set,
+            final State state) {
         if (state != null) {
-            Set<StateAndPermission> stateAndPerms = state.applyTransitionRelation(State.EPSILON);
-            assert  (stateAndPerms != null);
-            
+            Set<StateAndPermission> stateAndPerms = state
+                    .applyTransitionRelation(State.EPSILON);
+            assert (stateAndPerms != null);
+
             // ensure termination (there can be epsilon cycles)
             int oldSize = set.size();
             set.addAll(stateAndPerms);
@@ -250,21 +252,22 @@ public final class FSTRunner implements Cloneable {
             transitiveEpsilonExtension(set, newStates);
         }
     }
-    
-    private void transitiveEpsilonExtension(
-            final Set<StateAndPermission> set, final Set<State> states) {
+
+    private void transitiveEpsilonExtension(final Set<StateAndPermission> set,
+            final Set<State> states) {
         if (states != null) {
             for (State state : states) {
                 transitiveEpsilonExtension(set, state);
             }
         }
     }
-    
+
     /**
      * @deprecated
      */
     private final Set<StateAndPermission> applyEpsilon(final State state) {
-        Set<StateAndPermission> stateAndPerms = state.applyTransitionRelation(State.EPSILON);
+        Set<StateAndPermission> stateAndPerms = state
+                .applyTransitionRelation(State.EPSILON);
         assert stateAndPerms != null;
         return stateAndPerms;
     }
@@ -283,22 +286,22 @@ public final class FSTRunner implements Cloneable {
     private Set<State> transitiveEpsilonClosure(State... states) {
         return transitiveEpsilonClosure(Arrays.asList(states));
     }
-    
-//    private Set<State> transitiveEpsilonClosure(Collection<State> states) {
-//        Set<State> ret = new HashSet<State>(states);
-//        for (State state : states) {
-//            ret.addAll(state.applyStateTransition(State.EPSILON));
-//        }
-//        if (ret.size() != states.size()) {
-//            return transitiveEpsilonClosure(ret);
-//        }
-//        return ret;
-//    }
-    
+
+    // private Set<State> transitiveEpsilonClosure(Collection<State> states) {
+    // Set<State> ret = new HashSet<State>(states);
+    // for (State state : states) {
+    // ret.addAll(state.applyStateTransition(State.EPSILON));
+    // }
+    // if (ret.size() != states.size()) {
+    // return transitiveEpsilonClosure(ret);
+    // }
+    // return ret;
+    // }
+
     private Set<State> transitiveEpsilonClosure(Collection<State> states) {
         Set<State> result = new HashSet<State>(states);
         Set<State> newStates = new HashSet<State>(result);
-        
+
         while (!newStates.isEmpty()) {
             Set<State> brandNewStates = new HashSet<State>();
             for (State state : newStates) {
@@ -309,7 +312,7 @@ public final class FSTRunner implements Cloneable {
                 }
             }
             result.addAll(newStates);
-            newStates=brandNewStates;
+            newStates = brandNewStates;
         }
         return result;
     }
@@ -318,20 +321,24 @@ public final class FSTRunner implements Cloneable {
      * Moves to the beginning of this runner's {@link FST}.
      */
     public void reset() {
-        statusQuo = new HashSet<State>();
-        statusQuo.add(getMachine().getStartState());
+        Set<State> startStates = new HashSet<State>();
+        startStates.add(getMachine().getStartState());
+        statusQuo = Collections.unmodifiableSet(startStates);
 
         // as long as we do an epsilon closure before and after each step
         // there is no need to do one here
     }
-    
+
     @Override
     public FSTRunner clone() throws CloneNotSupportedException {
         FSTRunner clone = (FSTRunner) super.clone();
-        clone.statusQuo = (HashSet<State>)statusQuo.clone();
+
+        // Clone can be avoided if we never modify statusQuo but replace it.
+        // Does this invariant hold? Yes!
+        // clone.statusQuo = Collections.unmodifiableSet(statusQuo);
         return clone;
     }
-    
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -374,13 +381,12 @@ public final class FSTRunner implements Cloneable {
      * @param machine
      *            {@link FST}
      * @param input
-     *            inputString which has been run over the generated
-     *            {@link FST}
+     *            inputString which has been run over the generated {@link FST}
      * @param result
      *            output of the run
      */
-    private static void printResult(final FST machine,
-            final String input, final String result) {
+    private static void printResult(final FST machine, final String input,
+            final String result) {
         System.out.println("-----------FSTRun-----------");
         System.out.println(machine.getContracts().trim());
         System.out.println(input);
