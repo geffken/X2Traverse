@@ -83,6 +83,11 @@ public enum Permission {
         return ret;
     }
     
+    /* p1.containsAll(p2) */
+    public static boolean containsAll(Permission p1, Permission p2) {
+        return (p2.ordinal() & ~p1.ordinal()) == 0;
+    }
+    
     public boolean containsAll(Permission p) {
         return (p.ordinal() & ~this.ordinal()) == 0;
     }
