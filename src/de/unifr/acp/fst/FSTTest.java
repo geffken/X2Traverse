@@ -4,8 +4,11 @@ import static org.junit.Assert.assertEquals;
 import static de.unifr.acp.fst.Permission.NONE;
 import static de.unifr.acp.fst.Permission.READ_ONLY;
 import static de.unifr.acp.fst.Permission.READ_WRITE;
+import static java.util.Arrays.asList;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import org.junit.Test;
@@ -79,6 +82,24 @@ public class FSTTest {
         assertEquals(READ_ONLY+","+READ_WRITE, runner.runFromScratch("x.c"));
     }
     
+    public static <T> String toSeparatedString(String separator, T... elements) {
+        List<T> list = Arrays.asList(elements);
+        StringBuilder sb = new StringBuilder();
+        Iterator<T> it = list.iterator();
+        if (it.hasNext()) {
+            sb.append(it.next());
+        }
+        while (it.hasNext()) {
+            sb.append(separator);
+            sb.append(it.next());
+        }
+        return sb.toString();
+    }
+    
+    public static String toPermissionsString(Permission... permisssions) {
+        return toSeparatedString(",", permisssions);
+    }
+    
     /**
      * Expressions containing + modifier.
      */
@@ -86,16 +107,16 @@ public class FSTTest {
     public final void testRunPlus() {
         FST machine = new FST("x.a+");
         FSTRunner runner = new FSTRunner(machine);
-        assertEquals(READ_ONLY.toString(), runner.runFromScratch("x"));
-        assertEquals(READ_ONLY+","+READ_WRITE, runner.runFromScratch("x.a"));
-        assertEquals(READ_ONLY+","+READ_WRITE+","+READ_WRITE, runner.runFromScratch("x.a.a"));
-        assertEquals(READ_ONLY+","+READ_WRITE+","+NONE, runner.runFromScratch("x.a.b"));
+        assertEquals(toPermissionsString(READ_ONLY), runner.runFromScratch("x"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_WRITE), runner.runFromScratch("x.a"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_WRITE,READ_WRITE), runner.runFromScratch("x.a.a"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_WRITE,NONE), runner.runFromScratch("x.a.b"));
         machine = new FST("x.a+.b+");
         runner = new FSTRunner(machine);
-        assertEquals(READ_ONLY.toString(), runner.runFromScratch("x"));
-        assertEquals(READ_ONLY+","+READ_ONLY, runner.runFromScratch("x.a"));
-        assertEquals(READ_ONLY+","+READ_ONLY+","+READ_ONLY, runner.runFromScratch("x.a.a"));
-        assertEquals(READ_ONLY+","+READ_ONLY+","+READ_WRITE, runner.runFromScratch("x.a.b"));
+        assertEquals(toPermissionsString(READ_ONLY), runner.runFromScratch("x"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_ONLY), runner.runFromScratch("x.a"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_ONLY,READ_ONLY), runner.runFromScratch("x.a.a"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_ONLY,READ_WRITE), runner.runFromScratch("x.a.b"));
     }
 
     /**
