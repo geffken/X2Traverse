@@ -1,5 +1,10 @@
 package de.unifr.acp.trafo;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
+
 import de.unifr.acp.annot.Grant;
 
 public class TreeNode {
@@ -47,6 +52,43 @@ public class TreeNode {
     public void computeForcesDelegator() {
         computeForcesUnannotated();
     }
+    
+    public void computeForcesIterative() {
+        Deque<TreeNode> stack = new ArrayDeque<TreeNode>();
+        
+        stack.push(this);
+        
+        boolean doneLeft = false;
+        boolean doneRight = false;
+        while (!stack.isEmpty()) {
+            TreeNode current = stack.peek();
+            
+            /* reads mass writes force */
+            current.force = current.mass * R_GRAV;
+            
+            if (current.left != null && !doneLeft) {
+                stack.push(current.left);
+                doneLeft = false;
+                doneRight = false;
+            } else if (current.right != null && !doneRight) {
+                stack.push(current.right);
+                doneLeft = false;
+                doneRight = false;
+            } else if (!stack.isEmpty()) {
+                TreeNode popped = stack.pop();
+                if (!stack.isEmpty() && stack.peek().right == popped) {
+                    doneLeft = true;
+                    doneRight = true;
+                } else if (!stack.isEmpty() && stack.peek().left == popped) {
+                    doneLeft = true;
+                    doneRight = false;
+                } else {
+                    doneLeft = false;
+                    doneRight = false;
+                }
+            }
+        }
+    }
 
     public void computeForcesUnannotated() {
         /* reads mass writes force */
@@ -65,6 +107,17 @@ public class TreeNode {
          */
         if (right != null)
             right.computeForcesUnannotated();
+    }
+    
+    @Grant("this.force, this.mass.@")
+    public void computeForce() {
+        /* reads mass writes force */
+        this.force = this.mass * R_GRAV;
+    }
+    
+    public void computeForceUnannotated() {
+        /* reads mass writes force */
+        this.force = this.mass * R_GRAV;
     }
     
     public static void main(String[] args) {
@@ -101,10 +154,24 @@ public class TreeNode {
                 root.computeForcesUnannotated();
             }
             System.out.println("Time: "+(System.currentTimeMillis()-start));
+        } else if (args[2].equals("flat")) {
+            root.computeForce();
+            long start = System.currentTimeMillis();
+            for (int j = 0; j < 100; j++) {
+                root.computeForce();
+            }
+            System.out.println("Time: "+(System.currentTimeMillis()-start));
+        } else if (args[2].equals("flat-unannotated")) {
+            root.computeForceUnannotated();
+            long start = System.currentTimeMillis();
+            for (int j = 0; j < 100; j++) {
+                root.computeForceUnannotated();
+            }
+            System.out.println("Time: "+(System.currentTimeMillis()-start));
         }
     }
 
-    private static TreeNode genBalancedTree(int n) {
+    public static TreeNode genBalancedTree(int n) {
         if (n == 0) {
             return null;
         } else {
@@ -113,7 +180,7 @@ public class TreeNode {
         }
     }
     
-    private static TreeNode genDegenerateTree(int n) {
+    public static TreeNode genDegenerateTree(int n) {
         if (n == 0) {
             return null;
         } else {

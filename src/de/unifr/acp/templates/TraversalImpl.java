@@ -19,7 +19,7 @@ public class TraversalImpl implements Traversal__ {
     /*
      * a Set<Object x FSTRunner> of already visited pairs
      */
-    private static Set<ObjectAndFSTRunner> visitedPairs = new HashSet<ObjectAndFSTRunner>();
+    private Set<ObjectAndFSTRunner> visitedPairs = new HashSet<ObjectAndFSTRunner>();
     Map<Object, Map<String, Permission>> locPerms;
 
     /**
@@ -60,15 +60,17 @@ public class TraversalImpl implements Traversal__ {
             Permission currentLocPerm = fp.containsKey(fieldName) ? fp
                     .get(fieldName) : Permission.NONE;
             Permission resultPerm = intersection(
-                    Global.installedPermission(obj, fieldName),
+                    Global.installedPermission(obj, fieldName), // redundant if fp.containsKey(fieldName)
                     union(currentLocPerm, newPerm));
 
             // save resulting permission
             fp.put(fieldName, resultPerm);
 
             // make sure termination
-            ObjectAndFSTRunner currentObjAndRunner = new ObjectAndFSTRunner(obj, runner);
-            if (visitedPairs.contains(currentObjAndRunner)) {    
+            ObjectAndFSTRunner currentObjAndRunner = new ObjectAndFSTRunner(fieldvalue, runner);
+            if (runner.getStatusQuo().isEmpty()) {
+                return; // no chance to reach locations with non-standard permission - terminate
+            } else if (visitedPairs.contains(currentObjAndRunner)) {    
                 return; // terminate heap traversal
             } else {
                 visitedPairs.add(currentObjAndRunner);
@@ -110,8 +112,36 @@ public class TraversalImpl implements Traversal__ {
 
     @Override
     public void visitPrimitive__(Object obj, String fieldName) {
-        // TODO Auto-generated method stub
-        
+        try {
+            // remember automaton state
+            FSTRunner currentRunner = runner.clone();
+
+            // get field permissions for object under consideration
+            final Map<String, Permission> fp = getOrCreateFieldPerms(
+                    locPerms, obj);
+
+            // step automaton according to field name
+            // (for now contracts contain unqualified field names)
+            Permission newPerm = runner.step(unqualifiedFieldNameFromFieldName(fieldName));
+
+            // calculate effective permission from installed permission,
+            // this automaton's permission and permissions for this object/field
+            // from current location permission (or NONE)
+            Permission currentLocPerm = fp.containsKey(fieldName) ? fp
+                    .get(fieldName) : Permission.NONE;
+            Permission resultPerm = intersection(
+                    Global.installedPermission(obj, fieldName),
+                    union(currentLocPerm, newPerm));
+
+            // save resulting permission
+            fp.put(fieldName, resultPerm);
+            
+            // backtrack to previous automaton state
+            this.runner = currentRunner;
+        } catch (CloneNotSupportedException e) {
+            // print unexpected exception
+            e.printStackTrace();
+        }
     }
 
 }

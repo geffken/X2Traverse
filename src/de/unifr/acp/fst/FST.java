@@ -1,6 +1,5 @@
 package de.unifr.acp.fst;
 
-import static de.unifr.acp.fst.State.EPSILON;
 import static de.unifr.acp.fst.MetaCharacters.QUESTION_MARK;
 
 import java.io.IOException;
@@ -10,12 +9,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import de.unifr.acp.annot.Grant;
 import de.unifr.acp.contract.Concat;
 import de.unifr.acp.contract.Identifier;
 import de.unifr.acp.contract.Or;
@@ -45,7 +42,7 @@ public class FST {
      * To see the generated ({@link FST}).
      * @see FST#debugPrint()
      */
-    public static boolean debug = true;
+    public static boolean debug = false;
 
     /**
      * The allowed {@link Alphabet}.

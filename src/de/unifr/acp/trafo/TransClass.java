@@ -24,6 +24,7 @@ import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.SyntheticAttribute;
+import javassist.expr.ConstructorCall;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
 import javassist.expr.MethodCall;
@@ -163,7 +164,8 @@ public class TransClass {
      */
     public static void doTransform(CtClass target, boolean hasSuperclass)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
-
+        ClassPool.getDefault().importPackage("java.util");
+        
         // add: implements TRAVERSALTARGET
         List<CtClass> targetIfs = Arrays.asList(target.getInterfaces());
         Collection<CtClass> newTargetIfs = new HashSet<CtClass>(targetIfs);
@@ -171,7 +173,7 @@ public class TransClass {
         // NOTE: Given the equality semantics of CtClass the condition is only
         // valid if the CtClass instance representing the traversal interface is
         // never detached from the ClassPool as this would result in a new
-        // CtClass instance representing the traversal interface to be generated
+        // CtClass instance (representing the traversal interface) to be generated
         // by a call to ClassPool.get(...) not being equal to the old instance.
         
         // only generate implementation of traversal interface if not yet present
@@ -320,7 +322,6 @@ public class TransClass {
                         sb.append("    Map allLocPerms = visitor.getLocationPermissions();");
                         //sb.append("    System.out.println(\"allLocPerms: \"+allLocPerms);");
                         sb.append("  }");
-                        
                         // TODO: explicit representation of locations and location permissions (supporting join)
                         // (currently it's all generic maps and implicit joins in visitor similar to Maxine implementation)
                         
@@ -328,9 +329,9 @@ public class TransClass {
                     }
                     
                     // install allLocPerms and push new objects set on (current thread's) stack
-                    sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
                     //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
+                    sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
                     
                     // TODO: figure out how to instrument thread start/end and field access
@@ -343,6 +344,8 @@ public class TransClass {
 
                     // pop location permissions and new locations entry from
                     // (current thread's) stack
+                    //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
+                    //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
                     sb.append("de.unifr.acp.templates.Global.locPermStack.pop();");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.pop();");
                     String footer = sb.toString();
@@ -377,14 +380,16 @@ public class TransClass {
                     String qualifiedFieldName = expr.getClassName() + "."
                             + expr.getFieldName();
 
-                    // exclude standard API
+                    // exclude standard API (to be factored out)
                     if (!(qualifiedFieldName.startsWith("java") || qualifiedFieldName
                             .startsWith("javax"))) {
                         StringBuilder code = new StringBuilder();
                         code.append("{");
 
                         // get active permission for location to access
-                        code.append("de.unifr.acp.fst.Permission effectivePerm = de.unifr.acp.templates.Global.installedPermission($0, \""
+                        code.append("if (!de.unifr.acp.templates.Global.newObjectsStack.isEmpty()) {");
+                        
+                        code.append("de.unifr.acp.fst.Permission effectivePerm = de.unifr.acp.templates.Global.installedPermissionStackNotEmpty($0, \""
                                 + qualifiedFieldName + "\");");
 
                         // get permission needed for this access
@@ -395,15 +400,18 @@ public class TransClass {
                                 + (expr.isReader() ? "1" : "2")
                                 + "];");
 
-                        code.append("if (!effectivePerm.containsAll(accessPerm)) {");
+                        //code.append("if (!effectivePerm.containsAll(accessPerm)) {");
+                        code.append("if (!de.unifr.acp.fst.Permission.containsAll(effectivePerm, accessPerm)) {");
                         code.append("  System.out.println(\"ACCESS VIOLATION:\");");
                         code.append("  System.out.println($0);");
                         code.append("  System.out.println(\""
                                 + qualifiedFieldName + "\");");
                         code.append("  System.out.println(\"effectivePerm: \"+effectivePerm);");
+                        code.append("  System.out.println(de.unifr.acp.templates.Global.locPermStack);");
                         code.append("  System.out.println();");
-                        code.append("  System.out.println(\"requiredPerm: \");");
+                        code.append("  System.out.println(\"requiredPerm: \"+accessPerm);");
                         code.append("  System.out.println();");
+                        code.append("}");
                         code.append("}");
 
                         if (expr.isReader()) {
@@ -432,15 +440,27 @@ public class TransClass {
         // expressions (in AspectJ this might work using Initialization Pointcut
         // Designators). Hence, we go for instrumenting the constructor.
         
-//        if (methodOrCtor instanceof CtConstructor) {
+        if (methodOrCtor instanceof CtConstructor) {
+            /*
+             * The following does not work because the code is inserted before
+             * this becomes a valid object (happens only after super/this calls).
+             */
 //            CtConstructor ctor = (CtConstructor)methodOrCtor;
 //            StringBuilder code = new StringBuilder();
-//            code.append("{");
-//            code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
-//            code.append("}");
-//            String header = code.toString();
-//            ctor.insertBefore(header);
-//        }
+//            code.append("{de.unifr.acp.templates.Global.addNewObject($0);}");
+//            ctor.insertBefore(code.toString());
+            
+//            methodOrCtor.instrument(new ExprEditor() {
+//                public void edit(ConstructorCall expr) throws CannotCompileException {
+//                    StringBuilder code = new StringBuilder();
+//                    code.append("{");
+//                    code.append("  $_ = $proceed($$);");
+//                    code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
+//                    code.append("}");
+//                    expr.replace(code.toString());
+//                  } 
+//            });
+        }
     }
     
     /*

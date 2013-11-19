@@ -98,7 +98,7 @@ public class TransClassTest {
     @Test
     public void testDoTransformTreeNode() throws Throwable {
         ClassPool defaultPool = ClassPool.getDefault();
-//        CtClass target = defaultPool.get(TREE_NODE_NAME);
+        CtClass target = defaultPool.get(TREE_NODE_NAME);
 //        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
         TransClass.transformHierarchy(TREE_NODE_NAME);
 //        if (target.isModified()) {
@@ -107,7 +107,8 @@ public class TransClassTest {
         javassist.Loader cl = new javassist.Loader(defaultPool);
         
         // run with javassist's class loader to enable 'reloading' of test class
-        cl.run(TREE_NODE_NAME, new String[] { "200", "balanced", "annotated" });
+        cl.run(TREE_NODE_NAME, new String[] { "280", "degenerate", "delegator" });
+        //TreeNode.main(new String[] { "1280", "degenerate", "delegator" });
     }
 
     @Test
