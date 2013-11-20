@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <?eclipse.ant.import ?>
 <project default="lexer" name="Build X2Traverse based on Javassist">
-    <!--<property name="sablecc.jar.location" location="lib/sablecc.jar"/>-->
     <property name="grammar.dir" value="grammar" />
     <property name="grammar.gensrc.dir" value="generated-src" />
-
-    <!--<taskdef name="sablecc"
-        classname="org.sablecc.ant.taskdef.Sablecc"
-        classpath="${sablecc.jar.location}"/>-->
 
     <target name="lexer" depends="parser">
         <java classname="JLex.Main" classpath="bin">
