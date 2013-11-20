@@ -14,29 +14,36 @@
         <pathelement location="lib/hamcrest-core-1.1.jar"/>
         <pathelement location="lib/junit-4.10.jar"/>
     </path>
-
-    <target name="lexer" depends="build-project, parser">
+	
+    <target name="lexer" depends="build-JLex,parser">
         <java classname="JLex.Main" classpath="bin">
-        	 <arg value="src/de/unifr/acp/parser/MyScanner.lex"/>		
+                 <arg value="src/de/unifr/acp/parser/MyScanner.lex"/>
         </java>
         <move file="src/de/unifr/acp/parser/MyScanner.lex.java" tofile="src/de/unifr/acp/parser/MyScanner.java"/>
     </target>
-	
+
     <target name="parser">
         <java fork="true" jar="lib/jay.jar" input="src/de/unifr/acp/parser/skeleton.java" output="src/de/unifr/acp/parser/MyParser.java">
-        	 <arg value="src/de/unifr/acp/parser/MyParser.jay"/>
+                 <arg value="src/de/unifr/acp/parser/MyParser.jay"/>
         </java>
     </target>
-    	
+
     <target name="init" description="Initialize directories">
         <tstamp/>
         <mkdir dir="bin"/>
         <mkdir dir="${grammar.gensrc.dir}" />
     </target>
-	
+
     <target name="clean" description="Clean-up">
         <delete quiet="true">
         </delete>
+    </target>
+
+    <target depends="init" name="build-JLex">
+        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}" encoding="utf-8" >
+            <src path="src"/>
+            <include name="JLex/Main.java"/>
+        </javac>
     </target>
 	
     <target depends="init" name="build-project">
