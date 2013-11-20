@@ -18,6 +18,7 @@ public class Main {
      */
     public static void main(String[] args) throws NotFoundException, ClassNotFoundException, IOException, CannotCompileException {
         String className = args[0];
+        String outputDir = (args.length >= 2) ? args[1] : "bin";
         ClassPool defaultPool = ClassPool.getDefault();
         CtClass target = defaultPool.get(className);
 //        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
@@ -25,7 +26,7 @@ public class Main {
 
         // condition needed to avoid bug in writing unmodified class files causing invalid class files
         if (target.isModified()) { 
-            target.writeFile("bin");
+            target.writeFile(outputDir);
         }
 
     }
