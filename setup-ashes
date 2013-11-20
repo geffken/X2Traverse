@@ -1,0 +1,6 @@
+#!/bin/sh
+export ASHES_SUITE_COLLECTION=/home/geffken/Downloads/ashesSuiteCollection
+export CLASSPATH=$CLASSPATH:/home/geffken/Downloads/ashesBase/classes
+export ASHES_JDK_CLASSES=/home/geffken/Downloads/jdk1.7.0_45/jre/rt
+export ASHES_PDS=:
+export PATH=$PATH:/home/geffken/Downloads/ashesBase/bin
