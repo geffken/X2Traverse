@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?eclipse.ant.import ?>
+<project default="lexer" name="Build X2Traverse based on Javassist">
+    <!--<property name="sablecc.jar.location" location="lib/sablecc.jar"/>-->
+    <property name="grammar.dir" value="grammar" />
+    <property name="grammar.gensrc.dir" value="generated-src" />
+
+    <!--<taskdef name="sablecc"
+        classname="org.sablecc.ant.taskdef.Sablecc"
+        classpath="${sablecc.jar.location}"/>-->
+
+    <target name="lexer" depends="parser">
+        <java classname="JLex.Main" classpath="bin">
+        	 <arg value="src/de/unifr/acp/parser/MyScanner.lex"/>		
+        </java>
+        <move file="src/de/unifr/acp/parser/MyScanner.lex.java" tofile="src/de/unifr/acp/parser/MyScanner.java"/>
+    </target>
+	
+    <target name="parser">
+        <java fork="true" jar="lib/jay.jar" input="src/de/unifr/acp/parser/skeleton.java" output="src/de/unifr/acp/parser/MyParser.java">
+        	 <arg value="src/de/unifr/acp/parser/MyParser.jay"/>
+        </java>
+    </target>
+    	
+    <target name="init" description="Initialize directories">
+        <tstamp/>
+        <mkdir dir="${grammar.gensrc.dir}" />
+    </target>
+	
+    <target name="clean" description="Clean-up">
+        <delete quiet="true">
+        </delete>
+    </target>
+	
+	<target name="jar"
+		description="Make an executable JAR file">
+		<jar destfile="x2traverse.jar">
+			<manifest>
+				<attribute name="Main-Class" value="de.unifr.acp.trafo.Main" />
+			</manifest>
+			<fileset dir="bin" >
+				<include name="**/*.class"/>
+			</fileset>
+	        <zipfileset src="lib/javassist.jar"/>
+			<fileset file="build.xml" />
+		</jar>
+	</target>
+</project>
