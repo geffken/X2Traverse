@@ -13,7 +13,7 @@
     	<pathelement location="lib/jay.jar"/>
     </path>
 
-    <target name="lexer" depends="parser">
+    <target name="lexer" depends="build-project, parser">
         <java classname="JLex.Main" classpath="bin">
         	 <arg value="src/de/unifr/acp/parser/MyScanner.lex"/>		
         </java>
@@ -37,7 +37,7 @@
         </delete>
     </target>
 	
-    <target depends="init,lexer" name="build-project">
+    <target depends="init" name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
             <src path="src"/>
