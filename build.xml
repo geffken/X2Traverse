@@ -4,6 +4,14 @@
     <property name="grammar.dir" value="grammar" />
     <property name="grammar.gensrc.dir" value="generated-src" />
     <property name="debuglevel" value="source,lines,vars"/>
+    <property name="target" value="1.7"/>
+    <property name="source" value="1.7"/>
+	
+    <path id="X2Traverse.classpath">
+        <pathelement location="bin"/>
+        <pathelement location="lib/javassist.jar"/>
+    	<pathelement location="lib/jay.jar"/>
+    </path>
 
     <target name="lexer" depends="parser">
         <java classname="JLex.Main" classpath="bin">
@@ -20,6 +28,7 @@
     	
     <target name="init" description="Initialize directories">
         <tstamp/>
+        <mkdir dir="bin"/>
         <mkdir dir="${grammar.gensrc.dir}" />
     </target>
 	
@@ -28,7 +37,7 @@
         </delete>
     </target>
 	
-    <target depends="init" name="build-project">
+    <target depends="init,lexer" name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
             <src path="src"/>
