@@ -3,6 +3,7 @@
 <project default="lexer" name="Build X2Traverse based on Javassist">
     <property name="grammar.dir" value="grammar" />
     <property name="grammar.gensrc.dir" value="generated-src" />
+    <property name="debuglevel" value="source,lines,vars"/>
 
     <target name="lexer" depends="parser">
         <java classname="JLex.Main" classpath="bin">
@@ -27,7 +28,17 @@
         </delete>
     </target>
 	
-	<target name="jar"
+    <target depends="init" name="build-project">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
+            <src path="src"/>
+            <src path="test"/>
+            <exclude name="de/unifr/acp/parser/skeleton.java"/>
+            <classpath refid="X2Traverse.classpath"/>
+        </javac>
+    </target>
+	
+	<target depends="build-project" name="jar"
 		description="Make an executable JAR file">
 		<jar destfile="x2traverse.jar">
 			<manifest>
