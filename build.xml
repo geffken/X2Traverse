@@ -11,6 +11,8 @@
         <pathelement location="bin"/>
         <pathelement location="lib/javassist.jar"/>
     	<pathelement location="lib/jay.jar"/>
+        <pathelement location="lib/hamcrest-core-1.1.jar"/>
+        <pathelement location="lib/junit-4.10.jar"/>
     </path>
 
     <target name="lexer" depends="build-project, parser">
