@@ -207,11 +207,12 @@ public class TransClass {
             methodsAndCtors.addAll(methods);
             methodsAndCtors.addAll(ctors);
             
+            for (CtConstructor ctor : ctors) {
+                instrumentNew(ctor);
+            }
             for (CtBehavior methodOrCtor : methodsAndCtors) {
                 
                 instrumentFieldAccess(methodOrCtor);
-                
-                instrumentNew(methodOrCtor);
                 
                 if (hasMethodGrantAnnotations(methodOrCtor)) {
                     
@@ -360,19 +361,6 @@ public class TransClass {
     
     private static void instrumentFieldAccess(CtBehavior methodOrCtor)
             throws CannotCompileException {
-//        final AtomicBoolean isInstrumented = new AtomicBoolean(false);
-//
-//        methodOrCtor.instrument(new ExprEditor() {
-//
-//            public void edit(MethodCall expr) throws CannotCompileException {
-//                String name = expr.getMethodName();
-//                if (name.equals(
-//                        "installedPermission")) {
-//                    isInstrumented.set(true);
-//                }
-//            }
-//        });
-
 //        if (!isInstrumented.get()) {
             methodOrCtor.instrument(new ExprEditor() {
                 public void edit(FieldAccess expr)
@@ -393,12 +381,12 @@ public class TransClass {
                                 + qualifiedFieldName + "\");");
 
                         // get permission needed for this access
-//                        code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
-//                                + (expr.isReader() ? "READ_ONLY" : "WRITE_ONLY")
-//                                + ";");
-                        code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission.values()["
-                                + (expr.isReader() ? "1" : "2")
-                                + "];");
+                        code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
+                                + (expr.isReader() ? "READ_ONLY" : "WRITE_ONLY")
+                                + ";");
+//                        code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission.values()["
+//                                + (expr.isReader() ? "1" : "2")
+//                                + "];");
 
                         //code.append("if (!effectivePerm.containsAll(accessPerm)) {");
                         code.append("if (!de.unifr.acp.fst.Permission.containsAll(effectivePerm, accessPerm)) {");
@@ -433,34 +421,28 @@ public class TransClass {
      * Instruments constructors to such that the constructed object is added to
      * the new objects stack's top entry.
      */
-    private static void instrumentNew(CtBehavior methodOrCtor) throws CannotCompileException {
-        
+    private static void instrumentNew(CtConstructor ctor)
+            throws CannotCompileException {
+
         // Apparently Javassist does not support instrumentation between new
         // bytecode and constructor using the expression editor on new
         // expressions (in AspectJ this might work using Initialization Pointcut
-        // Designators). Hence, we go for instrumenting the constructor.
-        
-        if (methodOrCtor instanceof CtConstructor) {
-            /*
-             * The following does not work because the code is inserted before
-             * this becomes a valid object (happens only after super/this calls).
-             */
-//            CtConstructor ctor = (CtConstructor)methodOrCtor;
-//            StringBuilder code = new StringBuilder();
-//            code.append("{de.unifr.acp.templates.Global.addNewObject($0);}");
-//            ctor.insertBefore(code.toString());
-            
-//            methodOrCtor.instrument(new ExprEditor() {
-//                public void edit(ConstructorCall expr) throws CannotCompileException {
-//                    StringBuilder code = new StringBuilder();
-//                    code.append("{");
-//                    code.append("  $_ = $proceed($$);");
-//                    code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
-//                    code.append("}");
-//                    expr.replace(code.toString());
-//                  } 
-//            });
-        }
+        // Designators). Hence, we go for instrumenting the constructor, but
+        // we need to make sure that the object is a valid by the time we
+        // add it to the new objects (after this() or super() call).
+
+        ctor.instrument(new ExprEditor() {
+            public void edit(ConstructorCall expr)
+                    throws CannotCompileException {
+                StringBuilder code = new StringBuilder();
+                code.append("{");
+                code.append("  $_ = $proceed($$);");
+                code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
+                code.append("}");
+                expr.replace(code.toString());
+            }
+        });
+
     }
     
     /*
