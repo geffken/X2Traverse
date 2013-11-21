@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <?eclipse.ant.import ?>
-<project default="lexer" name="Build X2Traverse based on Javassist">
+<project default="build-project" name="Build X2Traverse based on Javassist">
     <property name="grammar.dir" value="grammar" />
     <property name="grammar.gensrc.dir" value="generated-src" />
     <property name="debuglevel" value="source,lines,vars"/>
@@ -15,14 +15,14 @@
         <pathelement location="lib/junit-4.10.jar"/>
     </path>
 	
-    <target name="lexer" depends="build-JLex,parser">
+    <target name="lexer" depends="init,build-JLex,parser">
         <java classname="JLex.Main" classpath="bin">
                  <arg value="src/de/unifr/acp/parser/MyScanner.lex"/>
         </java>
         <move file="src/de/unifr/acp/parser/MyScanner.lex.java" tofile="src/de/unifr/acp/parser/MyScanner.java"/>
     </target>
 
-    <target name="parser">
+    <target name="parser" depends="init">
         <java fork="true" jar="lib/jay.jar" input="src/de/unifr/acp/parser/skeleton.java" output="src/de/unifr/acp/parser/MyParser.java">
                  <arg value="src/de/unifr/acp/parser/MyParser.jay"/>
         </java>
@@ -35,8 +35,9 @@
     </target>
 
     <target name="clean" description="Clean-up">
-        <delete quiet="true">
-        </delete>
+        <delete quiet="true" file="src/de/unifr/acp/parser/MyParser.java"/>
+    	<delete quiet="true" file="src/de/unifr/acp/parser/MyScanner.java"/>
+    	<delete dir="bin"/>
     </target>
 
     <target depends="init" name="build-JLex">
@@ -46,7 +47,7 @@
         </javac>
     </target>
 	
-    <target depends="init" name="build-project">
+    <target depends="init,lexer" name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}" encoding="utf-8" >
             <src path="src"/>
@@ -64,6 +65,7 @@
 			</manifest>
 			<fileset dir="bin" >
 				<include name="**/*.class"/>
+				<exclude name="JLex/*.class"/>
 			</fileset>
 	        <zipfileset src="lib/javassist.jar"/>
 			<fileset file="build.xml" />
