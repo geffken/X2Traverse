@@ -204,12 +204,15 @@ public class TransClass {
                 });
                 methodOrCtor.instrument(new ExprEditor() {
                     public void edit(Handler expr)
-                        throws CannotCompileException {
-                            try {
-                                referredTypes.add(expr.getType());
-                            } catch (NotFoundException e) {
-                                notFoundexceptions.add(e);
+                            throws CannotCompileException {
+                        try {
+                            CtClass type = expr.getType();
+                            if (type != null) {
+                                referredTypes.add(type);
                             }
+                        } catch (NotFoundException e) {
+                            notFoundexceptions.add(e);
+                        }
                     }
                 });
                 methodOrCtor.instrument(new ExprEditor() {
