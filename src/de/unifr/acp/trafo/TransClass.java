@@ -24,9 +24,12 @@ import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
 import javassist.bytecode.SyntheticAttribute;
+import javassist.expr.Cast;
 import javassist.expr.ConstructorCall;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
+import javassist.expr.Handler;
+import javassist.expr.Instanceof;
 import javassist.expr.MethodCall;
 import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
@@ -127,7 +130,7 @@ public class TransClass {
             enter(superclazz);
         }
         
-        List<CtClass> referredTypes = new ArrayList<CtClass>();
+        final List<CtClass> referredTypes = new ArrayList<CtClass>();
         CtField[] fs = target.getDeclaredFields();
         for (CtField f : fs) {
             CtClass ft = f.getType();
@@ -153,6 +156,85 @@ public class TransClass {
             referredTypes.addAll(exceptionTypes);
             List<CtClass> paramTypes = Arrays.asList(methodOrCtor.getParameterTypes());
             referredTypes.addAll(paramTypes);
+            
+            try {
+                final List<NotFoundException> notFoundexceptions = new ArrayList<NotFoundException>(1);
+                methodOrCtor.instrument(new ExprEditor() {
+                    public void edit(NewExpr expr)
+                        throws CannotCompileException {
+                            try {
+                                referredTypes.add(expr.getConstructor().getDeclaringClass());
+                            } catch (NotFoundException e) {
+                                notFoundexceptions.add(e);
+                            }
+                    }
+                });
+                methodOrCtor.instrument(new ExprEditor() {
+                    public void edit(Instanceof expr)
+                        throws CannotCompileException {
+                            try {
+                                referredTypes.add(expr.getType());
+                            } catch (NotFoundException e) {
+                                notFoundexceptions.add(e);
+                            }
+                    }
+                });
+                methodOrCtor.instrument(new ExprEditor() {
+                    public void edit(NewArray expr)
+                        throws CannotCompileException {
+                            try {
+                                referredTypes.add(expr.getComponentType());
+                            } catch (NotFoundException e) {
+                                notFoundexceptions.add(e);
+                            }
+                    }
+                });
+                methodOrCtor.instrument(new ExprEditor() {
+                    public void edit(MethodCall expr)
+                        throws CannotCompileException {
+                            try {
+                                referredTypes.add(expr.getMethod().getDeclaringClass());
+                            } catch (NotFoundException e) {
+                                notFoundexceptions.add(e);
+                            }
+                    }
+                });
+                methodOrCtor.instrument(new ExprEditor() {
+                    public void edit(Handler expr)
+                        throws CannotCompileException {
+                            try {
+                                referredTypes.add(expr.getType());
+                            } catch (NotFoundException e) {
+                                notFoundexceptions.add(e);
+                            }
+                    }
+                });
+                methodOrCtor.instrument(new ExprEditor() {
+                    public void edit(FieldAccess expr)
+                        throws CannotCompileException {
+                            try {
+                                referredTypes.add(expr.getField().getType());
+                            } catch (NotFoundException e) {
+                                notFoundexceptions.add(e);
+                            }
+                    }
+                });
+                methodOrCtor.instrument(new ExprEditor() {
+                    public void edit(Cast expr)
+                        throws CannotCompileException {
+                            try {
+                                referredTypes.add(expr.getType());
+                            } catch (NotFoundException e) {
+                                notFoundexceptions.add(e);
+                            }
+                    }
+                });
+                if (!notFoundexceptions.isEmpty()) {
+                    throw notFoundexceptions.get(0);
+                }
+            } catch (CannotCompileException e) {
+                // we do not compile and therefore expect no such exception
+            }
         }
         
         for (CtClass type : referredTypes) {
