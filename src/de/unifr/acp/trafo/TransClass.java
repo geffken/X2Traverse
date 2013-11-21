@@ -126,14 +126,41 @@ public class TransClass {
         if (hasSuperclass) {
             enter(superclazz);
         }
+        
+        List<CtClass> referredTypes = new ArrayList<CtClass>();
         CtField[] fs = target.getDeclaredFields();
         for (CtField f : fs) {
             CtClass ft = f.getType();
             if (ft.isPrimitive())
                 continue;
-            if (ft.getName().matches("java\\..*"))
+//            if (ft.getName().matches("java\\..*"))
+//                continue;
+//            enter(ft);
+            referredTypes.add(ft);
+        }
+
+        List<CtMethod> methods = Arrays.asList(target.getMethods());
+        for (CtMethod method : methods) {
+            List<CtClass> returnType = Arrays.asList(method.getReturnType());
+            referredTypes.addAll(returnType);
+        }
+        List<CtConstructor> ctors = Arrays.asList(target.getConstructors());
+        List<CtBehavior> methodsAndCtors = new ArrayList<CtBehavior>();
+        methodsAndCtors.addAll(methods);
+        methodsAndCtors.addAll(ctors);
+        for (CtBehavior methodOrCtor : methodsAndCtors) {
+            List<CtClass> exceptionTypes = Arrays.asList(methodOrCtor.getExceptionTypes());
+            referredTypes.addAll(exceptionTypes);
+            List<CtClass> paramTypes = Arrays.asList(methodOrCtor.getParameterTypes());
+            referredTypes.addAll(paramTypes);
+        }
+        
+        for (CtClass type : referredTypes) {
+            if (type.isPrimitive())
                 continue;
-            enter(ft);
+            if (type.getName().matches("java\\..*"))
+                continue;
+            enter(type); 
         }
     }
 
