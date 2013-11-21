@@ -164,7 +164,9 @@ public class TransClass {
     protected void flushTransform(String outputDir) throws NotFoundException, IOException,
             CannotCompileException {
         for (CtClass tc : visited.keySet()) {
-            tc.writeFile(outputDir);
+            if (!tc.isArray()) {
+                tc.writeFile(outputDir);
+            }
         }
     }
 
