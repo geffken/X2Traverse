@@ -22,12 +22,12 @@ public class Main {
         ClassPool defaultPool = ClassPool.getDefault();
         CtClass target = defaultPool.get(className);
 //        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
-        TransClass.transformHierarchy(className);
+        TransClass.transformHierarchy(className, outputDir);
 
         // condition needed to avoid bug in writing unmodified class files causing invalid class files
-        if (target.isModified()) { 
-            target.writeFile(outputDir);
-        }
+//        if (target.isModified()) { 
+//            target.writeFile(outputDir);
+//        }
 
     }
 
