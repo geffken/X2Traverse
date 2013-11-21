@@ -179,6 +179,9 @@ public class TransClass {
      */
     public static void doTransform(CtClass target, boolean hasSuperclass)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
+        if (target.isArray()) {
+            return;
+        }
         ClassPool.getDefault().importPackage("java.util");
         
         // add: implements TRAVERSALTARGET
