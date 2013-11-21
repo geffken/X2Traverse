@@ -1,6 +1,6 @@
 #!/bin/sh
 # further ASHES_JDK_CLASSES pointing to dir containing unzipped rt.jar needed for SOOT
-export ASHES_SUITE_COLLECTION=/home/geffken/Downloads/ashesSuiteCollection
+export ASHES_SUITE_COLLECTION=`pwd`/benchmarks/ashesSuiteCollection
 export CLASSPATH=$CLASSPATH:`pwd`/benchmarks/ashesBase/classes
 export ASHES_PDS=:
 export PATH=$PATH:`pwd`/benchmarks/ashesBase/bin
