@@ -72,15 +72,28 @@ public class TransClass {
     /**
      * Transforms all classes that are reachable from the class corresponding
      * to the specified class name.
-     * @param className the class name of the class spanning a reachable classes tree
-     * @param outputDir the relative output directory 
+     * @param className the class name of the class spanning a reachable classes tree 
      * @throws ClassNotFoundException 
      */
-    public static void transformHierarchy(String className, String outputDir)
+    public static TransClass transformHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         TransClass tc = new TransClass(className);
         tc.computeReachableClasses();
         tc.performTransform();
+        return tc;
+    }
+
+    /**
+     * Transforms all classes that are reachable from the class corresponding
+     * to the specified class name and flushes the resulting classes to the
+     * specified output directory.
+     * @param className the class name of the class spanning a reachable classes tree
+     * @param outputDir the relative output directory 
+     * @throws ClassNotFoundException 
+     */
+    public static void transformAndFlushHierarchy(String className, String outputDir)
+            throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
+        TransClass tc = transformHierarchy(className);
         tc.flushTransform(outputDir);
     }
 
