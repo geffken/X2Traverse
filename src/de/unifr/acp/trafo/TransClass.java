@@ -211,22 +211,23 @@ public class TransClass {
                 });
                 methodOrCtor.instrument(new ExprEditor() {
                     public void edit(FieldAccess expr)
-                        throws CannotCompileException {
-                            try {
-                                referredTypes.add(expr.getField().getType());
-                            } catch (NotFoundException e) {
-                                notFoundexceptions.add(e);
-                            }
+                            throws CannotCompileException {
+                        try {
+                            referredTypes.add(expr.getField().getType());
+                        } catch (NotFoundException e) {
+                            notFoundexceptions.add(e);
+                        }
                     }
                 });
                 methodOrCtor.instrument(new ExprEditor() {
-                    public void edit(Cast expr)
-                        throws CannotCompileException {
-                            try {
+                    public void edit(Cast expr) throws CannotCompileException {
+                        try {
+                            if (expr.getType() != null) {
                                 referredTypes.add(expr.getType());
-                            } catch (NotFoundException e) {
-                                notFoundexceptions.add(e);
                             }
+                        } catch (NotFoundException e) {
+                            notFoundexceptions.add(e);
+                        }
                     }
                 });
                 if (!notFoundexceptions.isEmpty()) {
