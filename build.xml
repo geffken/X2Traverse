@@ -6,7 +6,8 @@
     <property name="debuglevel" value="source,lines,vars"/>
     <property name="target" value="1.7"/>
     <property name="source" value="1.7"/>
-	
+	<property name="jarfile" value="x2traverse.jar"/>
+
     <path id="X2Traverse.classpath">
         <pathelement location="bin"/>
         <pathelement location="lib/javassist.jar"/>
@@ -38,6 +39,7 @@
         <delete quiet="true" file="src/de/unifr/acp/parser/MyParser.java"/>
     	<delete quiet="true" file="src/de/unifr/acp/parser/MyScanner.java"/>
     	<delete dir="bin"/>
+        <delete file="${jarfile}"/>
     </target>
 
     <target depends="init" name="build-JLex">
@@ -59,7 +61,7 @@
 	
 	<target depends="build-project" name="jar"
 		description="Make an executable JAR file">
-		<jar destfile="x2traverse.jar">
+		<jar destfile="${jarfile}">
 			<manifest>
 				<attribute name="Main-Class" value="de.unifr.acp.trafo.Main" />
 			</manifest>
