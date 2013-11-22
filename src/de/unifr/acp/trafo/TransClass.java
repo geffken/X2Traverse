@@ -62,6 +62,8 @@ public class TransClass {
     private final CtClass objectClass;
     public final String FILTER_TRANSFORM_REGEX_DEFAULT = "java\\..*";
     private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
+    public final String FILTER_VISIT_REGEX_DEFAULT = "java\\..*";
+    private String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
    
 
     //private final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
@@ -157,9 +159,9 @@ public class TransClass {
             referredTypes.add(superclazz);
         }
         
-        for (CtClass clazz : target.getInterfaces()) {
-            referredTypes.add(clazz);
-        }
+//        for (CtClass clazz : target.getInterfaces()) {
+//            referredTypes.add(clazz);
+//        }
         
         CtField[] fs = target.getDeclaredFields();
         for (CtField f : fs) {
@@ -304,12 +306,12 @@ public class TransClass {
             }
         }
         
-        // basic filtering for referred types
+        // basic filtering of referred types
         for (CtClass type : referredTypes) {
             if (type.isPrimitive())
                 continue;
-//            if (type.getName().matches(filterTransformRegex))
-//                continue;
+            if (type.getName().matches(filterVisitRegex))
+                continue;
             enter(type); 
         }
     }
