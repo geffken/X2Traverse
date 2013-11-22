@@ -341,6 +341,10 @@ public class TransClass {
      */
     public static void doTransform(CtClass target, boolean hasSuperclass)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
+        Object[] params4Logging = new Object[2];
+        params4Logging[0] = (target != null) ? target.getName() : target;
+        params4Logging[1] = hasSuperclass;
+        logger.entering("TransClass", "doTransform", params4Logging);
         if (target.isArray() || target.isInterface()) {
             return;
         }
@@ -537,6 +541,7 @@ public class TransClass {
                 } // end if (hasMethodGrantAnnotations(methodOrCtor))
             }
         }
+        logger.exiting("TransClass", "doTransform");
     }
     
     private static void instrumentFieldAccess(CtBehavior methodOrCtor)
