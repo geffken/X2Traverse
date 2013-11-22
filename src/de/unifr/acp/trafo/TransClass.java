@@ -378,17 +378,24 @@ public class TransClass {
      * Flushes all reachable classes back to disk.
      * @param outputDir the relative output directory
      */
-    protected void flushTransform(String outputDir) throws NotFoundException, IOException,
-            CannotCompileException {
+    protected void flushTransform(String outputDir) throws NotFoundException,
+            IOException, CannotCompileException {
         for (CtClass tc : visited) {
             if (!tc.isArray()) {
                 tc.writeFile(outputDir);
             }
         }
-        ClassPool defaultPool = ClassPool.getDefault();
-        CtClass target = defaultPool.get("de.unifr.acp.templates.TraversalTarget__");
-        target.writeFile(outputDir);
+//        String[] libClassNames = { "de.unifr.acp.templates.TraversalTarget__",
+//                "de.unifr.acp.templates.TraversalImpl",
+//                "de.unifr.acp.templates.Traversal__",
+//                "de.unifr.acp.templates.Global", "de.unifr.acp.fst.Permission" };
+//        ClassPool defaultPool = ClassPool.getDefault();
+//        CtClass[] libClasses = defaultPool.get(libClassNames);
+//        for (CtClass libClass : libClasses) {
+//            libClass.writeFile(outputDir);
+//        }
     }
+
 
     /**
      * Transforms the target class type if not already done.
@@ -635,15 +642,7 @@ public class TransClass {
 
                         //code.append("if (!effectivePerm.containsAll(accessPerm)) {");
                         code.append("if (!de.unifr.acp.fst.Permission.containsAll(effectivePerm, accessPerm)) {");
-                        code.append("  System.out.println(\"ACCESS VIOLATION:\");");
-                        code.append("  System.out.println($0);");
-                        code.append("  System.out.println(\""
-                                + qualifiedFieldName + "\");");
-                        code.append("  System.out.println(\"effectivePerm: \"+effectivePerm);");
-                        code.append("  System.out.println(de.unifr.acp.templates.Global.locPermStack);");
-                        code.append("  System.out.println();");
-                        code.append("  System.out.println(\"requiredPerm: \"+accessPerm);");
-                        code.append("  System.out.println();");
+                        code.append("  de.unifr.acp.templates.Global.printViolation($0, \""+qualifiedFieldName+"\", effectivePerm, accessPerm);");
                         code.append("}");
                         code.append("}");
 
