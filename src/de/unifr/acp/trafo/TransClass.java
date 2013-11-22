@@ -364,13 +364,13 @@ public class TransClass {
                 doTransform(superclass, transformed.contains(superclass.getSuperclass()));
                 transformed.add(superclass);
             }
-            if (logger.isLoggable(Level.FINEST)) {
-                StringBuilder sb = new StringBuilder();
-                for (CtClass transformedClazz : transformed) {
-                    sb.append(transformedClazz.getName()+"\n");
-                }
-                logger.finest("Transformed types:\n" +sb.toString());
+        }
+        if (logger.isLoggable(Level.FINEST)) {
+            StringBuilder sb = new StringBuilder();
+            for (CtClass transformedClazz : transformed) {
+                sb.append(transformedClazz.getName()+"\n");
             }
+            logger.finest("Transformed types:\n" +sb.toString());
         }
     }
     
