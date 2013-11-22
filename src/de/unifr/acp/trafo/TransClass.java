@@ -357,7 +357,10 @@ public class TransClass {
                 doTransform(superclass, transformed.contains(superclass.getSuperclass()));
                 transformed.add(superclass);
             }
-            logger.finest("Transformed types: "+transformed);
+            logger.finest("Transformed types:");
+            for (CtClass transformedClazz : transformed) {
+                logger.finest(transformedClazz.getName());
+            }
         }
     }
     
