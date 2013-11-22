@@ -321,9 +321,11 @@ public class TransClass {
      * specified class to queue of pending classes, if not already visited.
      */
     private void enter(CtClass clazz) {
+        logger.entering("TransClass", "enter", clazz);
         if (!visited.contains(clazz)) {
             pending.add(clazz);
         }
+        logger.exiting("TransClass", "enter");
     }
 
     /*
