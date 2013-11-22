@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -153,15 +154,15 @@ public class TransClassTest {
     private void checkMap(TransClass tc, List<String> expected)
             throws NotFoundException, IOException, CannotCompileException {
         tc.computeReachableClasses();
-        Map<CtClass, Boolean> visited = tc.getVisited();
+        Set<CtClass> visited = tc.getVisited();
         if (verbose) {
             System.out.println("<<<");
-            for (CtClass cls : visited.keySet()) {
+            for (CtClass cls : visited) {
                 System.out.println(cls.getName());
             }
         }
         assertEquals(expected.size(), visited.size());
-        for (CtClass cls : visited.keySet()) {
+        for (CtClass cls : visited) {
             assertTrue(expected.contains(cls.getName()));
         }
     }
