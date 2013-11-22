@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -60,11 +61,15 @@ public class TransClass {
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     private final CtClass objectClass;
 
-    private final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
+    //private final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
+    private final HashSet<CtClass> visited = new HashSet<CtClass>();
     private final Queue<CtClass> pending;
 
-    protected Map<CtClass, Boolean> getVisited() {
-        return Collections.unmodifiableMap(visited);
+//    protected Map<CtClass, Boolean> getVisited() {
+//        return Collections.unmodifiableMap(visited);
+//    }
+    protected Set<CtClass> getVisited() {
+        return Collections.unmodifiableSet(visited);
     }
 
     protected Collection<CtClass> getPending() {
@@ -120,7 +125,7 @@ public class TransClass {
             IOException, CannotCompileException {
         while (!pending.isEmpty()) {
             CtClass clazz = pending.remove();
-            if (!visited.containsKey(clazz)) {
+            if (!visited.contains(clazz)) {
                 doTraverse(clazz);
             }
         }
@@ -139,14 +144,13 @@ public class TransClass {
      * visited.
      */
     private void doTraverse(CtClass target) throws NotFoundException {
-        CtClass superclazz = target.getSuperclass();
-        boolean hasSuperclass = !superclazz.equals(objectClass);
-        visited.put(target, hasSuperclass);
-        if (hasSuperclass) {
-            enter(superclazz);
-        }
+        visited.add(target);
         
-        final List<CtClass> referredTypes = new ArrayList<CtClass>();
+        // collect all types this type refers to in this set
+        final Set<CtClass> referredTypes = new HashSet<CtClass>();
+        CtClass superclazz = target.getSuperclass();
+        referredTypes.add(superclazz);
+        
         CtField[] fs = target.getDeclaredFields();
         for (CtField f : fs) {
             CtClass ft = f.getType();
@@ -290,6 +294,7 @@ public class TransClass {
             }
         }
         
+        // filter referred types
         for (CtClass type : referredTypes) {
             if (type.isPrimitive())
                 continue;
@@ -304,7 +309,7 @@ public class TransClass {
      * specified class to queue of pending classes, if not already visited.
      */
     private void enter(CtClass clazz) {
-        if (!visited.containsKey(clazz)) {
+        if (!visited.contains(clazz)) {
             pending.add(clazz);
         }
     }
@@ -314,17 +319,19 @@ public class TransClass {
      */
     protected void performTransform() throws NotFoundException, IOException,
             CannotCompileException, ClassNotFoundException {
-        for (Entry<CtClass, Boolean> entry : visited.entrySet()) {
+        for (CtClass clazz : visited) {
             Deque<CtClass> stack = new ArrayDeque<CtClass>();
-            CtClass current = entry.getKey();
+            CtClass current = clazz;
             stack.push(current);
-            while (visited.get(current)) {
+            while (visited.contains(current.getSuperclass())) {
                 current = current.getSuperclass();
                 stack.push(current);
             }
+            CtClass top = stack.pop();
+            doTransform(top, false);
             while (!stack.isEmpty()) {
-                CtClass clazz = stack.pop();
-                doTransform(clazz, visited.get(clazz));
+                CtClass subclass = stack.pop();
+                doTransform(subclass, visited.contains(subclass.getSuperclass()));
             }
             //doTransform(entry.getKey(), entry.getValue());
         }
@@ -336,7 +343,7 @@ public class TransClass {
      */
     protected void flushTransform(String outputDir) throws NotFoundException, IOException,
             CannotCompileException {
-        for (CtClass tc : visited.keySet()) {
+        for (CtClass tc : visited) {
             if (!tc.isArray()) {
                 tc.writeFile(outputDir);
             }
@@ -344,19 +351,19 @@ public class TransClass {
     }
 
     /**
-     * 
-     * @param target
-     * @param hasSuperclass
+     * Transforms the target class type if not already done.
+     * @param target the class to transform
+     * @param hasTransformedSuperclass the target has an already transformed superclass
      * @throws NotFoundException
      * @throws IOException
      * @throws CannotCompileException
      * @throws ClassNotFoundException
      */
-    public static void doTransform(CtClass target, boolean hasSuperclass)
+    public static void doTransform(CtClass target, boolean hasTransformedSuperclass)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         Object[] params4Logging = new Object[2];
         params4Logging[0] = (target != null) ? target.getName() : target;
-        params4Logging[1] = hasSuperclass;
+        params4Logging[1] = hasTransformedSuperclass;
         logger.entering("TransClass", "doTransform", params4Logging);
         if (target.isArray() || target.isInterface()) {
             return;
@@ -381,7 +388,7 @@ public class TransClass {
             target.setInterfaces(newTargetIfs.toArray(new CtClass[0]));
 
             // add: method traverse__ (create body before adding new technically required fields)
-            String methodbody = createBody(target, hasSuperclass);
+            String methodbody = createBody(target, hasTransformedSuperclass);
             CtMethod m = CtNewMethod.make(methodbody, target);
             target.addMethod(m);
             
