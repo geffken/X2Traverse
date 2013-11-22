@@ -174,7 +174,12 @@ public class TransClass {
                     public void edit(NewExpr expr)
                         throws CannotCompileException {
                             try {
-                                referredTypes.add(expr.getConstructor().getDeclaringClass());
+                                CtClass type = expr.getConstructor().getDeclaringClass();
+                                logger.fine("Reference to instantiated type "
+                                        + type.getName() + " at "
+                                        + expr.getFileName() + ":"
+                                        + expr.getLineNumber());                                
+                                referredTypes.add(type);
                             } catch (NotFoundException e) {
                                 notFoundexceptions.add(e);
                             }
@@ -184,7 +189,12 @@ public class TransClass {
                     public void edit(Instanceof expr)
                         throws CannotCompileException {
                             try {
-                                referredTypes.add(expr.getType());
+                                CtClass type = expr.getType();
+                                logger.fine("Reference to instanceof right-hand side type "
+                                        + type.getName() + " at "
+                                        + expr.getFileName() + ":"
+                                        + expr.getLineNumber());
+                                referredTypes.add(type);
                             } catch (NotFoundException e) {
                                 notFoundexceptions.add(e);
                             }
@@ -194,7 +204,12 @@ public class TransClass {
                     public void edit(NewArray expr)
                         throws CannotCompileException {
                             try {
-                                referredTypes.add(expr.getComponentType());
+                                CtClass type = expr.getComponentType();
+                                logger.fine("Reference to array component type "
+                                        + type.getName() + " at "
+                                        + expr.getFileName() + ":"
+                                        + expr.getLineNumber());
+                                referredTypes.add(type);
                             } catch (NotFoundException e) {
                                 notFoundexceptions.add(e);
                             }
@@ -205,9 +220,12 @@ public class TransClass {
                             throws CannotCompileException {
                         try {
                             CtClass type = expr.getMethod().getDeclaringClass();
-                            if (type != null) {
-                                referredTypes.add(type);
-                            }
+                            logger.fine("Reference to method-declaring type "
+                                    + type.getName() + " at "
+                                    + expr.getFileName() + ":"
+                                    + expr.getLineNumber());
+                            referredTypes.add(type);
+
                         } catch (NotFoundException e) {
                             notFoundexceptions.add(e);
                         }
@@ -217,9 +235,13 @@ public class TransClass {
                     public void edit(Handler expr)
                             throws CannotCompileException {
                         try {
-                            logger.fine("Reference to handler type "+expr.getType()+" at "+expr.getFileName()+":"+expr.getLineNumber());
-                            //System.out.println(""+expr.getFileName()+":"+expr.getLineNumber());
                             CtClass type = expr.getType();
+                            logger.fine("Reference to handler type "
+                                    + type.getName() + " at "
+                                    + expr.getFileName() + ":"
+                                    + expr.getLineNumber());
+                            // type can be null in case of synchronized blocks
+                            // which are compiled to handler for type 'any'
                             if (type != null) {
                                 referredTypes.add(type);
                             }
@@ -232,7 +254,12 @@ public class TransClass {
                     public void edit(FieldAccess expr)
                             throws CannotCompileException {
                         try {
-                            referredTypes.add(expr.getField().getType());
+                            CtClass type = expr.getField().getType();
+                            logger.fine("Reference to field-declaring type "
+                                    + type.getName() + " at "
+                                    + expr.getFileName() + ":"
+                                    + expr.getLineNumber());
+                            referredTypes.add(type);
                         } catch (NotFoundException e) {
                             notFoundexceptions.add(e);
                         }
@@ -241,9 +268,12 @@ public class TransClass {
                 methodOrCtor.instrument(new ExprEditor() {
                     public void edit(Cast expr) throws CannotCompileException {
                         try {
-                            if (expr.getType() != null) {
-                                referredTypes.add(expr.getType());
-                            }
+                            CtClass type = expr.getType();
+                            logger.fine("Reference to cast target type "
+                                    + type.getName() + " at "
+                                    + expr.getFileName() + ":"
+                                    + expr.getLineNumber());
+                            referredTypes.add(type);
                         } catch (NotFoundException e) {
                             notFoundexceptions.add(e);
                         }
@@ -254,6 +284,7 @@ public class TransClass {
                 }
             } catch (CannotCompileException e) {
                 // we do not compile and therefore expect no such exception
+                assert(false);
             }
         }
         
