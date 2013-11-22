@@ -357,9 +357,12 @@ public class TransClass {
                 doTransform(superclass, transformed.contains(superclass.getSuperclass()));
                 transformed.add(superclass);
             }
-            logger.finest("Transformed types:");
-            for (CtClass transformedClazz : transformed) {
-                logger.finest(transformedClazz.getName());
+            if (logger.isLoggable(Level.FINEST)) {
+                StringBuilder sb = new StringBuilder();
+                for (CtClass transformedClazz : transformed) {
+                    sb.append(transformedClazz.getName()+"\n");
+                }
+                logger.finest("Transformed types:" +sb.toString());
             }
         }
     }
