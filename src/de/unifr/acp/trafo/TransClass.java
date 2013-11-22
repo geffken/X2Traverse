@@ -340,6 +340,10 @@ public class TransClass {
             }
             while (!stack.isEmpty()) {
                 CtClass superclass = stack.pop();
+                
+                // if this does not hold we might miss some superclass fields
+                assert (transformed.contains(superclass.getSuperclass()) == transformed
+                        .contains(superclass.getSuperclass()));
                 doTransform(superclass, transformed.contains(superclass.getSuperclass()));
                 transformed.add(superclass);
             }
@@ -358,6 +362,9 @@ public class TransClass {
                 tc.writeFile(outputDir);
             }
         }
+        ClassPool defaultPool = ClassPool.getDefault();
+        CtClass target = defaultPool.get("de.unifr.acp.templates.TraversalTarget__");
+        target.writeFile(outputDir);
     }
 
     /**
