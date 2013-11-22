@@ -339,6 +339,13 @@ public class TransClass {
                 toTransform.add(clazz);
             }
         }
+        if (logger.isLoggable(Level.FINEST)) {
+            StringBuilder sb = new StringBuilder();
+            for (CtClass visitedClazz : visited) {
+                sb.append(visitedClazz.getName()+"\n");
+            }
+            logger.finest("Visited types:\n" +sb.toString());
+        }
         
         for (CtClass clazz : toTransform) {
             Deque<CtClass> stack = new ArrayDeque<CtClass>();
@@ -362,7 +369,7 @@ public class TransClass {
                 for (CtClass transformedClazz : transformed) {
                     sb.append(transformedClazz.getName()+"\n");
                 }
-                logger.finest("Transformed types:" +sb.toString());
+                logger.finest("Transformed types:\n" +sb.toString());
             }
         }
     }
