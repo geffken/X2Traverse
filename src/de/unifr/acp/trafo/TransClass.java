@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -40,6 +42,18 @@ import de.unifr.acp.templates.TraversalTarget__;
 // TODO: consider fully qualified field names
 
 public class TransClass {
+    static {
+        try {
+            logger = Logger.getLogger("de.unifr.acp.trafo.TransClass");
+            fh = new FileHandler("mylog.txt");
+            TransClass.logger.addHandler(TransClass.fh);
+            TransClass.logger.setLevel(Level.ALL);
+        } catch (SecurityException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static Logger logger;
+    private static FileHandler fh;
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     private final CtClass objectClass;
@@ -136,9 +150,6 @@ public class TransClass {
             CtClass ft = f.getType();
             if (ft.isPrimitive())
                 continue;
-//            if (ft.getName().matches("java\\..*"))
-//                continue;
-//            enter(ft);
             referredTypes.add(ft);
         }
 
@@ -206,8 +217,8 @@ public class TransClass {
                     public void edit(Handler expr)
                             throws CannotCompileException {
                         try {
-                            // can be null !!!
-                            System.out.println(""+expr.getFileName()+":"+expr.getLineNumber());
+                            logger.fine("Reference to handler type "+expr.getType()+" at "+expr.getFileName()+":"+expr.getLineNumber());
+                            //System.out.println(""+expr.getFileName()+":"+expr.getLineNumber());
                             CtClass type = expr.getType();
                             if (type != null) {
                                 referredTypes.add(type);
