@@ -119,4 +119,16 @@ public class Global {
             newObjectsStack.peek().add(obj);
         }
     }
+    
+    public static void printViolation(Object obj, String qualifiedFieldName,
+            Permission effectivePerm, Permission requiredPerm) {
+        System.out.println("ACCESS VIOLATION:");
+        System.out.print(obj);
+        System.out.println("." + qualifiedFieldName);
+        System.out.println("effectivePerm: " + effectivePerm);
+        System.out.println(de.unifr.acp.templates.Global.locPermStack);
+        System.out.println();
+        System.out.println("requiredPerm: " + requiredPerm);
+        System.out.println();
+    }
 }
