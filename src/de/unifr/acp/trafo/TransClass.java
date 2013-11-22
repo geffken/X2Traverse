@@ -206,6 +206,8 @@ public class TransClass {
                     public void edit(Handler expr)
                             throws CannotCompileException {
                         try {
+                            // can be null !!!
+                            System.out.println(""+expr.getFileName()+":"+expr.getLineNumber());
                             CtClass type = expr.getType();
                             if (type != null) {
                                 referredTypes.add(type);
@@ -297,7 +299,7 @@ public class TransClass {
      */
     public static void doTransform(CtClass target, boolean hasSuperclass)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
-        if (target.isArray()) {
+        if (target.isArray() || target.isInterface()) {
             return;
         }
         ClassPool.getDefault().importPackage("java.util");
