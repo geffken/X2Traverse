@@ -153,7 +153,13 @@ public class TransClass {
         // collect all types this type refers to in this set
         final Set<CtClass> referredTypes = new HashSet<CtClass>();
         CtClass superclazz = target.getSuperclass();
-        referredTypes.add(superclazz);
+        if (superclazz != null) {
+            referredTypes.add(superclazz);
+        }
+        
+        for (CtClass clazz : target.getInterfaces()) {
+            referredTypes.add(clazz);
+        }
         
         CtField[] fs = target.getDeclaredFields();
         for (CtField f : fs) {
