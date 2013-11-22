@@ -1,10 +1,12 @@
 package de.unifr.acp.trafo;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -175,7 +177,7 @@ public class TransClass {
                         throws CannotCompileException {
                             try {
                                 CtClass type = expr.getConstructor().getDeclaringClass();
-                                logger.fine("Reference to instantiated type "
+                                logger.finer("Reference to instantiated type "
                                         + type.getName() + " at "
                                         + expr.getFileName() + ":"
                                         + expr.getLineNumber());                                
@@ -190,7 +192,7 @@ public class TransClass {
                         throws CannotCompileException {
                             try {
                                 CtClass type = expr.getType();
-                                logger.fine("Reference to instanceof right-hand side type "
+                                logger.finer("Reference to instanceof right-hand side type "
                                         + type.getName() + " at "
                                         + expr.getFileName() + ":"
                                         + expr.getLineNumber());
@@ -205,7 +207,7 @@ public class TransClass {
                         throws CannotCompileException {
                             try {
                                 CtClass type = expr.getComponentType();
-                                logger.fine("Reference to array component type "
+                                logger.finer("Reference to array component type "
                                         + type.getName() + " at "
                                         + expr.getFileName() + ":"
                                         + expr.getLineNumber());
@@ -220,7 +222,7 @@ public class TransClass {
                             throws CannotCompileException {
                         try {
                             CtClass type = expr.getMethod().getDeclaringClass();
-                            logger.fine("Reference to method-declaring type "
+                            logger.finer("Reference to method-declaring type "
                                     + type.getName() + " at "
                                     + expr.getFileName() + ":"
                                     + expr.getLineNumber());
@@ -236,7 +238,7 @@ public class TransClass {
                             throws CannotCompileException {
                         try {
                             CtClass type = expr.getType();
-                            logger.fine("Reference to handler type "
+                            logger.finer("Reference to handler type "
                                     + ((type != null) ? type.getName() : type) + " at "
                                     + expr.getFileName() + ":"
                                     + expr.getLineNumber());
@@ -255,7 +257,7 @@ public class TransClass {
                             throws CannotCompileException {
                         try {
                             CtClass type = expr.getField().getType();
-                            logger.fine("Reference to field-declaring type "
+                            logger.finer("Reference to field-declaring type "
                                     + type.getName() + " at "
                                     + expr.getFileName() + ":"
                                     + expr.getLineNumber());
@@ -269,7 +271,7 @@ public class TransClass {
                     public void edit(Cast expr) throws CannotCompileException {
                         try {
                             CtClass type = expr.getType();
-                            logger.fine("Reference to cast target type "
+                            logger.finer("Reference to cast target type "
                                     + type.getName() + " at "
                                     + expr.getFileName() + ":"
                                     + expr.getLineNumber());
@@ -313,7 +315,18 @@ public class TransClass {
     protected void performTransform() throws NotFoundException, IOException,
             CannotCompileException, ClassNotFoundException {
         for (Entry<CtClass, Boolean> entry : visited.entrySet()) {
-            doTransform(entry.getKey(), entry.getValue());
+            Deque<CtClass> stack = new ArrayDeque<CtClass>();
+            CtClass current = entry.getKey();
+            stack.push(current);
+            while (visited.get(current)) {
+                current = current.getSuperclass();
+                stack.push(current);
+            }
+            while (!stack.isEmpty()) {
+                CtClass clazz = stack.pop();
+                doTransform(clazz, visited.get(clazz));
+            }
+            //doTransform(entry.getKey(), entry.getValue());
         }
     }
     
