@@ -357,7 +357,7 @@ public class TransClass {
                 doTransform(superclass, transformed.contains(superclass.getSuperclass()));
                 transformed.add(superclass);
             }
-            //doTransform(entry.getKey(), entry.getValue());
+            logger.finest("Transformed types: "+transformed);
         }
     }
     
