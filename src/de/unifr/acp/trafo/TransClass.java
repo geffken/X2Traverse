@@ -60,9 +60,13 @@ public class TransClass {
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     private final CtClass objectClass;
+    public final String FILTER_TRANSFORM_REGEX_DEFAULT = "java\\..*";
+    private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
+   
 
     //private final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
     private final HashSet<CtClass> visited = new HashSet<CtClass>();
+    private final HashSet<CtClass> transformed = new HashSet<CtClass>();
     private final Queue<CtClass> pending;
 
 //    protected Map<CtClass, Boolean> getVisited() {
@@ -294,12 +298,12 @@ public class TransClass {
             }
         }
         
-        // filter referred types
+        // basic filtering for referred types
         for (CtClass type : referredTypes) {
             if (type.isPrimitive())
                 continue;
-            if (type.getName().matches("java\\..*"))
-                continue;
+//            if (type.getName().matches(filterTransformRegex))
+//                continue;
             enter(type); 
         }
     }
@@ -319,19 +323,25 @@ public class TransClass {
      */
     protected void performTransform() throws NotFoundException, IOException,
             CannotCompileException, ClassNotFoundException {
+        HashSet<CtClass> toTransform = new HashSet<CtClass>();
         for (CtClass clazz : visited) {
+            if (!clazz.getName().matches(filterTransformRegex)) {
+                toTransform.add(clazz);
+            }
+        }
+        
+        for (CtClass clazz : toTransform) {
             Deque<CtClass> stack = new ArrayDeque<CtClass>();
             CtClass current = clazz;
             stack.push(current);
-            while (visited.contains(current.getSuperclass())) {
+            while (toTransform.contains(current.getSuperclass())) {
                 current = current.getSuperclass();
                 stack.push(current);
             }
-            CtClass top = stack.pop();
-            doTransform(top, false);
             while (!stack.isEmpty()) {
-                CtClass subclass = stack.pop();
-                doTransform(subclass, visited.contains(subclass.getSuperclass()));
+                CtClass superclass = stack.pop();
+                doTransform(superclass, transformed.contains(superclass.getSuperclass()));
+                transformed.add(superclass);
             }
             //doTransform(entry.getKey(), entry.getValue());
         }
