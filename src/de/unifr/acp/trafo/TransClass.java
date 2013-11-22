@@ -237,7 +237,7 @@ public class TransClass {
                         try {
                             CtClass type = expr.getType();
                             logger.fine("Reference to handler type "
-                                    + type.getName() + " at "
+                                    + ((type != null) ? type.getName() : type) + " at "
                                     + expr.getFileName() + ":"
                                     + expr.getLineNumber());
                             // type can be null in case of synchronized blocks
