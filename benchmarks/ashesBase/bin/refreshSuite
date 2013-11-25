@@ -1,0 +1,27 @@
+#!/bin/sh
+# @author Patrice Pominville 
+#         patrice@sable.mcgill.ca
+# RVR  added virtual suite support
+
+if [ ! $ASHES_SUITE_COLLECTION ]
+then
+   echo "Please define the ASHES_SUITE_COLLECTION environment variable to contain"
+   echo "the path to the Ashes Suite Collection."
+   exit 0
+fi
+
+BASE=$ASHES_SUITE_COLLECTION
+
+if [ -d ${BASE}/suites/$1 ]; then 
+   NEW_DIR=${BASE}/suites/$1 
+elif [ -d ${BASE}/virtualSuites/$1 ]; then
+   NEW_DIR=${BASE}/virtualSuites/$1
+elif [ -d ${BASE}/nonfreeSuites/$1 ]; then
+   NEW_DIR=${BASE}/nonfreeSuites/$1
+else
+   echo "Suite $1 not found; aborting."
+   exit 0;
+fi
+
+rm -rf $1
+cp -r $NEW_DIR .

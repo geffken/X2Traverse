@@ -1,0 +1,14 @@
+scale = 2
+nargs = read()
+
+min = read()
+
+for(i = 2; i <= nargs; i++)
+{
+    x = read()
+
+    if(x < min)
+        min = x 
+}
+
+print min;

@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# 1999/05/21 PTC Execute benchmark, and if it fails, start with unsootified
+#     classes (assumed to succeed), and gradually insert sootified classes 
+#     one by one until failure
+
+if [ $# = 0 ]
+then
+    echo "Syntax: isolateBugInBenchmark <benchmark>"
+    exit 0
+fi
+
+BENCHMARK=$1
+
+if [ `echo $BENCHMARK | cut -c1` != "/" ]
+then
+    BENCHMARK=`pwd`/$BENCHMARK
+fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+# check that clean and sootified classes exist
+if [ ! -d classes.org ]
+then
+   echo "*** Cannot find classes.org ***"
+   exit
+elif [ ! -d classes.soot ]
+then
+   echo "*** Cannot find classes.soot ***"
+   exit
+fi
+
+# check that sootified classes do fail
+rm -rf classes
+cp -r classes.soot classes
+echo " ... testing sootified benchmark ..."
+./run >executionOutput
+cat executionOutput | cut -f1 -d: >executionResult
+if [ `cat executionResult$SCRIPT_STEP` != "failure" ]
+then
+    echo "*** Sootified benchmark verified successfully. Aborting..."
+    exit
+fi
+
+# set classList to include all class files
+cd classes.org
+classList=`find . -name \*.class -print`
+cd ..
+let passNum=0
+
+# iterate until classList contains only one class
+while true
+do
+    # replace classes given in list with sootified ones
+    rm -rf classes
+    cp -r classes.org classes
+    let passNum=$passNum+1
+
+    # split list in half
+    leftList=`splitList left ${classList}`
+    rightList=`splitList right ${classList}`
+    # no need to continue if only one class file
+    if [ ${#leftList} = 0 ]
+    then
+        echo "*** Found bad sootified class file: $classList ***"
+        exit
+    fi
+
+    echo " ... starting pass #${passNum} ..."
+    cd classes.soot
+    tar cf ../classes/classList.tar $leftList
+    cd ../classes
+    tar xf classList.tar
+    rm -f classes/classList.tar
+    cd ..
+    ./run >executionOutput
+    cat executionOutput | cut -f1 -d: >executionResult
+    if [ `cat executionResult$SCRIPT_STEP` == "failure" ]
+    then
+        classList=$leftList
+    else
+        classList=$rightList
+    fi
+done
+
+popd >&/dev/null
+
+
+
+

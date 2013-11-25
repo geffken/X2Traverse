@@ -1,0 +1,9 @@
+ashes.tools.evalscene
+ashes.tools.profilecounts
+ashes.tools.stripcasts
+ashes.tools.printmembers
+ashes.tools.propagateconstants
+ashes.tools.unitweigher
+ashes.examples.countgotos
+ashes.examples.createclass
+

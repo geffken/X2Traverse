@@ -1,0 +1,85 @@
+#!/bin/bash
+
+if [ $# = 0 ]
+then
+    echo "Syntax: applyCmdOnSuite <command> <suite> [-- app-options]"
+    echo "        applyCmdOnSuite <command> <suite> <set> <context> [-- app-options]"
+    exit 0
+fi
+
+SUITE=$2
+COMMAND=$1
+shift
+shift
+
+# Make sure that the user put the --
+    if [ $1 ]
+    then
+        if [ $1 != "--" ]
+        then
+            STORE_RESULTS=true
+            SET=$1
+            shift
+            if [ $1 ]
+            then
+                CONTEXT=$1
+                shift
+            else
+                echo "Specified set but not context!"
+                exit 1
+            fi
+
+            if [ $1 ]
+            then
+                if [ $1 != "--" ]
+                then
+                    echo "unknown option $1"
+                    exit 1
+                fi
+            fi
+        fi
+    fi
+
+# Make sure the suite filename is absolute
+    if [ `echo $SUITE | cut -c1` != "/" ]
+    then
+       SUITE=`pwd`/$SUITE
+    fi
+
+echo ">>>Suite Command Start"
+echo ">>>`date` "
+echo
+echo ">>>Command: $COMMAND"   
+echo ">>>Suite: $SUITE"
+echo ">>>Options: $@"
+echo
+echo ">>>Host: $HOSTNAME"
+echo ">>>User: $USER"
+echo
+echo
+
+for i in `find ${SUITE}/benchmarks/ -mindepth 1 -maxdepth 1 -printf "%f\n" | sort`
+do
+    echo "---- Benchmark: $i ----"
+    echo
+
+    if [ $STORE_RESULTS ] 
+    then
+        $COMMAND ${SUITE}/benchmarks/$i $SET $CONTEXT $i $@
+    else
+        $COMMAND ${SUITE}/benchmarks/$i $@
+    fi
+
+    echo
+    echo
+done
+ 
+echo ">>>Suite Command End"
+echo ">>>`date` "
+
+
+
+
+
+
+

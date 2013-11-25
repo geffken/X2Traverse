@@ -1,0 +1,56 @@
+#!/bin/bash
+
+if [ ! $ASHES_DATABASE ]
+then
+   echo "Please define the ASHES_DATABASE environment variable to contain"
+   echo "the path to the directory of set files."
+   exit 0
+fi
+
+if [ ! $ASHES_DOMAINS ]
+then
+   echo "Please define the ASHES_DOMAINS environment variable to contain"
+   echo "the path to the directory of domains."
+   exit 0
+fi
+
+
+if [ $# != 3 ]
+then
+    echo "Syntax: adb-chart <set> <domainX> <domainY>"
+    exit 0
+fi
+
+SET=$1
+DOMAIN_X=$2
+DOMAIN_Y=$3
+
+
+printf "%10s" " "
+
+for i in `cat ${ASHES_DOMAINS}/${DOMAIN_X}` 
+do
+    NAME=`echo $i | cut -f 2 -d :`
+    FORMAT=`echo $i | cut -f 3 -d :`
+    printf $FORMAT $NAME
+done
+
+echo
+
+for j in `cat ${ASHES_DOMAINS}/${DOMAIN_Y}`
+do        
+    printf "%10s" $j
+
+    for i in `cat ${ASHES_DOMAINS}/${DOMAIN_X}` 
+    do
+        PARTIAL_KEY=`echo $i | cut -f 1 -d :`
+        FORMAT=`echo $i | cut -f 3 -d :`
+        VALUE=`adb-get $SET ${j}-${PARTIAL_KEY}`
+        printf $FORMAT $VALUE
+    done    
+    echo
+done
+
+
+
+

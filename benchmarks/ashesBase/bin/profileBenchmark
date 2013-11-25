@@ -1,0 +1,54 @@
+#!/bin/bash
+
+if [ $# != 1 -a $# != 4 ]
+then
+    echo "Syntaxes: executeBenchmark <benchmark_dir>" 
+    echo "          executeBenchmark <benchmark_dir> <set> <context> <benchmark_name>"
+    exit 0
+fi
+
+if [ $# = 4 ]
+then
+    STORE_RESULTS=true
+    SET=$2
+    CONTEXT=$3
+    BENCHMARK_NAME=$4
+fi
+
+BENCHMARK=$1
+
+if [ `echo $BENCHMARK | cut -c1` != "/" ]
+then
+   BENCHMARK=`pwd`/$BENCHMARK
+fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+export ASHES_JVM_CMD='java -Xrunhprof:cpu=samples -ms${ASHES_INITIAL_HEAP}m -mx${ASHES_MAXIMUM_HEAP}m'
+echo "   Executing benchmark..."
+./run >executionOutput$SCRIPT_STEP
+cat java.hprof.txt
+
+cat executionOutput$SCRIPT_STEP | cut -f1 -d: >executionResult$SCRIPT_STEP
+cat executionOutput$SCRIPT_STEP | cut -f2 -d: >executionTime$SCRIPT_STEP
+cat executionOutput$SCRIPT_STEP | cut -f3 -d: >elapsedTime$SCRIPT_STEP
+cat executionOutput$SCRIPT_STEP | cut -f4 -d: >cpuTime$SCRIPT_STEP
+
+echo "   Elapsed time: `cat elapsedTime$SCRIPT_STEP`s    (`cat cpuTime$SCRIPT_STEP` CPU usage) "  
+
+if [ $STORE_RESULTS ]
+then
+    adb-put $SET "${BENCHMARK_NAME}-${CONTEXT}-elapsedTime" `cat elapsedTime$SCRIPT_STEP`
+fi
+
+if [ `cat executionResult$SCRIPT_STEP` != "success" ]
+then
+    echo "*** Warning: Benchmark ran incorrectly! ***"
+fi
+
+popd >&/dev/null
+
+
+
+

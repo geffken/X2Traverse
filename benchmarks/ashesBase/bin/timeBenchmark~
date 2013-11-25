@@ -1,0 +1,116 @@
+#!/bin/bash
+
+if [ $# != 1 -a $# != 4 ]
+then
+    echo "Syntaxes: timeBenchmark <benchmark_dir>" 
+    echo "          timeBenchmark <benchmark_dir> <set> <context> <benchmark_name>"
+    exit 0
+fi
+
+if [ $# = 4 ]
+then
+    STORE_RESULTS=true
+    SET=$2
+    CONTEXT=$3
+    BENCHMARK_NAME=$4
+fi
+
+BENCHMARK=$1
+
+if [ `echo $BENCHMARK | cut -c1` != "/" ]
+then
+   BENCHMARK=`pwd`/$BENCHMARK
+fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+OLD_STEP=$SCRIPT_STEP
+
+if [ $OLD_STEP ]
+then
+    OLD_STEP="${OLD_STEP}-"
+fi
+
+export SCRIPT_STEP="${OLD_STEP}1"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}2"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}3"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}4"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}5"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}6"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}7"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}8"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}9"
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP="${OLD_STEP}10"
+executeBenchmark $BENCHMARK
+echo
+
+
+SCRIPT_STEP=$OLD_STEP
+
+echo "10 `cat $BENCHMARK/elapsedTime${OLD_STEP}1` `cat $BENCHMARK/elapsedTime${OLD_STEP}2` `cat $BENCHMARK/elapsedTime${OLD_STEP}3` `cat $BENCHMARK/elapsedTime${OLD_STEP}4` `cat $BENCHMARK/elapsedTime${OLD_STEP}5` `cat $BENCHMARK/elapsedTime${OLD_STEP}6` `cat $BENCHMARK/elapsedTime${OLD_STEP}7` `cat $BENCHMARK/elapsedTime${OLD_STEP}8` `cat $BENCHMARK/elapsedTime${OLD_STEP}9` `cat $BENCHMARK/elapsedTime${OLD_STEP}10`" >$BENCHMARK/bc.cmd
+
+cat $BENCHMARK/bc.cmd | bc `dirname $0`/min.bc >$BENCHMARK/minTime${SCRIPT_STEP}
+
+echo "10 `cat $BENCHMARK/elapsedTime${OLD_STEP}1` `cat $BENCHMARK/elapsedTime${OLD_STEP}2` `cat $BENCHMARK/elapsedTime${OLD_STEP}3` `cat $BENCHMARK/elapsedTime${OLD_STEP}4` `cat $BENCHMARK/elapsedTime${OLD_STEP}5` `cat $BENCHMARK/elapsedTime${OLD_STEP}6` `cat $BENCHMARK/elapsedTime${OLD_STEP}7` `cat $BENCHMARK/elapsedTime${OLD_STEP}8` `cat $BENCHMARK/elapsedTime${OLD_STEP}9` `cat $BENCHMARK/elapsedTime${OLD_STEP}10`" >$BENCHMARK/bc.cmd
+
+cat $BENCHMARK/bc.cmd | bc `dirname $0`/max.bc >$BENCHMARK/maxTime${SCRIPT_STEP}
+
+
+echo "scale=2" >$BENCHMARK/bc.cmd
+echo "(`cat $BENCHMARK/elapsedTime${OLD_STEP}1` + `cat $BENCHMARK/elapsedTime${OLD_STEP}2` + `cat $BENCHMARK/elapsedTime${OLD_STEP}3` + `cat $BENCHMARK/elapsedTime${OLD_STEP}4` + `cat $BENCHMARK/elapsedTime${OLD_STEP}5` + `cat $BENCHMARK/elapsedTime${OLD_STEP}6` + `cat $BENCHMARK/elapsedTime${OLD_STEP}7` + `cat $BENCHMARK/elapsedTime${OLD_STEP}8` + `cat $BENCHMARK/elapsedTime${OLD_STEP}9` + `cat $BENCHMARK/elapsedTime${OLD_STEP}10` - `cat $BENCHMARK/minTime${SCRIPT_STEP}` - `cat $BENCHMARK/maxTime${SCRIPT_STEP}`) / 8.0" >>$BENCHMARK/bc.cmd
+
+cat $BENCHMARK/bc.cmd
+
+cat $BENCHMARK/bc.cmd | bc >$BENCHMARK/estimatedTime${SCRIPT_STEP}
+
+TIME=`cat $BENCHMARK/estimatedTime${SCRIPT_STEP}`
+
+if [ ! "`grep failure $BENCHMARK/executionResult${OLD_STEP}1 $BENCHMARK/executionResult${OLD_STEP}2  $BENCHMARK/executionResult${OLD_STEP}3  $BENCHMARK/executionResult${OLD_STEP}4  $BENCHMARK/executionResult${OLD_STEP}5 $BENCHMARK/executionResult${OLD_STEP}6 $BENCHMARK/executionResult${OLD_STEP}7  $BENCHMARK/executionResult${OLD_STEP}8  $BENCHMARK/executionResult${OLD_STEP}9  $BENCHMARK/executionResult${OLD_STEP}10`" ]
+then
+    VALID="-"
+else
+    echo "   Invalid timing follows..."
+    VALID="#"
+fi
+
+echo "   Estimated time: ${TIME}s"
+echo "   Max time: `cat $BENCHMARK/maxTime${SCRIPT_STEP}`"
+echo "   Min time: `cat $BENCHMARK/minTime${SCRIPT_STEP}`"
+
+if [ $STORE_RESULTS ]
+then
+    adb-put $SET "${BENCHMARK_NAME}-${CONTEXT}-time" $TIME
+    adb-put $SET "${BENCHMARK_NAME}-${CONTEXT}-valid" $VALID
+fi
+
+
+
+

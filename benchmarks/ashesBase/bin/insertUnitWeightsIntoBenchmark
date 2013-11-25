@@ -1,0 +1,68 @@
+#!/bin/bash
+
+if [ ! $ASHES_JDK_CLASSES ]
+then
+   echo "Please define the ASHES_JDK_CLASSES environment variable to "
+   echo "contain the path to the standard JDK library classes."
+   exit 0
+fi
+
+if [ $# = 0 ]
+then
+    echo "Syntax: counterizeBenchmark <benchmark> [-- soot-options]"
+    exit 0
+fi
+
+BENCHMARK=$1
+shift
+
+# Make sure that the user put the --
+    if [ $1 ]
+    then
+        if [ $1 != "--" ]
+        then
+            echo "Illegal option " $1
+            exit
+        fi
+    fi
+
+# Make sure the benchmark filename is absolute
+    if [ `echo $BENCHMARK | cut -c1` != "/" ]
+    then
+       BENCHMARK=`pwd`/$BENCHMARK
+    fi
+
+shift
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+if [ -d oldClasses ]
+then
+    \rm -rf oldClasses
+fi
+
+cp -rf classes oldClasses
+
+echo "   Counterizing benchmark..."
+/usr/bin/time -o timeResults$SCRIPT_STEP -f "%E*%P" java -ms64m -mx256m ashes.tools.unitweigher.Main --app -d classes --dynamic-path classes --soot-class-path classes:$ASHES_JDK_CLASSES $@ `cat mainClass` >counterizeOutput$SCRIPT_STEP
+
+cat timeResults$SCRIPT_STEP | cut -f1 -d* >executionTime$SCRIPT_STEP
+cat timeResults$SCRIPT_STEP | cut -f2 -d* >cpuTime$SCRIPT_STEP 
+
+echo "   `cat executionTime$SCRIPT_STEP` elapsed  (`cat cpuTime$SCRIPT_STEP` CPU usage) "  
+
+popd >&/dev/null
+
+
+
+
+
+
+
+
+
+
+
+
+

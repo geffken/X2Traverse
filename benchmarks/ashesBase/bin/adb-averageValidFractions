@@ -1,0 +1,61 @@
+#!/bin/bash
+
+if [ ! $ASHES_DATABASE ]
+then
+   echo "Please define the ASHES_DATABASE environment variable to contain"
+   echo "the path to the directory of set files."
+   exit 0
+fi
+
+if [ ! $ASHES_DOMAINS ]
+then
+   echo "Please define the ASHES_DOMAINS environment variable to contain"
+   echo "the path to the directory of domains."
+   exit 0
+fi
+
+
+if [ $# != 3 ]
+then
+    echo "Syntax: adb-averageValidTimes <set> <context> <domainY>"
+    exit 0
+fi
+
+SET=$1
+CONTEXT=$2
+DOMAIN_Y=$3
+
+typeset -i numValid=0
+VALID_VALUES=""
+
+for i in `cat ${ASHES_DOMAINS}/${DOMAIN_Y}` 
+do
+    FRACTION=`adb-get $SET ${i}-${CONTEXT}-fraction`
+    VALID=`adb-get $SET ${i}-${CONTEXT}-valid`
+    
+    if [ $VALID = "-" ] 
+    then
+        numValid=numValid+1
+        VALID_VALUES="$VALID_VALUES $FRACTION"
+        echo "Adding fraction $FRACTION..."
+    fi
+done
+
+
+echo "$numValid $VALID_VALUES" | bc `dirname $0`/average.bc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

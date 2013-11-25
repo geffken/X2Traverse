@@ -1,0 +1,168 @@
+<html>
+<head><title>Soot: a Java Optimization Framework</title></head>
+
+<body background="background5.gif" TEXT="#000000" BGCOLOR="#F3F3F3" LINK="#0000CC">
+
+<table border=0 cellpadding=0 cellspacing=3>
+
+<TR>
+
+<!--LeftHandTable-->
+
+<TD ALIGN=LEFT VALIGN=TOP ROWSPACE="1" WIDTH=135>
+
+<p><font face="helvetica,arial" size="+1"><b>Ashes Home</b></font>
+
+<p>
+<a href="#introduction"><font face="helvetica,arial" size="+0">Introduction</font></a><br>
+<a href="#support"><font face="helvetica,arial" size="+0">Support</font></a><br>
+<a href="#installation"><font face="helvetica,arial" size="+0">Installation</font></a><br>
+<a href="#commands"><font face="helvetica,arial" size="+0">Commands</font></a><br>
+<a href="#download"><font face="helvetica,arial" size="+0">Download</font></a><br>
+
+<p><a href="http://www.sable.mcgill.ca">Sable Home</a>
+
+</td>
+
+<!--ActualContents-->
+
+<td align=left valign=top>
+<center>
+<a name="top"><b><font face="helvetica,arial" size="+2">Ashes: a Java Compiler Infrastructure</font></b></center></a> <br>
+</center>
+
+<!--Introduction-->
+<a name="introduction"> <table width=100%> <tr>
+<td width=97% align=left><b><font face="helvetica,arial" size="+1">Introduction</b></font></td></a>
+<td width=3% align=left><font size="-2"><a href="#top">top</a></td>
+</table>
+
+<blockquote>
+
+Ashes is a companion project to the Soot optimization framework.  It provides
+three distinct packages.  
+
+<ol> 
+<li><b>Ashes Suite Collection</b>: a collection of Java benchmarks which can be used as
+test programs or as evaluation benchmarks.  The run scripts for the individual benchmarks
+are bash scripts.
+
+<li><b><tt>ashes.*</tt> package</b>: a collection of Java programs written with the Soot framework
+to provide some interesting standalone compiler functionality.  Works under any Java compliant system.
+
+<li><b>Ashes scripts</b>: a collection of bash scripts which simplify the
+interface to the Ashes Suite Collection and the Ashes Java package </ol>
+
+<p>Ashes is freely redistributable.  Note that the Ashes Suite Collection
+includes software developed by IBM Corp. as part of the 
+<a href="http://www.ibm.com/research/jikes">IBM Research Jikes Compiler Project</a>
+
+
+</blockquote>
+
+<br>
+
+<!--Status-->
+<a name="support"> <table width=100%> <tr>
+<td width=97% align=left><b><font face="helvetica,arial" size="+1">Support</b></font></td></a>
+<td width=3% align=left><font size="-2"><a href="#top">top</a></td>
+</table>
+
+<blockquote>
+
+<p>This is the first public release of Ashes.  Ashes is unsupported, but it can be discussed on the 
+<a href="http://www.sable.mcgill.ca/soot/#contacts">Soot mailing list</a>.
+
+
+</blockquote>
+
+<br>
+
+<!--Installation-->
+<a name="installation"> <table width=100%> <tr>
+<td width=97% align=left><b><font face="helvetica,arial" size="+1">Installation</b></font></td></a>
+<td width=3% align=left><font size="-2"><a href="#top">top</a></td>
+</table>
+
+<blockquote>
+
+<p>If you wish to use Ashes under Windows NT/98 you will need to first install <a href="http://sourceware.cygnus.com/cygwin/">CygWin</a> by Cygnus.  
+
+<p>You must obtain the ashesSuiteCollection tar file and untar it in a directory, and set the environment variable ASHES_SUITE_COLLECTION to contain this directory.  e.g.
+
+<blockquote>
+<tt>tar xzvf ashesSuiteCollection-20Mar2000.tar.gz <br>
+ASHES_SUITE_COLLECTION=`pwd`/ashesSuiteCollection <br>
+</tt>
+</blockquote>
+
+<p>Then you must obtain the ashesBase tar file and untar it in a directory.  Add the bin subdirectory of to your PATH and
+the classes subdirectory to your CLASSPATH.  Set ASHES_JDK_CLASSES to point to an unjarred repository of JDK classfiles.
+On Unix systems, set ASHES_PDS=:, and on NT systems, set ASHES_PDS=;. e.g.
+
+<blockquote>
+<tt>tar xzvf ashesBase-21Mar2000.tar.gz<br>
+CLASSPATH=$CLASSPATH:ashesBase/classes<br>
+ASHES_JDK_CLASSES=/usr/local/jdk1.2.2/jre/rt<br>
+ASHES_PDS=:<br>
+</tt>
+</blockquote>
+<p>
+
+</blockquote>
+
+<br>
+
+
+<!--Commands-->
+<a name="commands"> <table width=100%> <tr>
+<td width=97% align=left><b><font face="helvetica,arial" size="+1">Commands</b></font></td></a>
+<td width=3% align=left><font size="-2"><a href="#top">top</a></td>
+</table>
+
+<blockquote>
+<ul>
+<li><tt>refreshBenchmark [b]</tt>&nbsp;&nbsp;&nbsp;copies benchmark [b] to the current directory from the ashesSuiteCollection
+<li><tt>refreshSuite [s]</tt>&nbsp;&nbsp;&nbsp;copies suite [s] to the current directory from the ashesSuiteCollection
+<li><tt>applyCmdOnSuite [c] [s]</tt>&nbsp;&nbsp;&nbsp; applies command [c] to the suite [s]
+<li><tt>ashesCountGotos [b] </tt>&nbsp;&nbsp;&nbsp; reports dynamic number of gotos executed in benchmark [b]
+<li><tt>ashesProfileCounts [b] </tt>&nbsp;&nbsp;&nbsp; reports dynamic number of invokevirtuals, invokeinterfaces, etc. in [b]
+<li><tt>ashesEvalScene [b] </tt>&nbsp;&nbsp;&nbsp; reports number of classfiles, fields and methods in benchmark [b]
+<li><tt>ashesPrintMembers [b] </tt>&nbsp;&nbsp;&nbsp; prints the members of benchmark [b]
+<li><tt>ashesPropagateConstants [b] </tt>&nbsp;&nbsp;&nbsp; propagates the constants in benchmark [b]
+<li><tt>ashesUnitWeigher [b] </tt>&nbsp;&nbsp;&nbsp; determines the dynamic count of each invoke in benchmark [b]
+<li><tt>executeBenchmark [b]</tt>&nbsp;&nbsp;&nbsp; executes benchmark [b] exactly once
+<li><tt>timeBenchmark [b]</tt>&nbsp;&nbsp;&nbsp; executes benchmark [b] ten times and performs average
+<li><tt>sootifyBenchmark [b] -- [soot-options]</tt>&nbsp;&nbsp;&nbsp; puts the benchmark [b] through Soot passing options
+<li><tt>testSootifyBenchmark [b]</tt>&nbsp;&nbsp;&nbsp; executes the benchmark [b], puts it through Soot, and executes it again
+</ul>
+
+</blockquote>
+
+<!--Download-->
+<a name="download"> <table width=100%> <tr>
+<td width=97% align=left><b><font face="helvetica,arial" size="+1">Download</b></font></td></a>
+<td width=3% align=left><font size="-2"><a href="#top">top</a></td>
+</table>
+<blockquote>
+
+Get the Ashes Suite Collection, </tt>ashes.*</tt> package and the Ashes scripts from our software repository at <a
+href="http://www.sable.mcgill.ca/software">http://www.sable.mcgill.ca/software</a>.
+                          
+</blockquote>
+<br>
+
+
+</td>
+
+</tr>
+</table>
+
+</html>
+
+
+
+
+
+
+
