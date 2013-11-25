@@ -272,7 +272,7 @@ public class TransClass {
                     public void edit(FieldAccess expr)
                             throws CannotCompileException {
                         try {
-                            CtClass type = expr.getField().getType();
+                            CtClass type = expr.getField().getDeclaringClass();
                             logger.finer("Reference to field-declaring type "
                                     + type.getName() + " at "
                                     + expr.getFileName() + ":"
