@@ -108,8 +108,16 @@ public class TransClass {
     public static TransClass transformHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         TransClass tc = new TransClass(className);
-        tc.computeReachableClasses();
-        tc.performTransform();
+        Set<CtClass> reachable = tc.computeReachableClasses(ClassPool.getDefault().get(className));
+        tc.performTransformation(reachable);
+        return tc;
+    }
+    
+    public static TransClass defaultAnnotateHierarchy(String className)
+            throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
+        TransClass tc = new TransClass(className);
+        Set<CtClass> reachable = tc.computeReachableClasses(ClassPool.getDefault().get(className));
+        tc.performDefaultAnnotatation(reachable);
         return tc;
     }
 
@@ -126,22 +134,27 @@ public class TransClass {
         TransClass tc = transformHierarchy(className);
         tc.flushTransform(outputDir);
     }
+    
+    public static void defaultAnnotateAndFlushHierarchy(String className, String outputDir)
+            throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
+        TransClass tc = defaultAnnotateHierarchy(className);
+        tc.flushTransform(outputDir);
+    }
 
-    protected void computeReachableClasses() throws NotFoundException,
+    protected Set<CtClass> computeReachableClasses(CtClass root) throws NotFoundException,
             IOException, CannotCompileException {
+        Queue<CtClass> pending = new LinkedList<CtClass>();
+        HashSet<CtClass> visited = new HashSet<CtClass>();
+        
+        pending.add(root);
         while (!pending.isEmpty()) {
             CtClass clazz = pending.remove();
             if (!visited.contains(clazz)) {
-                doTraverse(clazz);
+                doTraverse(clazz, pending, visited);
             }
         }
+        return visited;
     }
-    
-//    public boolean hasSuperClassOtherThan(CtClass target, CtClass standard) throws NotFoundException {
-//        CtClass superclazz = target.getSuperclass();
-//        boolean hasSuperclass = !superclazz.equals(standard);
-//        return hasSuperclass;
-//    }
     
     /*
      * Helper method for <code>computeReachableClasses</code>. Traverses the
@@ -149,7 +162,7 @@ public class TransClass {
      * all classes the class' fields to queue of pending classes, if not already
      * visited.
      */
-    private void doTraverse(CtClass target) throws NotFoundException {
+    private void doTraverse(CtClass target, Queue<CtClass> pending, Set<CtClass> visited) throws NotFoundException {
         visited.add(target);
         
         // collect all types this type refers to in this set
@@ -312,7 +325,7 @@ public class TransClass {
                 continue;
             if (type.getName().matches(filterVisitRegex))
                 continue;
-            enter(type); 
+            enter(type, pending, visited); 
         }
     }
 
@@ -320,7 +333,7 @@ public class TransClass {
      * Helper method for <code>computeReachableClasses</code>. Adds the
      * specified class to queue of pending classes, if not already visited.
      */
-    private void enter(CtClass clazz) {
+    private void enter(CtClass clazz, Queue<CtClass> pending, Set<CtClass> visited) {
         logger.entering("TransClass", "enter", clazz);
         if (!visited.contains(clazz)) {
             pending.add(clazz);
@@ -328,17 +341,28 @@ public class TransClass {
         logger.exiting("TransClass", "enter");
     }
 
-    /*
-     * Transforms all reachable classes.
-     */
-    protected void performTransform() throws NotFoundException, IOException,
-            CannotCompileException, ClassNotFoundException {
+    private Set<CtClass> filterClassesToTransform(Set<CtClass> visited) {
         HashSet<CtClass> toTransform = new HashSet<CtClass>();
         for (CtClass clazz : visited) {
             if (!clazz.getName().matches(filterTransformRegex)) {
                 toTransform.add(clazz);
             }
         }
+        return toTransform;
+    }
+    
+    protected void performDefaultAnnotatation(Set<CtClass> classes) {
+        
+    }
+    
+    /*
+     * Transforms all reachable classes.
+     */
+    protected void performTransformation(Set<CtClass> classes) throws NotFoundException, IOException,
+            CannotCompileException, ClassNotFoundException {
+        
+        Set<CtClass> toTransform = filterClassesToTransform(classes);
+        
         if (logger.isLoggable(Level.FINEST)) {
             StringBuilder sb = new StringBuilder();
             for (CtClass visitedClazz : visited) {
@@ -359,7 +383,7 @@ public class TransClass {
                 CtClass superclass = stack.pop();
                 
                 // if this does not hold we might miss some superclass fields
-                assert (transformed.contains(superclass.getSuperclass()) == transformed
+                assert (transformed.contains(superclass.getSuperclass()) == toTransform
                         .contains(superclass.getSuperclass()));
                 doTransform(superclass, transformed.contains(superclass.getSuperclass()));
                 transformed.add(superclass);

@@ -35,7 +35,7 @@ public class Main {
         } catch (ArrayIndexOutOfBoundsException e) {
             StringBuilder usage = new StringBuilder();
             usage.append("Usage: x2traverse class [output directory]\n");
-            usage.append(" (to transform the class hierarchy rootet at a class\n");
+            usage.append(" (to transform the class hierarchy rootet at a class)\n");
             usage.append("where options include:\n");
             usage.append(" \n");
             System.out.println(usage);
