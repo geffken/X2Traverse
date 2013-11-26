@@ -67,20 +67,17 @@ public class TransClass {
    
 
     //private final Map<CtClass, Boolean> visited = new HashMap<CtClass, Boolean>();
-    private final HashSet<CtClass> visited = new HashSet<CtClass>();
-    private final HashSet<CtClass> transformed = new HashSet<CtClass>();
-    private final Queue<CtClass> pending;
+    //private final HashSet<CtClass> visited = new HashSet<CtClass>();
+    //private final HashSet<CtClass> transformed = new HashSet<CtClass>();
+    //private final Queue<CtClass> pending;
 
-//    protected Map<CtClass, Boolean> getVisited() {
-//        return Collections.unmodifiableMap(visited);
+//    protected Set<CtClass> getVisited() {
+//        return Collections.unmodifiableSet(visited);
 //    }
-    protected Set<CtClass> getVisited() {
-        return Collections.unmodifiableSet(visited);
-    }
 
-    protected Collection<CtClass> getPending() {
-        return Collections.unmodifiableCollection(pending);
-    }
+//    protected Collection<CtClass> getPending() {
+//        return Collections.unmodifiableCollection(pending);
+//    }
 
     /**
      * Transformer class capable of statically adding heap traversal code to a
@@ -92,10 +89,9 @@ public class TransClass {
      * @throws NotFoundException
      */
     protected TransClass(String classname) throws NotFoundException {
-        CtClass clazz = ClassPool.getDefault().get(classname);
-        ClassPool.getDefault().importPackage("java.util");
-    	pending = new LinkedList<CtClass>();
-    	pending.add(clazz);
+        //CtClass clazz = ClassPool.getDefault().get(classname);
+    	//pending = new LinkedList<CtClass>();
+    	//pending.add(clazz);
         objectClass = ClassPool.getDefault().get(Object.class.getName());
     }
 
@@ -105,20 +101,20 @@ public class TransClass {
      * @param className the class name of the class spanning a reachable classes tree 
      * @throws ClassNotFoundException 
      */
-    public static TransClass transformHierarchy(String className)
+    public static Set<CtClass> transformHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         TransClass tc = new TransClass(className);
         Set<CtClass> reachable = tc.computeReachableClasses(ClassPool.getDefault().get(className));
-        tc.performTransformation(reachable);
-        return tc;
+        Set<CtClass> transformed = tc.performTransformation(reachable);
+        return transformed;
     }
     
-    public static TransClass defaultAnnotateHierarchy(String className)
+    public static Set<CtClass> defaultAnnotateHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         TransClass tc = new TransClass(className);
         Set<CtClass> reachable = tc.computeReachableClasses(ClassPool.getDefault().get(className));
-        tc.performDefaultAnnotatation(reachable);
-        return tc;
+        Set<CtClass> transformed = tc.performDefaultAnnotatation(reachable);
+        return transformed;
     }
 
     /**
@@ -131,14 +127,14 @@ public class TransClass {
      */
     public static void transformAndFlushHierarchy(String className, String outputDir)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
-        TransClass tc = transformHierarchy(className);
-        tc.flushTransform(outputDir);
+        Set<CtClass> transformed = transformHierarchy(className);
+        TransClass.flushTransform(transformed, outputDir);
     }
     
     public static void defaultAnnotateAndFlushHierarchy(String className, String outputDir)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
-        TransClass tc = defaultAnnotateHierarchy(className);
-        tc.flushTransform(outputDir);
+        Set<CtClass> transformed = defaultAnnotateHierarchy(className);
+        TransClass.flushTransform(transformed, outputDir);
     }
 
     protected Set<CtClass> computeReachableClasses(CtClass root) throws NotFoundException,
@@ -351,26 +347,31 @@ public class TransClass {
         return toTransform;
     }
     
-    protected void performDefaultAnnotatation(Set<CtClass> classes) {
+    protected Set<CtClass> performDefaultAnnotatation(Set<CtClass> classes) {
+        final HashSet<CtClass> transformed = new HashSet<CtClass>();
         
+        
+        return transformed;
     }
     
     /*
      * Transforms all reachable classes.
      */
-    protected void performTransformation(Set<CtClass> classes) throws NotFoundException, IOException,
+    protected Set<CtClass> performTransformation(Set<CtClass> classes) throws NotFoundException, IOException,
             CannotCompileException, ClassNotFoundException {
+        ClassPool.getDefault().importPackage("java.util");
         
         Set<CtClass> toTransform = filterClassesToTransform(classes);
         
         if (logger.isLoggable(Level.FINEST)) {
             StringBuilder sb = new StringBuilder();
-            for (CtClass visitedClazz : visited) {
+            for (CtClass visitedClazz : toTransform) {
                 sb.append(visitedClazz.getName()+"\n");
             }
-            logger.finest("Visited types:\n" +sb.toString());
+            logger.finest("Classes to transform:\n" +sb.toString());
         }
         
+        final HashSet<CtClass> transformed = new HashSet<CtClass>();
         for (CtClass clazz : toTransform) {
             Deque<CtClass> stack = new ArrayDeque<CtClass>();
             CtClass current = clazz;
@@ -396,15 +397,16 @@ public class TransClass {
             }
             logger.finest("Transformed types:\n" +sb.toString());
         }
+        return transformed;
     }
     
     /**
      * Flushes all reachable classes back to disk.
      * @param outputDir the relative output directory
      */
-    protected void flushTransform(String outputDir) throws NotFoundException,
+    protected static void flushTransform(Set<CtClass> classes, String outputDir) throws NotFoundException,
             IOException, CannotCompileException {
-        for (CtClass tc : visited) {
+        for (CtClass tc : classes) {
             if (!tc.isArray()) {
                 tc.writeFile(outputDir);
                 for (CtClass inner : tc.getNestedClasses()) {
