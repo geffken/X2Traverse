@@ -115,32 +115,32 @@ public class TransClassTest {
     @Test
     public void testComputeReachableClasses() throws NotFoundException,
             IOException, CannotCompileException {
-        TransClass tc = new TransClass(TEST_EMPTY_CLASS_NAME);
+        TransClass tc = new TransClass();
         List<String> expected = Arrays
                 .asList(TEST_EMPTY_CLASS_NAME);
-        checkMap(tc, expected);
+        checkMap(tc, TEST_EMPTY_CLASS_NAME, expected);
 
-        tc = new TransClass(TEST_INT_CLASS_NAME);
+        tc = new TransClass();
         expected = Arrays.asList(TEST_INT_CLASS_NAME);
-        checkMap(tc, expected);
+        checkMap(tc, TEST_INT_CLASS_NAME, expected);
 
-        tc = new TransClass(TEST_COMPOUND_CLASS_NAME);
+        tc = new TransClass();
         expected = Arrays.asList(TEST_COMPOUND_CLASS_NAME,
                 TEST_EMPTY_CLASS_NAME,
                 TEST_INT_CLASS_NAME);
-        checkMap(tc, expected);
+        checkMap(tc, TEST_COMPOUND_CLASS_NAME, expected);
 
-        tc = new TransClass("de.unifr.acp.trafo.TestEmptySubclass");
+        tc = new TransClass();
         expected = Arrays.asList("de.unifr.acp.trafo.TestEmptySubclass",
                 TEST_EMPTY_CLASS_NAME);
-        checkMap(tc, expected);
+        checkMap(tc, "de.unifr.acp.trafo.TestEmptySubclass", expected);
 
-        tc = new TransClass("de.unifr.acp.trafo.TestCompoundSubclass");
+        tc = new TransClass();
         expected = Arrays.asList("de.unifr.acp.trafo.TestCompoundSubclass",
                 TEST_EMPTY_CLASS_NAME,
                 TEST_INT_CLASS_NAME,
                 TEST_COMPOUND_CLASS_NAME);
-        checkMap(tc, expected);
+        checkMap(tc, "de.unifr.acp.trafo.TestCompoundSubclass", expected);
 
     }
 
@@ -151,10 +151,9 @@ public class TransClassTest {
      * @throws IOException
      * @throws CannotCompileException
      */
-    private void checkMap(TransClass tc, List<String> expected)
+    private void checkMap(TransClass tc, String classname, List<String> expected)
             throws NotFoundException, IOException, CannotCompileException {
-        tc.computeReachableClasses();
-        Set<CtClass> visited = tc.getVisited();
+        Set<CtClass> visited = tc.computeReachableClasses(ClassPool.getDefault().get(classname));
         if (verbose) {
             System.out.println("<<<");
             for (CtClass cls : visited) {

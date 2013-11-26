@@ -28,7 +28,16 @@ import javassist.CtField;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.AttributeInfo;
+import javassist.bytecode.ClassFile;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.ParameterAnnotationsAttribute;
 import javassist.bytecode.SyntheticAttribute;
+import javassist.bytecode.annotation.Annotation;
+import javassist.bytecode.annotation.ClassMemberValue;
+import javassist.bytecode.annotation.IntegerMemberValue;
+import javassist.bytecode.annotation.StringMemberValue;
 import javassist.expr.Cast;
 import javassist.expr.ConstructorCall;
 import javassist.expr.ExprEditor;
@@ -88,7 +97,7 @@ public class TransClass {
      *            reachable classes
      * @throws NotFoundException
      */
-    protected TransClass(String classname) throws NotFoundException {
+    protected TransClass() throws NotFoundException {
     }
 
     /**
@@ -99,7 +108,7 @@ public class TransClass {
      */
     public static Set<CtClass> transformHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
-        TransClass tc = new TransClass(className);
+        TransClass tc = new TransClass();
         Set<CtClass> reachable = tc.computeReachableClasses(ClassPool.getDefault().get(className));
         Set<CtClass> transformed = tc.performTransformation(reachable);
         return transformed;
@@ -107,7 +116,7 @@ public class TransClass {
     
     public static Set<CtClass> defaultAnnotateHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
-        TransClass tc = new TransClass(className);
+        TransClass tc = new TransClass();
         Set<CtClass> reachable = tc.computeReachableClasses(ClassPool.getDefault().get(className));
         Set<CtClass> transformed = tc.performDefaultAnnotatation(reachable);
         return transformed;
@@ -345,7 +354,54 @@ public class TransClass {
     
     protected Set<CtClass> performDefaultAnnotatation(Set<CtClass> classes) {
         final HashSet<CtClass> transformed = new HashSet<CtClass>();
-        
+        for (CtClass cc : classes) {
+            
+            // collect all methods and constructors
+            List<CtMethod> methods = Arrays.asList(cc.getMethods());
+            List<CtConstructor> ctors = Arrays.asList(cc.getConstructors());
+            List<CtBehavior> methodsAndCtors = new ArrayList<CtBehavior>();
+            methodsAndCtors.addAll(methods);
+            methodsAndCtors.addAll(ctors);
+
+            ClassFile ccFile = cc.getClassFile();
+            ConstPool constpool = ccFile.getConstPool();
+            for (CtBehavior methodOrCtor : methodsAndCtors) {
+                // create and add the mehtod-level annotation
+                AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+                Annotation annot = new Annotation("MyAnnotation", constpool);
+                annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
+                attr.addAnnotation(annot);
+                methodOrCtor.getMethodInfo().addAttribute(attr);
+
+                // create and add the parameter-level annotation
+                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.invisibleTag); // or inVisibleTag
+                ConstPool parameterConstPool = paramAttributeInfo.getConstPool();
+                
+                Annotation parameterAnnotation = new Annotation("annotation name", parameterConstPool);
+                ClassMemberValue parameterMemberValue = new ClassMemberValue("class full name", parameterConstPool);
+                StringMemberValue value = new StringMemberValue("*", constpool);
+                parameterAnnotation.addMemberValue("value", parameterMemberValue);
+                
+
+                // add annotation to dimensional array
+                ParameterAnnotationsAttribute parameterAtrribute = ((ParameterAnnotationsAttribute) paramAttributeInfo);
+                Annotation[][] paramArrays = parameterAtrribute.getAnnotations();
+                for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
+                    // int orderNum = position.getOrderNumber();
+                    Annotation[] addAnno = paramArrays[orderNum];
+                    Annotation[] newAnno = null;
+                    if (addAnno.length == 0) {
+                        newAnno = new Annotation[1];
+                    } else {
+                        newAnno = Arrays.copyOf(addAnno, addAnno.length + 1);
+                    }
+                    newAnno[addAnno.length] = parameterAnnotation;
+                    paramArrays[orderNum] = newAnno;
+                    parameterAtrribute.setAnnotations(paramArrays);
+                }
+            }
+            
+        }
         
         return transformed;
     }
@@ -423,7 +479,7 @@ public class TransClass {
 
 
     /**
-     * Transforms the target class type if not already done.
+     * Transforms a single class if not already done.
      * @param target the class to transform
      * @param hasTransformedSuperclass the target has an already transformed superclass
      * @throws NotFoundException
