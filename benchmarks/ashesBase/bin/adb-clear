@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ ! $ASHES_DATABASE ]
+then
+   echo "Please define the ASHES_DATABASE environment variable to contain"
+   echo "the path to the directory of set files."
+   exit 0
+fi
+
+
+if [ $# != 1 ]
+then
+    echo "Syntax: adb-clear <set>"
+    exit 0
+fi
+
+SET=$1
+
+rm $ASHES_DATABASE/$SET

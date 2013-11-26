@@ -1,0 +1,46 @@
+#!/bin/bash
+
+if [ $# != 1 -a $# != 4 ]
+then
+    echo "Syntaxes: timeBenchmark <benchmark_dir>" 
+    echo "          timeBenchmark <benchmark_dir> <set> <context> <benchmark_name>"
+    exit 0
+fi
+
+if [ $# = 4 ]
+then
+    STORE_RESULTS=true
+    SET=$2
+    CONTEXT=$3
+    BENCHMARK_NAME=$4
+fi
+
+BENCHMARK=$1
+
+if [ `echo $BENCHMARK | cut -c1` != "/" ]
+then
+   BENCHMARK=`pwd`/$BENCHMARK
+fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+OLD_STEP=$SCRIPT_STEP
+
+if [ $OLD_STEP ]
+then
+    OLD_STEP="${OLD_STEP}-"
+fi
+
+export SCRIPT_STEP="${OLD_STEP}1"
+executeBenchmark $BENCHMARK
+echo
+
+TIME=`cat $BENCHMARK/executionTime${SCRIPT_STEP}`
+
+echo "   Estimated average time: ${TIME}s"
+
+if [ $STORE_RESULTS ]
+then
+    adb-put $SET "${BENCHMARK_NAME}-${CONTEXT}-averageTime" $TIME
+fi

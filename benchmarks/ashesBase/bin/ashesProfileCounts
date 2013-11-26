@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [ $# = 0 ]
+then
+    echo "Syntax: profileBenchmarkWithCounters <benchmark> [-- soot-options]"
+    exit 0
+fi
+
+BENCHMARK=$1
+shift
+
+# Make sure that the user put the --
+    if [ $1 ]
+    then
+        if [ $1 != "--" ]
+        then
+            echo "Illegal option " $1
+            exit
+        fi
+    fi
+
+# Make sure the benchmark filename is absolute
+    if [ `echo $BENCHMARK | cut -c1` != "/" ]
+    then
+       BENCHMARK=`pwd`/$BENCHMARK
+    fi
+
+export SCRIPT_STEP=1
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP=2
+insertInvokeCountsIntoBenchmark $BENCHMARK $@
+echo
+
+SCRIPT_STEP=3
+executeBenchmark $BENCHMARK
+echo
+
+SCRIPT_STEP=4
+cd $BENCHMARK
+java ashes.tools.profilecounts.FormatCounters `cat executionTime1` >&/dev/null
+cat counters.txt

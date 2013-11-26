@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# 1999/05/21 PTC Sootify benchmark, then test. If it fails, start with 
+#     unsootified classes (assumed to succeed), and gradually insert 
+#     sootified classes one by one until failure
+
+if [ $# = 0 ]
+then
+    echo "Syntax: sootifyAndTestBenchmark <benchmark> [-- soot-options]"
+    exit 0
+fi
+
+BENCHMARK=$1
+echo ""
+echo "Benchmark: $BENCHMARK"
+
+if [ ! $ASHES_JDK_CLASSES ]
+then
+   echo "Please define the ASHES_JDK_CLASSES environment variable to contain"
+   echo "the path to the standard JDK library classes."
+   exit 0
+fi
+
+shift
+
+# Make sure that the user put the --
+    if [ $1 ]
+    then
+        if [ $1 != "--" ]
+        then
+            echo "Illegal option " $1
+            exit
+        fi
+
+	shift
+    fi
+
+# Make sure the benchmark filename is absolute
+    if [ `echo $BENCHMARK | cut -c1` != "/" ]
+    then
+       BENCHMARK=`pwd`/$BENCHMARK
+    fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+# if classes.org/ exists, copy it to classes/, else copy classes/ to it
+if [ ! -d classes.org ] 
+then
+  echo " ... saving current class files ..."
+  cp -r classes classes.org
+else
+  echo " ... restoring original class files ..."
+  rm -rf classes
+  cp -r classes.org classes
+fi
+
+echo "   Sootifying benchmark..."
+/usr/bin/time -o timeResults -f "%E*%P" java -Djava.compiler= -ms32m -mx256m soot.Main --soot-class-path classes:$ASHES_JDK_CLASSES -d classes -r $@ `cat mainClass`  | tee sootOutput
+
+if [ "`grep -l 'failed due' sootOutput`" ]
+then
+    echo "*** Sootification failed! ***"
+    exit 
+fi
+
+# now copy sootified classes to classes.soot/
+if [ -d classes.soot ] 
+then
+  rm -rf classes.soot
+fi
+echo " ... saving sootified class files ..."
+cp -r classes classes.soot
+
+cat timeResults | cut -f1 -d* >executionTime
+cat timeResults | cut -f2 -d* >cpuTime
+
+echo "   `cat executionTime` elapsed  (`cat cpuTime` CPU usage)"  
+
+echo " ... testing sootified benchmark ..."
+./run >executionOutput
+cat executionOutput | cut -f1 -d: >executionResult
+if [ `cat executionResult$SCRIPT_STEP` == "success" ]
+then
+    echo " ... Sootified benchmark verified successfully ..."
+    exit
+else
+    echo "*** Benchmark did not verify... attempting to find bad sootified class ***"
+fi
+
+popd >&/dev/null
+
+isolateBugInBenchmark $BENCHMARK
+
+
+
+

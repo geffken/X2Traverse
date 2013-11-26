@@ -1,0 +1,137 @@
+#!/bin/bash
+
+if [ ! $ASHES_JDK_CLASSES ]
+then
+   echo "Please define the ASHES_JDK_CLASSES environment variable to contain"
+   echo "the path to the standard JDK library classes."
+   exit 0
+fi
+
+if [ ! $ASHES_PDS ]
+then
+   echo "Please set the ASHES_PDS environment variable to be the "
+   echo "path delimiter symbol for the Java CLASSPATH on your system. "
+   exit 0
+fi
+
+if [ $# = 0 ]
+then
+    echo "Syntax: sootifyBenchmark <benchmark> [-- soot-options]"
+    echo "        sootifyBenchmark <benchmark> <set> <context> <benchmark_name> [-- soot-options]"
+    exit 0
+fi
+
+BENCHMARK=$1
+shift
+
+# Make sure that the user put the --
+    if [ $1 ]
+    then
+        if [ $1 != "--" ]
+        then
+            STORE_RESULTS=true
+            SET=$1
+            shift
+            if [ $1 ]
+            then
+                CONTEXT=$1
+                shift
+            else
+                echo "Specified set but not context!"
+                exit 1
+            fi
+
+            if [ $1 ] 
+            then
+                BENCHMARK_NAME=$1
+                shift
+            else
+                echo "Specified set & context but not benchmark name"
+                exit 1
+            fi
+            
+            if [ $1 ]
+            then
+                if [ $1 != "--" ]
+                then
+                    echo "unknown option $1"
+                    exit 1
+                else
+		    shift
+                fi
+            fi
+	else
+	    shift
+        fi
+    fi
+
+
+# Make sure the benchmark filename is absolute
+    if [ `echo $BENCHMARK | cut -c1` != "/" ]
+    then
+       BENCHMARK=`pwd`/$BENCHMARK
+    fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+if [ -d newClasses ]
+then
+    rm -rf newClasses
+fi
+
+cp -r classes newClasses
+find newClasses -name "*.class" -print | xargs rm -rf
+
+echo "   Sootifying benchmark..."
+
+/usr/bin/time -o timeResults$SCRIPT_STEP -f "%E*%P" java -Xrunhprof:cpu=samples -ms32m -mx256m soot.Main --app --dynamic-path classes --soot-class-path "classes${ASHES_PDS}${ASHES_JDK_CLASSES}" -d newClasses $@ `cat mainClass` &>sootOutput$SCRIPT_STEP
+
+VALID="-"
+
+if [ "`grep -l 'failed due' sootOutput$SCRIPT_STEP`" ]
+then
+    echo "*** Sootification failed! ***"
+    VALID="X"
+    
+fi
+
+if [ "`grep -l 'JAS Error' sootOutput$SCRIPT_STEP`" ]
+then
+    echo "*** Sootification failed! ***"
+    VALID="X"
+fi
+
+if [ $STORE_RESULTS ]
+then
+    adb-put $SET "${BENCHMARK_NAME}-${CONTEXT}-valid" $VALID
+fi
+
+if [ $VALID = "X" ]
+then
+    exit
+fi
+
+rm -rf classes
+mv newClasses classes
+
+cat timeResults$SCRIPT_STEP | cut -f1 -d* >executionTime$SCRIPT_STEP
+cat timeResults$SCRIPT_STEP | cut -f2 -d* >cpuTime$SCRIPT_STEP 
+
+echo "   `cat executionTime$SCRIPT_STEP` elapsed  (`cat cpuTime$SCRIPT_STEP` CPU usage)"  
+
+popd >&/dev/null
+
+
+
+
+
+
+
+
+
+
+
+
+
+

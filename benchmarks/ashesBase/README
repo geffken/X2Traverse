@@ -1,0 +1,22 @@
+Ashes Scripts
+-------------
+
+This bin directory contains a bunch of unsupported scripts which can be used
+with the ashesSuiteCollection to simplify the lives of developers using Soot.
+
+
+Environment variables
+
+ASHES_DATABASE    -- undocumented
+ASHES_DOMAINS     -- undocumented
+ASHES_JDK_CLASSES -- complete path to the unjarred jdk classes
+ASHES_JVM_CMD     -- command to execute to run benchmarks
+   e.g
+    ASHES_JVM_CMD='java -ms${ASHES_INITIAL_HEAP}m 
+       -mx${ASHES_MAXIMUM_HEAP}m -Djava.compiler= -verify'
+
+ASHES_MAXIMUM_HEAP -- used within "run" scripts 
+ASHES_INITIAL_HEAP -- used within "run" scripts (see ashesSuiteCollection)
+ASHES_PDS          -- path separator
+ASHES_SUITE_COLLECTION -- location to the ashes suite collection
+

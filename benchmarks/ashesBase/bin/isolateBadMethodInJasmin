@@ -1,0 +1,130 @@
+#!/usr/bin/perl
+#
+# by Patrice Pominville  July 28, 1999; Sept 13, 1999
+#
+# 
+# usage: isolateBadMethodInJasmin <goodJasminFile> <badJasminFile>
+# must be executed within benchmark directory
+
+
+$file0 = $ARGV[0];  
+$file1 = $ARGV[1];
+$tempFile = "temp_result_file";
+
+open(FILE_0, $file0); 
+open(FILE_1, $file1); 
+
+
+# put correct methods into @methods_0 array, extract class header into $header
+while (<FILE_0>){
+    if ($_ =~ ".method") {
+	$entry = $_;
+	while(<FILE_0>) {
+	    $entry = $entry.$_;
+	    last if $_ =~ ".end method";
+	}
+	push(@methods_0, $entry);
+    } else {
+	$header=$header.$_;
+    }
+} 
+
+
+# put broken class methods into @methods_1 array
+while (<FILE_1>){
+    if ($_ =~ ".method") {
+	$entry = $_;
+	while(<FILE_1>) {
+	    $entry = $entry.$_;
+	    last if $_ =~ ".end method";
+	}
+	push(@methods_1, $entry);
+    } 
+} 
+
+
+$begin = 0;
+$end = scalar(@methods_0);
+if( int (($end + $begin)/2) == ($end +$begin)/2) {
+    $middle = ($end + $begin)/2;
+}  else {
+    $middle = int (($end + $begin)/2) +1;
+}
+
+
+
+
+
+while($begin != $end) {
+
+    $testResult = &doTest;     # success = 1
+
+    if($testResult == 1) {
+	$begin = $middle;
+    } else {
+	$end = $middle - 1;
+    }
+    if( (int (($end + $begin)/2)) == ($end +$begin)/2) {
+	$middle = ($end + $begin)/2;      
+   }  else {
+       $middle = (int (($end + $begin)/2)) +1;    
+   }
+}
+
+@lines = split /^/m, $methods_0[$begin];
+print "broken method signature is: \n";
+print "$lines[0]\n";
+
+
+
+sub doTest {
+    
+#load temp array with correct methods 
+    splice(@temp, 0, scalar(@methods_0), @methods_0[0 .. scalar(@methods_0)]);
+    
+    $| = 1;
+    print "begin:  $begin, middle: $middle, end: $end\n"; 
+    
+# replace methods in [begin, middle-1] range by broken class methods 
+    splice (@temp, $begin, ($middle -1) - $begin +1 , @methods_1[$begin .. ($middle -1) ]);
+
+
+# print out resulting mixed array of methods to file
+    $tempfile = "tempfile";    
+    open(OUT, ">$tempfile");
+    
+    print OUT $header;
+    foreach $method (@temp) {
+	print OUT $method;
+    }
+    close(OUT);
+
+# run test; Wouldn't it be nicer if the run script returned a value?
+    system("cd classes; java jasmin.Main ../$tempfile; cd ..; ./run &> $tempFile");
+
+# assume success
+    $testResult = 1;
+
+    open(TEMP, $tempFile); 
+    while(<TEMP>) {
+	if ($_ =~ "failure" || $_ =~ "faillure") {
+	    $testResult = 0;
+	    break;
+	}
+    }
+    system("cat $tempFile >> log");
+    close(TEMP);
+    return $testResult;
+}
+
+
+
+
+
+
+
+
+
+
+
+

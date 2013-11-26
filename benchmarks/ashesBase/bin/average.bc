@@ -1,0 +1,36 @@
+scale = 3
+nargs = read()
+
+for(i = 1; i <= nargs; i++)
+{
+    x = read()
+
+    total = total + x
+    input[i] = x
+}
+
+avg = total / nargs
+
+scale=3
+
+print "Average: " 
+print avg;
+print "\n"
+
+scale=6
+variance = 0;
+
+for(i = 1 ; i <= nargs; i++)
+{
+    variance = variance + (avg - input[i]) * (avg - input[i]);
+}
+
+variance = variance / nargs;
+
+deviation = sqrt(variance);
+
+print "Standard deviation: " 
+print deviation;
+print "\n"
+
+

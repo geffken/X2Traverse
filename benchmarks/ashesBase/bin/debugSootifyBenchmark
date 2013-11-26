@@ -1,0 +1,87 @@
+#!/bin/bash
+
+if [ ! $ASHES_JDK_CLASSES ]
+then
+   echo "Please define the ASHES_JDK_CLASSES environment variable to contain"
+   echo "the path to the standard JDK library classes."
+   exit 0
+fi
+
+if [ $# = 0 ]
+then
+    echo "Syntax: sootifyBenchmark <benchmark> [-- soot-options]"
+    exit 0
+fi
+
+BENCHMARK=$1
+
+shift
+
+# Make sure that the user put the --
+    if [ $1 ]
+    then
+        if [ $1 != "--" ]
+        then
+            echo "Illegal option " $1
+            exit
+        fi
+
+	shift
+    fi
+
+# Make sure the benchmark filename is absolute
+    if [ `echo $BENCHMARK | cut -c1` != "/" ]
+    then
+       BENCHMARK=`pwd`/$BENCHMARK
+    fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+if [ -d newClasses ]
+then
+    rm -rf newClasses
+fi
+
+cp -r classes newClasses
+find newClasses -name "*.class" -print | xargs rm -rf
+
+echo "   Sootifying benchmark..."
+
+/usr/bin/time -o timeResults$SCRIPT_STEP -f "%E*%P" java -ms32m -mx256m -Djava.compiler= soot.Main --app --soot-class-path supportClasses:classes:$ASHES_JDK_CLASSES --dynamic-path classes --debug -d newClasses $@ `cat mainClass` >&sootOutput$SCRIPT_STEP
+
+if [ "`grep -l 'failed due' sootOutput$SCRIPT_STEP`" ]
+then
+    echo "*** Sootification failed! ***"
+    exit 
+fi
+
+if [ "`grep -l 'JAS Error' sootOutput$SCRIPT_STEP`" ]
+then
+    echo "*** Sootification failed! ***"
+    exit 
+fi
+
+rm -rf classes
+mv newClasses classes
+
+cat timeResults$SCRIPT_STEP | cut -f1 -d* >executionTime$SCRIPT_STEP
+cat timeResults$SCRIPT_STEP | cut -f2 -d* >cpuTime$SCRIPT_STEP 
+
+echo "   `cat executionTime$SCRIPT_STEP` elapsed  (`cat cpuTime$SCRIPT_STEP` CPU usage)"  
+
+popd >&/dev/null
+
+
+
+
+
+
+
+
+
+
+
+
+
+

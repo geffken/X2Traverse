@@ -1,0 +1,28 @@
+#!/bin/sh
+if [ $# = 0 ]
+then
+   echo "Syntax: boundProcess <secs> <cmd>"
+   exit 0
+fi
+
+DELAY=$1
+shift
+
+$@ & 
+
+PID=$!
+counter=0
+
+while [ $counter != $DELAY ]
+do
+   if [ ! "`ps $PID | grep $PID`" ]
+   then
+       exit 0
+   fi
+
+   sleep 1
+   counter=`expr $counter + 1`
+done
+
+kill -9 $PID
+

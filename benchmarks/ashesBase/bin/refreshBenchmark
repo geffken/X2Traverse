@@ -1,0 +1,59 @@
+#!/bin/sh
+# @author Patrice Pominville 
+#         patrice@sable.mcgill.ca
+# Fri Jun 25 14:08:57 EDT 1999
+
+
+if [ $1 = "--help" ]; then
+
+echo "Usage: refreshBenchmark benchmark"
+fi
+
+if [ ! $ASHES_SUITE_COLLECTION ]
+then
+   echo "Please define the ASHES_SUITE_COLLECTION environment variable to contain"
+   echo "the path to the Ashes Suite Collection."
+   exit 0
+fi
+
+BASE2=${ASHES_SUITE_COLLECTION}/nonfreeSuites
+BASE1=${ASHES_SUITE_COLLECTION}/suites
+
+
+DIR=$1
+
+NEW_DIR=`find $BASE1  -type d -name $DIR -maxdepth 3`
+
+if [ ! $NEW_DIR ] 
+then
+    NEW_DIR=`find $BASE2  -type d -name $DIR -maxdepth 3`
+fi
+
+if [ ! $NEW_DIR ] 
+then
+    echo "Can not find benchmark $DIR in the Ashes Suite Collection; aborting."
+    exit
+fi
+
+rm -rf $DIR
+cp -r $NEW_DIR .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

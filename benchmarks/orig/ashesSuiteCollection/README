@@ -1,0 +1,31 @@
+Ashes Suite Collection
+----------------------
+
+This is the collection of programs that we use at the Sable Research Group to 
+develop and test our compilers.  It is a set of freely redistributable benchmarks
+which have the following properties:
+
+- Freely redistributable and optimizable (allows reverse-engineering)
+
+- Be non-interactive and windowless
+
+- Be deterministic
+
+- Run under jdk1.2
+
+Benchmark organization
+----------------------
+All the benchmarks are organized in the following manner:
+
+benchmark/classes      classfiles for the benchmark
+benchmark/src          source files for the benchmark
+benchmark/run*         script to execute the benchmark under Unix
+benchmark/mainClass    file containing the name of the root class of the
+                       benchmark
+
+possibly some additional files
+
+
+Note that this product includes software developed by IBM Corp. as part of the
+IBM Research Jikes Compiler Project, http://www.ibm.com/research/jikes.
+

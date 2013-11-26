@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ $# != 2 ]
+then
+    echo "Syntax: copyBenchmark <source> <dest>"
+    exit 0
+fi
+
+SOURCE=$1
+DEST=$2
+
+if [ ! -d $DEST ]
+then
+    mkdir $DEST
+else
+    rm -rf ${DEST}/*
+fi 
+
+cp -rf ${SOURCE}/* ${DEST}

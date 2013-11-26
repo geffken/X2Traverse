@@ -1,0 +1,3 @@
+#!/bin/sh
+find . -name "*.class" | cut -f2 -d "." | tr "/" "." | sed s/^.//
+

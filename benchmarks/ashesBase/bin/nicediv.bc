@@ -1,0 +1,13 @@
+scale=3
+x = read()
+y = read()
+
+z3 = x / y
+scale=2
+
+z2 = x / y 
+d = z3 - z2
+if(d >= 0.005)
+   z2 = z2 + 0.01
+
+print z2

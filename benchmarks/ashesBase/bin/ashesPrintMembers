@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# = 0 ]
+then
+    echo "Syntax: ashesPrintMembers <classname>"
+    exit 0
+fi
+
+java -ms64m -mx256m ashes.tools.printmembers.Main $@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,12 @@
+scale = 2
+nargs = read()
+
+for(i = 1; i <= nargs; i++)
+{
+    x = read()
+
+    total = total + x
+}
+
+avg = total / nargs
+print avg;

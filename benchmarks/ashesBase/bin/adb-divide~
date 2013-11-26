@@ -1,0 +1,42 @@
+#!/bin/bash
+
+if [ ! $ASHES_DATABASE ]
+then
+   echo "Please define the ASHES_DATABASE environment variable to contain"
+   echo "the path to the directory of set files."
+   exit 0
+fi
+
+if [ ! $ASHES_DOMAINS ]
+then
+   echo "Please define the ASHES_DOMAINS environment variable to contain"
+   echo "the path to the directory of domains."
+   exit 0
+fi
+
+if [ $# != 5 ]
+then
+    echo "Syntax: adb-divide <set> <domainY> <in1> <in2> <out>"
+    exit 0
+fi
+
+SET=$1
+DOMAIN_Y=$2
+IN1=$3
+IN2=$4
+OUT=$5
+
+BASEDIR=`dirname $0`
+
+for i in `cat ${ASHES_DOMAINS}/${DOMAIN_Y}` 
+do
+    VALUE1=`adb-get $SET ${i}-${IN1}`
+    VALUE2=`adb-get $SET ${i}-${IN2}`
+
+    TMPCMD=`echo $VALUE1 $VALUE2`
+
+    VALUE3=`echo $TMPCMD | bc ${BASEDIR}/nicediv.bc`
+    
+    adb-put $SET ${i}-${OUT} $VALUE3
+done    
+

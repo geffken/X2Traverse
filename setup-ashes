@@ -4,3 +4,4 @@ export ASHES_SUITE_COLLECTION=`pwd`/benchmarks/ashesSuiteCollection
 export CLASSPATH=$CLASSPATH:`pwd`/benchmarks/ashesBase/classes
 export ASHES_PDS=:
 export PATH=$PATH:`pwd`/benchmarks/ashesBase/bin
+export ASHES_CLASSPATH_EXT=:`pwd`/x2traverse.jar

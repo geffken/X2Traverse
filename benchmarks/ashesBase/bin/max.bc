@@ -1,0 +1,14 @@
+scale = 2
+nargs = read()
+
+max = read()
+
+for(i = 2; i <= nargs; i++)
+{
+    x = read()
+
+    if(x > max)
+        max = x 
+}
+
+print max;

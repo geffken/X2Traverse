@@ -1,0 +1,29 @@
+#!/bin/bash
+
+if [ $# != 1 ]
+then
+    echo "Syntax: hpjBenchmark <benchmark>"
+    exit 0
+fi
+
+
+BENCHMARK=$1
+
+if [ `echo $BENCHMARK | cut -c1` != "/" ]
+then
+   BENCHMARK=`pwd`/$BENCHMARK
+fi
+
+pushd . >&/dev/null
+cd $BENCHMARK
+
+echo "   Compiling benchmark with HPJ..."
+
+cd classes
+jar cf ../classes.jar *
+cd ..
+
+hpj -classpath classes.jar -nofollow -O -o `cat mainClass` classes.jar -main `cat mainClass`
+rm classes.jar
+
+popd >&/dev/null
