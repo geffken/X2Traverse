@@ -383,6 +383,9 @@ public class TransClass {
         for (CtClass tc : visited) {
             if (!tc.isArray()) {
                 tc.writeFile(outputDir);
+                for (CtClass inner : tc.getNestedClasses()) {
+                    inner.writeFile(outputDir);
+                }
             }
         }
 //        String[] libClassNames = { "de.unifr.acp.templates.TraversalTarget__",
