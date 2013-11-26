@@ -374,7 +374,7 @@ public class TransClass {
                 methodOrCtor.getMethodInfo().addAttribute(attr);
 
                 // create and add the parameter-level annotation
-                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.invisibleTag); // or inVisibleTag
+                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.invisibleTag); // or visibleTag
                 ConstPool parameterConstPool = paramAttributeInfo.getConstPool();
                 
                 Annotation parameterAnnotation = new Annotation("annotation name", parameterConstPool);
@@ -383,7 +383,7 @@ public class TransClass {
                 parameterAnnotation.addMemberValue("value", parameterMemberValue);
                 
 
-                // add annotation to dimensional array
+                // add annotation to 2-dimensional array
                 ParameterAnnotationsAttribute parameterAtrribute = ((ParameterAnnotationsAttribute) paramAttributeInfo);
                 Annotation[][] paramArrays = parameterAtrribute.getAnnotations();
                 for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
