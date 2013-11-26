@@ -59,7 +59,7 @@ public class TransClass {
     private static FileHandler fh;
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.templates.TraversalTarget__";
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
-    private final CtClass objectClass;
+    //private final CtClass objectClass = ClassPool.getDefault().get(Object.class.getName());
     public final String FILTER_TRANSFORM_REGEX_DEFAULT = "java\\..*";
     private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
     public final String FILTER_VISIT_REGEX_DEFAULT = "java\\..*";
@@ -89,10 +89,6 @@ public class TransClass {
      * @throws NotFoundException
      */
     protected TransClass(String classname) throws NotFoundException {
-        //CtClass clazz = ClassPool.getDefault().get(classname);
-    	//pending = new LinkedList<CtClass>();
-    	//pending.add(clazz);
-        objectClass = ClassPool.getDefault().get(Object.class.getName());
     }
 
     /**
