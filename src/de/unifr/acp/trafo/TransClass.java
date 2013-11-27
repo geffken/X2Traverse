@@ -380,11 +380,11 @@ public class TransClass {
             ConstPool constpool = ccFile.getConstPool();
             for (CtBehavior methodOrCtor : methodsAndCtors) {
                 // create and add the method-level annotation
-//                AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-//                Annotation annot = new Annotation(Grant.class.getName(), constpool);
-//                annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
-//                attr.addAnnotation(annot);
-//                methodOrCtor.getMethodInfo().addAttribute(attr);
+                AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+                Annotation annot = new Annotation(Grant.class.getName(), constpool);
+                annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
+                attr.addAnnotation(annot);
+                methodOrCtor.getMethodInfo().addAttribute(attr);
                 
                 transformed.add(cc);
 
@@ -396,32 +396,49 @@ public class TransClass {
 //                        paramAttributeInfo = (ParameterAnnotationsAttribute) attributeInfo;
 //                    }
 //                }
+
+                Annotation parameterAnnotation = new Annotation(
+                        Grant.class.getName(), constpool);
+                StringMemberValue parameterMemberValue = new StringMemberValue(
+                        "*", constpool);
+                parameterAnnotation.addMemberValue("value",
+                        parameterMemberValue);
+                
                 AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
                 logger.finest("paramAttributeInfo: " + paramAttributeInfo);
-                if (paramAttributeInfo == null) {
-                    continue;
-                }
-                ConstPool parameterConstPool = paramAttributeInfo.getConstPool();
-                
-                Annotation parameterAnnotation = new Annotation(Grant.class.getName(), parameterConstPool);
-                StringMemberValue parameterMemberValue = new StringMemberValue("*", constpool);
-                parameterAnnotation.addMemberValue("value", parameterMemberValue);
+                if (paramAttributeInfo != null) {
 
-                // add annotation to 2-dimensional array
-                ParameterAnnotationsAttribute parameterAtrribute = ((ParameterAnnotationsAttribute) paramAttributeInfo);
-                Annotation[][] paramArrays = parameterAtrribute.getAnnotations();
-                for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
-                    // int orderNum = position.getOrderNumber();
-                    Annotation[] addAnno = paramArrays[orderNum];
-                    Annotation[] newAnno = null;
-                    if (addAnno.length == 0) {
-                        newAnno = new Annotation[1];
-                    } else {
-                        newAnno = Arrays.copyOf(addAnno, addAnno.length + 1);
+//                    ConstPool parameterConstPool = paramAttributeInfo
+//                            .getConstPool();
+
+                    // add annotation to 2-dimensional array
+                    ParameterAnnotationsAttribute parameterAtrribute = ((ParameterAnnotationsAttribute) paramAttributeInfo);
+                    Annotation[][] paramArrays = null;
+                    paramArrays = parameterAtrribute.getAnnotations();
+                    for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
+                        // int orderNum = position.getOrderNumber();
+                        Annotation[] addAnno = paramArrays[orderNum];
+                        Annotation[] newAnno = null;
+                        if (addAnno.length == 0) {
+                            newAnno = new Annotation[1];
+                        } else {
+                            newAnno = Arrays
+                                    .copyOf(addAnno, addAnno.length + 1);
+                        }
+                        newAnno[addAnno.length] = parameterAnnotation;
+                        paramArrays[orderNum] = newAnno;
+                        parameterAtrribute.setAnnotations(paramArrays);
                     }
-                    newAnno[addAnno.length] = parameterAnnotation;
-                    paramArrays[orderNum] = newAnno;
-                    parameterAtrribute.setAnnotations(paramArrays);
+                } else {
+                    ParameterAnnotationsAttribute parameterAtrribute = new ParameterAnnotationsAttribute(
+                            constpool, ParameterAnnotationsAttribute.visibleTag);
+                    Annotation[][] paramArrays = new Annotation[parameterCountOf(methodOrCtor)][1];
+                    for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
+                        Annotation[] newAnno = {parameterAnnotation};
+                        paramArrays[orderNum] = newAnno;
+                        parameterAtrribute.setAnnotations(paramArrays);
+                        methodOrCtor.getMethodInfo().addAttribute(parameterAtrribute);
+                    }
                 }
             }
             
@@ -629,8 +646,8 @@ public class TransClass {
                     sb.append("else {");
                     
                     // build array of FSTs indexed by parameter
-                    sb.append("  fSTs = new de.unifr.acp.fst.FST["+(getParameterCount(methodOrCtor)+1)+"];");
-                    for (int i=0; i<getParameterCount(methodOrCtor)+1; i++) {
+                    sb.append("  fSTs = new de.unifr.acp.fst.FST["+(parameterCountOf(methodOrCtor)+1)+"];");
+                    for (int i=0; i<parameterCountOf(methodOrCtor)+1; i++) {
                         Grant grant = grantAnno(methodOrCtor, i);
                         if (grant != null) {
                             sb.append("    fSTs[" + i
@@ -646,7 +663,7 @@ public class TransClass {
                     // now we expect to have all FSTs available and cached
                     
                     sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
-                    for (int i=0; i<getParameterCount(methodOrCtor)+1; i++) {
+                    for (int i=0; i<parameterCountOf(methodOrCtor)+1; i++) {
                         
                         // only grant-annotated methods/parameters require any action
                         if (grantAnno(methodOrCtor, i) == null) {
@@ -812,7 +829,7 @@ public class TransClass {
         });
     }
     
-    private static int getParameterCount(CtBehavior methodOrCtor) {
+    private static int parameterCountOf(CtBehavior methodOrCtor) {
         return methodOrCtor.getAvailableParameterAnnotations().length;
     }
     
