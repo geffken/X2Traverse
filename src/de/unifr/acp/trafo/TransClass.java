@@ -396,7 +396,7 @@ public class TransClass {
 //                        paramAttributeInfo = (ParameterAnnotationsAttribute) attributeInfo;
 //                    }
 //                }
-                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.invisibleTag); // or invisibleTag
+                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
                 logger.finest("paramAttributeInfo: " + paramAttributeInfo);
                 if (paramAttributeInfo == null) {
                     continue;
