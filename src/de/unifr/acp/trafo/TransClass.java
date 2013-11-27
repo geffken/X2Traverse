@@ -366,9 +366,9 @@ public class TransClass {
             ClassFile ccFile = cc.getClassFile();
             ConstPool constpool = ccFile.getConstPool();
             for (CtBehavior methodOrCtor : methodsAndCtors) {
-                // create and add the mehtod-level annotation
+                // create and add the method-level annotation
                 AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-                Annotation annot = new Annotation("MyAnnotation", constpool);
+                Annotation annot = new Annotation(Grant.class.getName(), constpool);
                 annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
                 attr.addAnnotation(annot);
                 methodOrCtor.getMethodInfo().addAttribute(attr);
@@ -377,11 +377,9 @@ public class TransClass {
                 AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.invisibleTag); // or visibleTag
                 ConstPool parameterConstPool = paramAttributeInfo.getConstPool();
                 
-                Annotation parameterAnnotation = new Annotation("annotation name", parameterConstPool);
-                ClassMemberValue parameterMemberValue = new ClassMemberValue("class full name", parameterConstPool);
-                StringMemberValue value = new StringMemberValue("*", constpool);
+                Annotation parameterAnnotation = new Annotation(Grant.class.getName(), parameterConstPool);
+                StringMemberValue parameterMemberValue = new StringMemberValue("*", constpool);
                 parameterAnnotation.addMemberValue("value", parameterMemberValue);
-                
 
                 // add annotation to 2-dimensional array
                 ParameterAnnotationsAttribute parameterAtrribute = ((ParameterAnnotationsAttribute) paramAttributeInfo);
