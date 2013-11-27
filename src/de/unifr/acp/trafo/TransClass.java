@@ -404,6 +404,7 @@ public class TransClass {
                         "*", constpool);
                 parameterAnnotation.addMemberValue("value",
                         parameterMemberValue);
+                logger.fine("parameterAnnotation: " + parameterAnnotation);
                 
                 AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
                 logger.finest("paramAttributeInfo: " + paramAttributeInfo);
@@ -440,7 +441,7 @@ public class TransClass {
                         int n = paramArrays.length;
                         for (int i = 0; i < n; ++i) {
                             Annotation[] anno = paramArrays[i];
-                            logger.finest("Annotations of param #" + i + "of length"
+                            logger.finest("Annotations of param # " + i + "of length "
                                     + anno.length);
                             for (int j = 0; j < anno.length; ++j) {
                                 Annotation aa = anno[j];
