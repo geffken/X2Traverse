@@ -389,7 +389,14 @@ public class TransClass {
                 transformed.add(cc);
 
                 // create and add the parameter-level annotation
-                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
+                List<AttributeInfo> paramAttributeInfos = methodOrCtor.getMethodInfo().getAttributes();
+                AttributeInfo paramAttributeInfo = null;
+                for (AttributeInfo attributeInfo : paramAttributeInfos) {
+                    if (attributeInfo instanceof ParameterAnnotationsAttribute) {
+                    paramAttributeInfo = (ParameterAnnotationsAttribute)attributeInfo;
+                    }
+                }
+                //AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
                 logger.finest("paramAttributeInfo: " + paramAttributeInfo);
                 if (paramAttributeInfo == null) {
                     continue;
