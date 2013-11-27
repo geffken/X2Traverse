@@ -407,7 +407,7 @@ public class TransClass {
                 logger.fine("parameterAnnotation: " + parameterAnnotation);
                 
                 AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
-                logger.finest("paramAttributeInfo: " + paramAttributeInfo);
+                //logger.finest("paramAttributeInfo: " + paramAttributeInfo);
                 if (paramAttributeInfo != null) {
 
                     // add annotation to 2-dimensional array
