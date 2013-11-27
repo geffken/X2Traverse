@@ -379,6 +379,7 @@ public class TransClass {
             ClassFile ccFile = cc.getClassFile();
             ConstPool constpool = ccFile.getConstPool();
             for (CtBehavior methodOrCtor : methodsAndCtors) {
+                logger.fine("Annotating method or ctor: " + ((methodOrCtor != null) ? methodOrCtor.getName() : methodOrCtor));
                 // create and add the method-level annotation
                 AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
                 Annotation annot = new Annotation(Grant.class.getName(), constpool);
