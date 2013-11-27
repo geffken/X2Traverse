@@ -398,20 +398,16 @@ public class TransClass {
 //                    }
 //                }
 
-
-
+                Annotation parameterAnnotation = new Annotation(
+                        Grant.class.getName(), constpool);
+                StringMemberValue parameterMemberValue = new StringMemberValue(
+                        "*", constpool);
+                parameterAnnotation.addMemberValue("value",
+                        parameterMemberValue);
                 
                 AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
                 logger.finest("paramAttributeInfo: " + paramAttributeInfo);
                 if (paramAttributeInfo != null) {
-                    constpool = paramAttributeInfo.getConstPool();
-                    Annotation parameterAnnotation = new Annotation(
-                            Grant.class.getName(), constpool);
-                    StringMemberValue parameterMemberValue = new StringMemberValue(
-                            "*", constpool);
-                    parameterAnnotation.addMemberValue("value",
-                            parameterMemberValue);
-
 
                     // add annotation to 2-dimensional array
                     ParameterAnnotationsAttribute parameterAtrribute = ((ParameterAnnotationsAttribute) paramAttributeInfo);
@@ -432,26 +428,27 @@ public class TransClass {
                         parameterAtrribute.setAnnotations(paramArrays);
                     }
                 }
-//                else {
-//                    ParameterAnnotationsAttribute parameterAtrribute = new ParameterAnnotationsAttribute(
-//                            constpool, ParameterAnnotationsAttribute.visibleTag);
-//                    Annotation[][] paramArrays = new Annotation[parameterCountOf(methodOrCtor)][1];
-//                    for (int orderNum = 0; orderNum < parameterCountOf(methodOrCtor); orderNum++) {
-//                        Annotation[] newAnno = {parameterAnnotation};
-//                        //paramArrays[orderNum] = newAnno;
-//                        paramArrays[orderNum][0] = parameterAnnotation;
-//                        
-//                        int n = paramArrays.length;
-//                        for (int i = 0; i < n; ++i) {
-//                            Annotation[] anno = paramArrays[i];
-//                            for (int j = 0; j < anno.length; ++j) {
-//                                Annotation aa = anno[j];
-//                            }
-//                        }
-//                        parameterAtrribute.setAnnotations(paramArrays);
-//                        methodOrCtor.getMethodInfo().addAttribute(parameterAtrribute);
-//                    }
-//                }
+                else {
+                    ParameterAnnotationsAttribute parameterAtrribute = new ParameterAnnotationsAttribute(
+                            constpool, ParameterAnnotationsAttribute.visibleTag);
+                    Annotation[][] paramArrays = new Annotation[parameterCountOf(methodOrCtor)][1];
+                    for (int orderNum = 0; orderNum < parameterCountOf(methodOrCtor); orderNum++) {
+                        Annotation[] newAnno = {parameterAnnotation};
+                        //paramArrays[orderNum] = newAnno;
+                        paramArrays[orderNum][0] = parameterAnnotation;
+                        
+                        int n = paramArrays.length;
+                        for (int i = 0; i < n; ++i) {
+                            Annotation[] anno = paramArrays[i];
+                            for (int j = 0; j < anno.length; ++j) {
+                                Annotation aa = anno[j];
+                                logger.finest("Annotation: " + aa);
+                            }
+                        }
+                        parameterAtrribute.setAnnotations(paramArrays);
+                        methodOrCtor.getMethodInfo().addAttribute(parameterAtrribute);
+                    }
+                }
             }
             
         }
