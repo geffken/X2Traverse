@@ -353,8 +353,18 @@ public class TransClass {
     }
     
     protected Set<CtClass> performDefaultAnnotatation(Set<CtClass> classes) {
+        Set<CtClass> toTransform = filterClassesToTransform(classes);
+        
+        if (logger.isLoggable(Level.FINEST)) {
+            StringBuilder sb = new StringBuilder();
+            for (CtClass visitedClazz : toTransform) {
+                sb.append(visitedClazz.getName()+"\n");
+            }
+            logger.finest("Classes to transform:\n" +sb.toString());
+        }
+        
         final HashSet<CtClass> transformed = new HashSet<CtClass>();
-        for (CtClass cc : classes) {
+        for (CtClass cc : toTransform) {
             if (cc.isFrozen()) {
                 continue;
             }
