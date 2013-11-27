@@ -432,7 +432,7 @@ public class TransClass {
                 } else {
                     ParameterAnnotationsAttribute parameterAtrribute = new ParameterAnnotationsAttribute(
                             constpool, ParameterAnnotationsAttribute.visibleTag);
-                    Annotation[][] paramArrays = new Annotation[parameterCountOf(methodOrCtor)][1];
+                    Annotation[][] paramArrays = new Annotation[parameterCountOf(methodOrCtor)][];
                     for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
                         Annotation[] newAnno = {parameterAnnotation};
                         paramArrays[orderNum] = newAnno;
