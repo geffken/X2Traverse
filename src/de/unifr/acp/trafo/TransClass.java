@@ -374,7 +374,8 @@ public class TransClass {
                 methodOrCtor.getMethodInfo().addAttribute(attr);
 
                 // create and add the parameter-level annotation
-                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.invisibleTag); // or visibleTag
+                AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
+                logger.finest("paramAttributeInfo: " + paramAttributeInfo);
                 ConstPool parameterConstPool = paramAttributeInfo.getConstPool();
                 
                 Annotation parameterAnnotation = new Annotation(Grant.class.getName(), parameterConstPool);
