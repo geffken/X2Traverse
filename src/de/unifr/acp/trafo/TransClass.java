@@ -355,6 +355,9 @@ public class TransClass {
     protected Set<CtClass> performDefaultAnnotatation(Set<CtClass> classes) {
         final HashSet<CtClass> transformed = new HashSet<CtClass>();
         for (CtClass cc : classes) {
+            if (cc.isFrozen()) {
+                continue;
+            }
             
             // collect all methods and constructors
             List<CtMethod> methods = Arrays.asList(cc.getMethods());
@@ -372,6 +375,8 @@ public class TransClass {
                 annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
                 attr.addAnnotation(annot);
                 methodOrCtor.getMethodInfo().addAttribute(attr);
+                
+                transformed.add(cc);
 
                 // create and add the parameter-level annotation
                 AttributeInfo paramAttributeInfo = methodOrCtor.getMethodInfo().getAttribute(ParameterAnnotationsAttribute.visibleTag); // or invisibleTag
