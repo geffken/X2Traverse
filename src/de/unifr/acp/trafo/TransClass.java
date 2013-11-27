@@ -437,6 +437,14 @@ public class TransClass {
                         Annotation[] newAnno = {parameterAnnotation};
                         //paramArrays[orderNum] = newAnno;
                         paramArrays[orderNum][0] = parameterAnnotation;
+                        
+                        int n = paramArrays.length;
+                        for (int i = 0; i < n; ++i) {
+                            Annotation[] anno = paramArrays[i];
+                            for (int j = 0; j < anno.length; ++j) {
+                                Annotation aa = anno[j];
+                            }
+                        }
                         parameterAtrribute.setAnnotations(paramArrays);
                         methodOrCtor.getMethodInfo().addAttribute(parameterAtrribute);
                     }
