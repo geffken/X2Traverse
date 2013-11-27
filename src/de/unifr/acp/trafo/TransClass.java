@@ -380,11 +380,11 @@ public class TransClass {
             ConstPool constpool = ccFile.getConstPool();
             for (CtBehavior methodOrCtor : methodsAndCtors) {
                 // create and add the method-level annotation
-                AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-                Annotation annot = new Annotation(Grant.class.getName(), constpool);
-                annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
-                attr.addAnnotation(annot);
-                methodOrCtor.getMethodInfo().addAttribute(attr);
+//                AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+//                Annotation annot = new Annotation(Grant.class.getName(), constpool);
+//                annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
+//                attr.addAnnotation(annot);
+//                methodOrCtor.getMethodInfo().addAttribute(attr);
                 
                 transformed.add(cc);
 
