@@ -440,6 +440,7 @@ public class TransClass {
                         int n = paramArrays.length;
                         for (int i = 0; i < n; ++i) {
                             Annotation[] anno = paramArrays[i];
+                            logger.finest("Annotations: " + anno);
                             for (int j = 0; j < anno.length; ++j) {
                                 Annotation aa = anno[j];
                                 logger.finest("Annotation: " + aa);
