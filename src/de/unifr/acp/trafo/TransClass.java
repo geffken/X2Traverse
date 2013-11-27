@@ -397,6 +397,7 @@ public class TransClass {
 //                    }
 //                }
 
+                constpool = methodOrCtor.getMethodInfo().getConstPool();
                 Annotation parameterAnnotation = new Annotation(
                         Grant.class.getName(), constpool);
                 StringMemberValue parameterMemberValue = new StringMemberValue(
