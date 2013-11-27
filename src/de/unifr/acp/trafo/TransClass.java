@@ -450,7 +450,7 @@ public class TransClass {
 //                        parameterAtrribute.setAnnotations(paramArrays);
 //                        methodOrCtor.getMethodInfo().addAttribute(parameterAtrribute);
 //                    }
-                }
+//                }
             }
             
         }
