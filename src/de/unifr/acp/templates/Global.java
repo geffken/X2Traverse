@@ -120,14 +120,14 @@ public class Global {
         }
     }
     
-    public static void printViolation(Object obj, String qualifiedFieldName,
+    public static void printViolation(Object obj, String qualifiedFieldName, String methodName,
             Permission effectivePerm, Permission requiredPerm) {
         System.out.println("ACCESS VIOLATION:");
-        System.out.print("Instance" + obj);
+        System.out.println("Instance: " + obj);
         System.out.println("Field: " + qualifiedFieldName);
         System.out.println("Effective permission: " + effectivePerm);
         System.out.println("Required permission: " + requiredPerm);
-        System.out.println();
+        System.out.println("in method "+ methodName);
         System.out.println(de.unifr.acp.templates.Global.locPermStack);
         System.out.println();
     }
