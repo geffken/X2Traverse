@@ -588,6 +588,7 @@ public class TransClass {
                 instrumentFieldAccess(methodOrCtor);
                 
                 if (hasMethodGrantAnnotations(methodOrCtor)) {
+                    logger.fine("Add traversal to behavior: "+methodOrCtor.getLongName());
                     
                     /* generate header and footer */
                     
