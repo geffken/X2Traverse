@@ -371,9 +371,15 @@ public class TransClass {
             
             // collect all methods and constructors
             List<CtMethod> methods = Arrays.asList(cc.getMethods());
+            List<CtMethod> ownMethods = new ArrayList<CtMethod>();
+            for (CtMethod method : methods) {
+                if (method.getDeclaringClass().equals(cc)) {
+                    ownMethods.add(method);
+                }
+            }
             List<CtConstructor> ctors = Arrays.asList(cc.getConstructors());
             List<CtBehavior> methodsAndCtors = new ArrayList<CtBehavior>();
-            methodsAndCtors.addAll(methods);
+            methodsAndCtors.addAll(ownMethods);
             methodsAndCtors.addAll(ctors);
 
             ClassFile ccFile = cc.getClassFile();
