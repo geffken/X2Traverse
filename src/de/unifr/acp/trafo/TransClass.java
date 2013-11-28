@@ -642,8 +642,9 @@ public class TransClass {
                     
                     sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
                     
-                    int i= ((methodOrCtor.getModifiers() & Modifier.STATIC) != 0) ? 1 : 0;
-                    for (; i<parameterCountOf(methodOrCtor)+1; i++) {
+                    int i= ((isStatic(methodOrCtor)) ? 1 : 0);
+                    int limit = ((isStatic(methodOrCtor)) ? (parameterCountOf(methodOrCtor)) : parameterCountOf(methodOrCtor)+1);
+                    for (; i<limit; i++) {
                         
                         // only grant-annotated methods/parameters require any action
                         if (grantAnno(methodOrCtor, i) == null) {
@@ -669,7 +670,7 @@ public class TransClass {
                         // here the runner should be in synch with the parameter object
                         // (as far as non-static fields are concerned), the visitor implicitly joins locPerms
                         if (!methodOrCtor.getParameterTypes()[isStatic(methodOrCtor) ? i - 1
-                                : i].isArray()) {
+                                : i].isArray()) {       
                             sb.append("  if ($"
                                     + i
                                     + " instanceof de.unifr.acp.templates.TraversalTarget__) {");
