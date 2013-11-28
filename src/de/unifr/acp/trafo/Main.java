@@ -1,6 +1,7 @@
 package de.unifr.acp.trafo;
 
 import java.io.IOException;
+import java.io.InvalidClassException;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -39,6 +40,10 @@ public class Main {
             usage.append("where options include:\n");
             usage.append(" \n");
             System.out.println(usage);
+        } catch (InvalidClassException e) {
+            e.printStackTrace();
+            e.toString();
+            System.out.println(e.getMessage());
         }
 
     }

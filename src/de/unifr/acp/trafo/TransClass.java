@@ -665,7 +665,7 @@ public class TransClass {
                         // (as far as non-static fields are concerned), the visitor implicitly joins locPerms
                         sb.append("  if ($"+i+" instanceof de.unifr.acp.templates.TraversalTarget__) {");
                         sb.append("    de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
-                        //sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
+                        sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
 
                         // Map<Object, Map<String, de.unifr.acp.fst.Permission>>
                         //sb.append("    Map allLocPerms = visitor.getLocationPermissions();");
