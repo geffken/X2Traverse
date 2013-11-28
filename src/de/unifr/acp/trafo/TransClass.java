@@ -719,7 +719,7 @@ public class TransClass {
         return ((methodOrCtor.getModifiers() & Modifier.STATIC) != 0);
     }
     
-    private static void instrumentFieldAccess(CtBehavior methodOrCtor)
+    private static void instrumentFieldAccess(final CtBehavior methodOrCtor)
             throws CannotCompileException {
 //        if (!isInstrumented.get()) {
             methodOrCtor.instrument(new ExprEditor() {
@@ -750,7 +750,7 @@ public class TransClass {
 
                         //code.append("if (!effectivePerm.containsAll(accessPerm)) {");
                         code.append("if (!de.unifr.acp.fst.Permission.containsAll(effectivePerm, accessPerm)) {");
-                        code.append("  de.unifr.acp.templates.Global.printViolation($0, \""+qualifiedFieldName+"\", effectivePerm, accessPerm);");
+                        code.append("  de.unifr.acp.templates.Global.printViolation($0, \""+qualifiedFieldName+"\", \""+methodOrCtor.getLongName()+"\",effectivePerm, accessPerm);");
                         code.append("}");
                         code.append("}");
 
