@@ -1,0 +1,13 @@
+Benchmark: machineSim
+
+Author: Patrick Lam (plam@sable.mcgill.ca)
+
+Packaged by: Raja Vallee-Rai (rvalleerai@sable.mcgill.ca)
+Packaged on: April 6, 1999
+
+Description: This is an machine simulator program.  Implemented for
+a basic computer architecture class, it simulates a micro-architecture
+executing an instruction stream.
+
+
+
