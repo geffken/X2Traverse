@@ -669,8 +669,8 @@ public class TransClass {
                         
                         // here the runner should be in synch with the parameter object
                         // (as far as non-static fields are concerned), the visitor implicitly joins locPerms
-                        if (!methodOrCtor.getParameterTypes()[isStatic(methodOrCtor) ? i - 1
-                                : i].isArray()) {       
+                        if (i == 0 || !methodOrCtor.getParameterTypes()[isStatic(methodOrCtor) ? i - 1
+                                : i].isArray()) {
                             sb.append("  if ($"
                                     + i
                                     + " instanceof de.unifr.acp.templates.TraversalTarget__) {");
