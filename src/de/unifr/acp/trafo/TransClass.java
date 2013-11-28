@@ -335,7 +335,7 @@ public class TransClass {
      * specified class to queue of pending classes, if not already visited.
      */
     private void enter(CtClass clazz, Queue<CtClass> pending, Set<CtClass> visited) {
-        logger.entering("TransClass", "enter", clazz);
+        logger.entering(TransClass.class.getSimpleName(), "enter", (clazz != null) ? clazz.getName() : clazz);
         if (!visited.contains(clazz)) {
             pending.add(clazz);
         }
@@ -381,15 +381,13 @@ public class TransClass {
             ClassFile ccFile = cc.getClassFile();
             ConstPool constpool = ccFile.getConstPool();
             for (CtBehavior methodOrCtor : methodsAndCtors) {
-                logger.fine("Annotating method or ctor: " + cc.getName() + "." + ((methodOrCtor != null) ? methodOrCtor.getName() : methodOrCtor));
+                logger.fine("Annotating method or ctor: " + ((methodOrCtor != null) ? methodOrCtor.getLongName() : methodOrCtor));
                 // create and add the method-level annotation
                 AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
                 Annotation annot = new Annotation(Grant.class.getName(), constpool);
                 annot.addMemberValue("value", new StringMemberValue("this.*", constpool));
                 attr.addAnnotation(annot);
                 methodOrCtor.getMethodInfo().addAttribute(attr);
-                
-                transformed.add(cc);
 
                 // create and add the parameter-level annotation
                 final CtClass[] parameterTypes = methodOrCtor.getParameterTypes();
@@ -442,17 +440,9 @@ public class TransClass {
             
         }
         
+        // conservatively assume all classes have been transformed
+        transformed.addAll(toTransform);
         return transformed;
-    }
-
-    private static List<CtMethod> declaredMethodsOf(CtClass cc) {
-        List<CtMethod> ownMethods = new ArrayList<CtMethod>();
-        for (CtMethod method : cc.getMethods()) {
-            if (method.getDeclaringClass().equals(cc)) {
-                ownMethods.add(method);
-            }
-        }
-        return ownMethods;
     }
     
     /*
@@ -578,7 +568,7 @@ public class TransClass {
             //   3. Use insertBefore() and insertAfter() to insert permission installation/deinstallation code
             
             // according to tutorial there's no support for generics in Javassist, thus we use raw types
-            CtField f = CtField.make("private java.util.HashMap "+FST_CACHE_FIELD_NAME+" = new java.util.HashMap();", target);
+            CtField f = CtField.make("private static java.util.HashMap "+FST_CACHE_FIELD_NAME+" = new java.util.HashMap();", target);
             target.addField(f);
             
             // collect all methods and constructors
@@ -609,30 +599,30 @@ public class TransClass {
                     
                     // optional method grant annotation (can be null)
                     // NOTE: method contracts include 'this' and type names as anchors
-                    Grant methodGrantAnnot = ((Grant)methodOrCtor.getAnnotation(Grant.class));
-                    
-                    // optional parameter types annotations indexed by parameter position
-                    Object[][] availParamAnnot = methodOrCtor.getAvailableParameterAnnotations();
-                    
-                    // optional parameter (1 to n) grant annotations indexed by parameter position minus one
-                    // NOTE: parameter contracts exclude anchors (formal parameter names)
-                    Grant[] paramGrantAnnots = new Grant[availParamAnnot.length];
-                    final CtClass[] parameterTypes = methodOrCtor.getParameterTypes();
-                    
-                    for (int i = 0; i < availParamAnnot.length; i++) {
-                        final Object[] oa = availParamAnnot[i];
-                        final CtClass paramType = parameterTypes[i];
-                        
-                        // we can savely ignore grant annotations on primitive formal parameters
-                        if (!paramType.isPrimitive()) {
-                            for (Object o : oa) {
-                                if (o instanceof Grant) {
-                                    paramGrantAnnots[i] = (Grant)o;
-                                    break; // there's one grant annotation per parameter only
-                                }
-                            }
-                        }
-                    }
+//                    Grant methodGrantAnnot = ((Grant)methodOrCtor.getAnnotation(Grant.class));
+//                    
+//                    // optional parameter types annotations indexed by parameter position
+//                    Object[][] availParamAnnot = methodOrCtor.getAvailableParameterAnnotations();
+//                    
+//                    // optional parameter (1 to n) grant annotations indexed by parameter position minus one
+//                    // NOTE: parameter contracts exclude anchors (formal parameter names)
+//                    Grant[] paramGrantAnnots = new Grant[availParamAnnot.length];
+//                    final CtClass[] parameterTypes = methodOrCtor.getParameterTypes();
+//                    
+//                    for (int i = 0; i < availParamAnnot.length; i++) {
+//                        final Object[] oa = availParamAnnot[i];
+//                        final CtClass paramType = parameterTypes[i];
+//                        
+//                        // we can savely ignore grant annotations on primitive formal parameters
+//                        if (!paramType.isPrimitive()) {
+//                            for (Object o : oa) {
+//                                if (o instanceof Grant) {
+//                                    paramGrantAnnots[i] = (Grant)o;
+//                                    break; // there's one grant annotation per parameter only
+//                                }
+//                            }
+//                        }
+//                    }
                     
                     /*
                      * We keep method contract and all parameter contracts separate.
