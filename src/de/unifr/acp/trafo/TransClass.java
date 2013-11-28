@@ -584,6 +584,7 @@ public class TransClass {
                 instrumentNew(ctor);
             }
             for (CtBehavior methodOrCtor : methodsAndCtors) {
+                logger.fine("Consider adding traversal to behavior: "+methodOrCtor.getLongName());
                 if ((methodOrCtor.getModifiers() | Modifier.ABSTRACT) != 0) {
                     continue;
                 }
