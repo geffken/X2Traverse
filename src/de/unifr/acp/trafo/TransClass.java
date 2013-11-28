@@ -584,6 +584,9 @@ public class TransClass {
                 instrumentNew(ctor);
             }
             for (CtBehavior methodOrCtor : methodsAndCtors) {
+                if ((methodOrCtor.getModifiers() | Modifier.ABSTRACT) != 0) {
+                    continue;
+                }
                 
                 instrumentFieldAccess(methodOrCtor);
                 
