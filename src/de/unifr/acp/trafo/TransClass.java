@@ -585,7 +585,7 @@ public class TransClass {
             }
             for (CtBehavior methodOrCtor : methodsAndCtors) {
                 logger.fine("Consider adding traversal to behavior: "+methodOrCtor.getLongName());
-                if ((methodOrCtor.getModifiers() | Modifier.ABSTRACT) != 0) {
+                if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
                     continue;
                 }
                 
@@ -642,7 +642,7 @@ public class TransClass {
                     
                     sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
                     
-                    int i= ((methodOrCtor.getModifiers() | Modifier.STATIC) != 0) ? 1 : 0;
+                    int i= ((methodOrCtor.getModifiers() & Modifier.STATIC) != 0) ? 1 : 0;
                     for (; i<parameterCountOf(methodOrCtor)+1; i++) {
                         
                         // only grant-annotated methods/parameters require any action
