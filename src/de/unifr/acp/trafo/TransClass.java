@@ -370,13 +370,7 @@ public class TransClass {
             }
             
             // collect all methods and constructors
-            List<CtMethod> methods = Arrays.asList(cc.getMethods());
-            List<CtMethod> ownMethods = new ArrayList<CtMethod>();
-            for (CtMethod method : methods) {
-                if (method.getDeclaringClass().equals(cc)) {
-                    ownMethods.add(method);
-                }
-            }
+            List<CtMethod> ownMethods = declaredMethodsOf(cc);
             List<CtConstructor> ctors = Arrays.asList(cc.getConstructors());
             List<CtBehavior> methodsAndCtors = new ArrayList<CtBehavior>();
             methodsAndCtors.addAll(ownMethods);
@@ -386,6 +380,7 @@ public class TransClass {
             ConstPool constpool = ccFile.getConstPool();
             for (CtBehavior methodOrCtor : methodsAndCtors) {
                 logger.fine("Annotating method or ctor: " + cc.getName() + "." + ((methodOrCtor != null) ? methodOrCtor.getName() : methodOrCtor));
+                
                 // create and add the method-level annotation
                 AnnotationsAttribute attr = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
                 Annotation annot = new Annotation(Grant.class.getName(), constpool);
@@ -396,14 +391,6 @@ public class TransClass {
                 transformed.add(cc);
 
                 // create and add the parameter-level annotation
-                List<AttributeInfo> paramAttributeInfos = methodOrCtor.getMethodInfo().getAttributes();
-//                AttributeInfo paramAttributeInfo = null;
-//                for (AttributeInfo attributeInfo : paramAttributeInfos) {
-//                    if (attributeInfo instanceof ParameterAnnotationsAttribute) {
-//                        paramAttributeInfo = (ParameterAnnotationsAttribute) attributeInfo;
-//                    }
-//                }
-
                 Annotation parameterAnnotation = new Annotation(
                         Grant.class.getName(), constpool);
                 StringMemberValue parameterMemberValue = new StringMemberValue(
@@ -418,11 +405,10 @@ public class TransClass {
 
                     // add annotation to 2-dimensional array
                     ParameterAnnotationsAttribute parameterAtrribute = ((ParameterAnnotationsAttribute) paramAttributeInfo);
-                    Annotation[][] paramArrays = null;
-                    paramArrays = parameterAtrribute.getAnnotations();
-                    for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
-                        // int orderNum = position.getOrderNumber();
-                        Annotation[] addAnno = paramArrays[orderNum];
+                    Annotation[][] paramAnnots = parameterAtrribute
+                            .getAnnotations();
+                    for (int orderNum = 0; orderNum < paramAnnots.length; orderNum++) {
+                        Annotation[] addAnno = paramAnnots[orderNum];
                         Annotation[] newAnno = null;
                         if (addAnno.length == 0) {
                             newAnno = new Annotation[1];
@@ -431,30 +417,28 @@ public class TransClass {
                                     .copyOf(addAnno, addAnno.length + 1);
                         }
                         newAnno[addAnno.length] = parameterAnnotation;
-                        paramArrays[orderNum] = newAnno;
-                        parameterAtrribute.setAnnotations(paramArrays);
+                        paramAnnots[orderNum] = newAnno;
+                        parameterAtrribute.setAnnotations(paramAnnots);
                     }
                 }
                 else {
                     ParameterAnnotationsAttribute parameterAtrribute = new ParameterAnnotationsAttribute(
                             constpool, ParameterAnnotationsAttribute.visibleTag);
-                    Annotation[][] paramArrays = new Annotation[parameterCountOf(methodOrCtor)][1];
-                    for (int orderNum = 0; orderNum < paramArrays.length; orderNum++) {
-                        Annotation[] newAnno = {parameterAnnotation};
-                        //paramArrays[orderNum] = newAnno;
-                        paramArrays[orderNum][0] = parameterAnnotation;
+                    Annotation[][] paramAnnots = new Annotation[parameterCountOf(methodOrCtor)][1];
+                    for (int orderNum = 0; orderNum < paramAnnots.length; orderNum++) {
+                        paramAnnots[orderNum][0] = parameterAnnotation;
                     }
-                    int n = paramArrays.length;
-                    for (int i = 0; i < n; ++i) {
-                        Annotation[] anno = paramArrays[i];
-                        logger.finest("Annotations of param # " + i + " of length "
-                                + anno.length);
-                        for (int j = 0; j < anno.length; ++j) {
-                            Annotation aa = anno[j];
-                            logger.finest("Annotation: " + aa);
-                        }
-                    }
-                    parameterAtrribute.setAnnotations(paramArrays);
+//                    int n = paramAnnots.length;
+//                    for (int i = 0; i < n; ++i) {
+//                        Annotation[] anno = paramAnnots[i];
+//                        logger.finest("Annotations of param # " + i + " of length "
+//                                + anno.length);
+//                        for (int j = 0; j < anno.length; ++j) {
+//                            Annotation aa = anno[j];
+//                            logger.finest("Annotation: " + aa);
+//                        }
+//                    }
+                    parameterAtrribute.setAnnotations(paramAnnots);
                     methodOrCtor.getMethodInfo().addAttribute(parameterAtrribute);
                 }
             }
@@ -462,6 +446,16 @@ public class TransClass {
         }
         
         return transformed;
+    }
+
+    private static List<CtMethod> declaredMethodsOf(CtClass cc) {
+        List<CtMethod> ownMethods = new ArrayList<CtMethod>();
+        for (CtMethod method : cc.getMethods()) {
+            if (method.getDeclaringClass().equals(cc)) {
+                ownMethods.add(method);
+            }
+        }
+        return ownMethods;
     }
     
     /*
@@ -591,7 +585,7 @@ public class TransClass {
             target.addField(f);
             
             // collect all methods and constructors
-            List<CtMethod> methods = Arrays.asList(target.getMethods());
+            List<CtMethod> methods = declaredMethodsOf(target);
             List<CtConstructor> ctors = Arrays.asList(target.getConstructors());
             List<CtBehavior> methodsAndCtors = new ArrayList<CtBehavior>();
             methodsAndCtors.addAll(methods);
