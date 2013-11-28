@@ -352,7 +352,7 @@ public class TransClass {
         return toTransform;
     }
     
-    protected Set<CtClass> performDefaultAnnotatation(Set<CtClass> classes) {
+    protected Set<CtClass> performDefaultAnnotatation(Set<CtClass> classes) throws NotFoundException {
         Set<CtClass> toTransform = filterClassesToTransform(classes);
         
         if (logger.isLoggable(Level.FINEST)) {
@@ -424,20 +424,15 @@ public class TransClass {
                 else {
                     ParameterAnnotationsAttribute parameterAtrribute = new ParameterAnnotationsAttribute(
                             constpool, ParameterAnnotationsAttribute.visibleTag);
-                    Annotation[][] paramAnnots = new Annotation[parameterCountOf(methodOrCtor)][1];
+                    Annotation[][] paramAnnots = new Annotation[parameterCountOf(methodOrCtor)][];
+                    final CtClass[] parameterTypes = methodOrCtor.getParameterTypes();
                     for (int orderNum = 0; orderNum < paramAnnots.length; orderNum++) {
-                        paramAnnots[orderNum][0] = parameterAnnotation;
+                        Annotation[] annots = {parameterAnnotation};
+                        if (parameterTypes[orderNum].isPrimitive()) {
+                                annots = new Annotation[0];
+                        }
+                        paramAnnots[orderNum]= annots;
                     }
-//                    int n = paramAnnots.length;
-//                    for (int i = 0; i < n; ++i) {
-//                        Annotation[] anno = paramAnnots[i];
-//                        logger.finest("Annotations of param # " + i + " of length "
-//                                + anno.length);
-//                        for (int j = 0; j < anno.length; ++j) {
-//                            Annotation aa = anno[j];
-//                            logger.finest("Annotation: " + aa);
-//                        }
-//                    }
                     parameterAtrribute.setAnnotations(paramAnnots);
                     methodOrCtor.getMethodInfo().addAttribute(parameterAtrribute);
                 }
