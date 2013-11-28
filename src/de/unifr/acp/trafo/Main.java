@@ -48,6 +48,7 @@ public class Main {
             e.printStackTrace();
             System.out.println(e.toString());
             System.out.println(e.getReason());
+            throw e;
         }
 
     }

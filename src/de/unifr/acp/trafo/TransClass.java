@@ -668,14 +668,16 @@ public class TransClass {
                         
                         // here the runner should be in synch with the parameter object
                         // (as far as non-static fields are concerned), the visitor implicitly joins locPerms
-                        sb.append("  if ($"+i+" instanceof de.unifr.acp.templates.TraversalTarget__) {");
-                        sb.append("    de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
-                        sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
-
-                        // Map<Object, Map<String, de.unifr.acp.fst.Permission>>
-                        //sb.append("    Map allLocPerms = visitor.getLocationPermissions();");
-                        //sb.append("    System.out.println(\"allLocPerms: \"+allLocPerms);");
-                        sb.append("  }");
+                        if (!methodOrCtor.getParameterTypes()[isStatic(methodOrCtor) ? i - 1
+                                : i].isArray()) {
+                            sb.append("  if ($"
+                                    + i
+                                    + " instanceof de.unifr.acp.templates.TraversalTarget__) {");
+                            sb.append("    de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
+                            sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"
+                                    + i + ").traverse__(visitor);");
+                            sb.append("  }");
+                        }
                         // TODO: explicit representation of locations and location permissions (supporting join)
                         // (currently it's all generic maps and implicit joins in visitor similar to Maxine implementation)
                         
@@ -711,6 +713,10 @@ public class TransClass {
             }
         }
         logger.exiting("TransClass", "doTransform");
+    }
+    
+    private static boolean isStatic(CtBehavior methodOrCtor) {
+        return ((methodOrCtor.getModifiers() & Modifier.STATIC) != 0);
     }
     
     private static void instrumentFieldAccess(CtBehavior methodOrCtor)
