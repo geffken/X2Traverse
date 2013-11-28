@@ -598,33 +598,6 @@ public class TransClass {
                                         
                     // generate method header
                     
-                    // optional method grant annotation (can be null)
-                    // NOTE: method contracts include 'this' and type names as anchors
-//                    Grant methodGrantAnnot = ((Grant)methodOrCtor.getAnnotation(Grant.class));
-//                    
-//                    // optional parameter types annotations indexed by parameter position
-//                    Object[][] availParamAnnot = methodOrCtor.getAvailableParameterAnnotations();
-//                    
-//                    // optional parameter (1 to n) grant annotations indexed by parameter position minus one
-//                    // NOTE: parameter contracts exclude anchors (formal parameter names)
-//                    Grant[] paramGrantAnnots = new Grant[availParamAnnot.length];
-//                    final CtClass[] parameterTypes = methodOrCtor.getParameterTypes();
-//                    
-//                    for (int i = 0; i < availParamAnnot.length; i++) {
-//                        final Object[] oa = availParamAnnot[i];
-//                        final CtClass paramType = parameterTypes[i];
-//                        
-//                        // we can savely ignore grant annotations on primitive formal parameters
-//                        if (!paramType.isPrimitive()) {
-//                            for (Object o : oa) {
-//                                if (o instanceof Grant) {
-//                                    paramGrantAnnots[i] = (Grant)o;
-//                                    break; // there's one grant annotation per parameter only
-//                                }
-//                            }
-//                        }
-//                    }
-                    
                     /*
                      * We keep method contract and all parameter contracts separate.
                      */
@@ -692,10 +665,10 @@ public class TransClass {
                         // (as far as non-static fields are concerned), the visitor implicitly joins locPerms
                         sb.append("  if ($"+i+" instanceof de.unifr.acp.templates.TraversalTarget__) {");
                         sb.append("    de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
-                        sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
+                        //sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"+i+").traverse__(visitor);");
 
                         // Map<Object, Map<String, de.unifr.acp.fst.Permission>>
-                        sb.append("    Map allLocPerms = visitor.getLocationPermissions();");
+                        //sb.append("    Map allLocPerms = visitor.getLocationPermissions();");
                         //sb.append("    System.out.println(\"allLocPerms: \"+allLocPerms);");
                         sb.append("  }");
                         // TODO: explicit representation of locations and location permissions (supporting join)
