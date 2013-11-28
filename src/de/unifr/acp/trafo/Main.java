@@ -42,8 +42,12 @@ public class Main {
             System.out.println(usage);
         } catch (InvalidClassException e) {
             e.printStackTrace();
-            e.toString();
-            System.out.println(e.getMessage());
+            System.out.println(e.toString());
+            throw e;
+        } catch (CannotCompileException e) {
+            e.printStackTrace();
+            System.out.println(e.toString());
+            System.out.println(e.getReason());
         }
 
     }
