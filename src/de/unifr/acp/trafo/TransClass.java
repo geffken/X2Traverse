@@ -1,6 +1,7 @@
 package de.unifr.acp.trafo;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -662,7 +663,9 @@ public class TransClass {
                     // now we expect to have all FSTs available and cached
                     
                     sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
-                    for (int i=0; i<parameterCountOf(methodOrCtor)+1; i++) {
+                    
+                    int i= ((methodOrCtor.getModifiers() | Modifier.STATIC) != 0) ? 1 : 0;
+                    for (; i<parameterCountOf(methodOrCtor)+1; i++) {
                         
                         // only grant-annotated methods/parameters require any action
                         if (grantAnno(methodOrCtor, i) == null) {
