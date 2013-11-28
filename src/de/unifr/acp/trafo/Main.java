@@ -19,12 +19,22 @@ public class Main {
      */
     public static void main(String[] args) throws NotFoundException, ClassNotFoundException, IOException, CannotCompileException {
         try {
+            if (args.length < 1) {
+                StringBuilder usage = new StringBuilder();
+                usage.append("Usage: x2traverse class [output directory]\n");
+                usage.append(" (to transform the class hierarchy rootet at a class)\n");
+                usage.append("where options include:\n");
+                usage.append(" \n");
+                System.out.println(usage);
+                System.exit(1);
+            }
             String className = args[0];
             String outputDir = (args.length >= 2) ? args[1] : "bin";
             ClassPool defaultPool = ClassPool.getDefault();
             CtClass target = defaultPool.get(className);
             // TransClass.doTransform(target,
             // !target.getSuperclass().equals(objectClass));
+        
             TransClass.transformAndFlushHierarchy(className, outputDir);
 
             // condition needed to avoid bug in writing unmodified class files
@@ -33,13 +43,7 @@ public class Main {
             // target.writeFile(outputDir);
             // }
 
-        } catch (ArrayIndexOutOfBoundsException e) {
-            StringBuilder usage = new StringBuilder();
-            usage.append("Usage: x2traverse class [output directory]\n");
-            usage.append(" (to transform the class hierarchy rootet at a class)\n");
-            usage.append("where options include:\n");
-            usage.append(" \n");
-            System.out.println(usage);
+
         } catch (InvalidClassException e) {
             e.printStackTrace();
             System.out.println(e.toString());
