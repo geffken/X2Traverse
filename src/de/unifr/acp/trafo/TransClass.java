@@ -963,6 +963,7 @@ public class TransClass {
             CtClass tf = f.getType();
             String fname = f.getName();
             if (!fname.equals(FST_CACHE_FIELD_NAME)) {
+                sb.append("System.out.println(\""+fname +"\");");
                 appendVisitorCalls(sb, target, tf, fname);
             }
         }
