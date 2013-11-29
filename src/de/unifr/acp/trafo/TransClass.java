@@ -725,6 +725,7 @@ public class TransClass {
             methodOrCtor.instrument(new ExprEditor() {
                 public void edit(FieldAccess expr)
                         throws CannotCompileException {
+                if (!expr.isStatic()) {
                     String qualifiedFieldName = expr.getClassName() + "."
                             + expr.getFieldName();
 
@@ -736,7 +737,7 @@ public class TransClass {
 
                         // get active permission for location to access
                         code.append("if (!de.unifr.acp.templates.Global.newObjectsStack.isEmpty()) {");
-                        
+
                         code.append("de.unifr.acp.fst.Permission effectivePerm = de.unifr.acp.templates.Global.installedPermissionStackNotEmpty($0, \""
                                 + qualifiedFieldName + "\");");
 
@@ -744,13 +745,17 @@ public class TransClass {
                         code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
                                 + (expr.isReader() ? "READ_ONLY" : "WRITE_ONLY")
                                 + ";");
-//                        code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission.values()["
-//                                + (expr.isReader() ? "1" : "2")
-//                                + "];");
+                        // code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission.values()["
+                        // + (expr.isReader() ? "1" : "2")
+                        // + "];");
 
-                        //code.append("if (!effectivePerm.containsAll(accessPerm)) {");
+                        // code.append("if (!effectivePerm.containsAll(accessPerm)) {");
                         code.append("if (!de.unifr.acp.fst.Permission.containsAll(effectivePerm, accessPerm)) {");
-                        code.append("  de.unifr.acp.templates.Global.printViolation($0, \""+qualifiedFieldName+"\", \""+methodOrCtor.getLongName()+"\",effectivePerm, accessPerm);");
+                        code.append("  de.unifr.acp.templates.Global.printViolation($0, \""
+                                + qualifiedFieldName
+                                + "\", \""
+                                + methodOrCtor.getLongName()
+                                + "\",effectivePerm, accessPerm);");
                         code.append("}");
                         code.append("}");
 
@@ -762,6 +767,7 @@ public class TransClass {
                         code.append("}");
 
                         expr.replace(code.toString());
+                    }
                     }
                 }
             });
