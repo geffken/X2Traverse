@@ -658,6 +658,7 @@ public class TransClass {
                         // TODO: factor out this code in external class, parameterize over i and allPermissions
                         // a location permission is a Map<Object, Map<String, Permission>>
                         sb.append("{");
+                        sb.append("System.out.println(\"start of traversal ...\");");
                         sb.append("  de.unifr.acp.fst.FST fst = fSTs["+i+"];");
                         sb.append("  de.unifr.acp.fst.FSTRunner runner = new de.unifr.acp.fst.FSTRunner(fst);");
                         
