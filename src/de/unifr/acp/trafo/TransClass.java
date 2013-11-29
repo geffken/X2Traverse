@@ -689,6 +689,7 @@ public class TransClass {
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
                     sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
+                    sb.append("System.out.println(\"Push in \"+methodOrCtor.getLongName());");
                     
                     // TODO: figure out how to instrument thread start/end and field access
                     
@@ -702,6 +703,7 @@ public class TransClass {
                     // (current thread's) stack
                     //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
+                    sb.append("System.out.println(\"Pop in \"+methodOrCtor.getLongName());");
                     sb.append("de.unifr.acp.templates.Global.locPermStack.pop();");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.pop();");
                     String footer = sb.toString();

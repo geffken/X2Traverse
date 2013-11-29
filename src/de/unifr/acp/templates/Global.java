@@ -1,13 +1,30 @@
 package de.unifr.acp.templates;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.unifr.acp.fst.Permission;
+import de.unifr.acp.trafo.TransClass;
 
 public class Global {
+    static {
+        try {
+            logger = Logger.getLogger("de.unifr.acp.templates.Global");
+            fh = new FileHandler("traverse.log");
+            Global.logger.addHandler(Global.fh);
+            Global.logger.setLevel(Level.ALL);
+        } catch (SecurityException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static Logger logger;
+    private static FileHandler fh;
     
     public static final boolean enableDebugOutput = false;
 
