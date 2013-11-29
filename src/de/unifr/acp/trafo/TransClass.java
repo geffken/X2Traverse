@@ -969,7 +969,7 @@ public class TransClass {
         for (CtField f : target.getDeclaredFields()) {
             CtClass tf = f.getType();
             String fname = f.getName();
-            if (!fname.equals(FST_CACHE_FIELD_NAME) && !f.getType().isArray()) {
+            if (!fname.equals(FST_CACHE_FIELD_NAME)/* && !f.getType().isArray()*/) {
                 sb.append("System.out.println(\""+fname +"\");");
                 appendVisitorCalls(sb, target, tf, fname);
             }
