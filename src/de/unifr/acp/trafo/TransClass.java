@@ -573,7 +573,7 @@ public class TransClass {
             target.addField(f);
             
             // collect all methods and constructors
-//            List<CtMethod> methods = Arrays.asList(target.getDeclaredMethods());
+            List<CtMethod> ownMethods = Arrays.asList(target.getDeclaredMethods());
             List<CtConstructor> ctors = Arrays.asList(target.getDeclaredConstructors());
 //            List<CtBehavior> methodsAndCtors = new ArrayList<CtBehavior>();
 //            methodsAndCtors.addAll(methods);
@@ -583,7 +583,7 @@ public class TransClass {
             for (CtConstructor ctor : ctors) {
                 instrumentNew(ctor);
             }
-            for (CtBehavior methodOrCtor : methodsAndCtors) {
+            for (CtBehavior methodOrCtor : ownMethods) {
                 logger.fine("Consider adding traversal to behavior: "+methodOrCtor.getLongName());
                 if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
                     continue;
