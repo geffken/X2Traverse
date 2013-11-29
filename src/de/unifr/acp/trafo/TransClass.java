@@ -660,12 +660,15 @@ public class TransClass {
                         sb.append("{");
                         sb.append("System.out.println(\"start of traversal ...\");");
                         sb.append("  de.unifr.acp.fst.FST fst = fSTs["+i+"];");
+                        sb.append("System.out.println(\"got FST ...\");");
                         sb.append("  de.unifr.acp.fst.FSTRunner runner = new de.unifr.acp.fst.FSTRunner(fst);");
+                        sb.append("System.out.println(\"got runner ...\");");
                         
                         // step to reach FST runner state that corresponds to anchor object
                         // for explicitly anchored contracts
                         if (i == 0) {
                             sb.append("  runner.resetAndStep(\"this\");");
+                            sb.append("System.out.println(\"after reset of runner ...\");");
                         }
                         
                         // here the runner should be in synch with the parameter object
@@ -674,9 +677,12 @@ public class TransClass {
                             sb.append("  if ($"
                                     + i
                                     + " instanceof de.unifr.acp.templates.TraversalTarget__) {");
+                            sb.append("System.out.println(\"found traversal target ...\");");
                             sb.append("    de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
+                            sb.append("System.out.println(\"got visitor ...\");");
                             sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"
                                     + i + ").traverse__(visitor);");
+                            sb.append("System.out.println(\"traversal ...\");");
                             sb.append("  }");
                         }
                         // TODO: explicit representation of locations and location permissions (supporting join)
