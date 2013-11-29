@@ -703,7 +703,7 @@ public class TransClass {
                     // (current thread's) stack
                     //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
-                    sb.append("System.out.println(\"Push in "+methodOrCtor.getLongName()+"\");");
+                    sb.append("System.out.println(\"Pop in "+methodOrCtor.getLongName()+"\");");
                     sb.append("de.unifr.acp.templates.Global.locPermStack.pop();");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.pop();");
                     String footer = sb.toString();
