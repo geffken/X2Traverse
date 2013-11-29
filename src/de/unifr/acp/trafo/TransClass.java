@@ -540,7 +540,6 @@ public class TransClass {
         
         // add: implements TRAVERSALTARGET
         List<CtClass> targetIfs = Arrays.asList(target.getInterfaces());
-        Collection<CtClass> newTargetIfs = new HashSet<CtClass>(targetIfs);
         
         // NOTE: Given the equality semantics of CtClass the condition is only
         // valid if the CtClass instance representing the traversal interface is
@@ -550,15 +549,8 @@ public class TransClass {
         
         // only generate implementation of traversal interface if not yet present
         // use traversal interface as marker for availability of other instrumentation
-        CtClass traversalTargetInterface = ClassPool.getDefault().get(TRAVERSAL_TARGET);
-        if (!newTargetIfs.contains(traversalTargetInterface)) {
-            newTargetIfs.add(traversalTargetInterface);
-            target.setInterfaces(newTargetIfs.toArray(new CtClass[0]));
-
-            // add: method traverse__ (create body before adding new technically required fields)
-            String methodbody = createBody(target, hasTransformedSuperclass);
-            CtMethod m = CtNewMethod.make(methodbody, target);
-            target.addMethod(m);
+        CtClass traversalTargetIf = ClassPool.getDefault().get(TRAVERSAL_TARGET);
+        if (!targetIfs.contains(traversalTargetIf)) {
             
             // change methods carrying contracts
             // 1. Find all methods carrying contracts
@@ -721,12 +713,27 @@ public class TransClass {
 
                 } // end if (hasMethodGrantAnnotations(methodOrCtor))
             }
+            
+            // add traversal target interface
+            addInterface(target, traversalTargetIf);
+
+            // add: method traverse__ (create body before adding new technically required fields)
+            String methodbody = createBody(target, hasTransformedSuperclass);
+            CtMethod m = CtNewMethod.make(methodbody, target);
+            target.addMethod(m);
         }
         logger.exiting("TransClass", "doTransform");
     }
     
     private static boolean isStatic(CtBehavior methodOrCtor) {
         return ((methodOrCtor.getModifiers() & Modifier.STATIC) != 0);
+    }
+    
+    private static void addInterface(CtClass clazz, CtClass interf) throws NotFoundException {
+        List<CtClass> clazzIfs = Arrays.asList(clazz.getInterfaces());
+        HashSet<CtClass> newClazzIfs = new HashSet<CtClass>(clazzIfs);
+        newClazzIfs.add(interf);
+        clazz.setInterfaces(newClazzIfs.toArray(new CtClass[0]));   
     }
     
     private static void instrumentFieldAccess(final CtBehavior methodOrCtor)
@@ -962,7 +969,7 @@ public class TransClass {
         for (CtField f : target.getDeclaredFields()) {
             CtClass tf = f.getType();
             String fname = f.getName();
-            if (!fname.equals(FST_CACHE_FIELD_NAME)) {
+            if (!fname.equals(FST_CACHE_FIELD_NAME) && !f.getType().isArray()) {
                 sb.append("System.out.println(\""+fname +"\");");
                 appendVisitorCalls(sb, target, tf, fname);
             }
