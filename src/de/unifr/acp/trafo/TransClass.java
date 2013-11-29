@@ -680,13 +680,14 @@ public class TransClass {
                         }
                         // TODO: explicit representation of locations and location permissions (supporting join)
                         // (currently it's all generic maps and implicit joins in visitor similar to Maxine implementation)
-                        
+                        sb.append("System.out.println(\"end of traversal ...\");");
                         sb.append("}");
                     }
                     
                     // install allLocPerms and push new objects set on (current thread's) stack
                     //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
+                    sb.append("System.out.println(\"before push ...\");");
                     sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
                     sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
                     sb.append("System.out.println(\"Push in "+methodOrCtor.getLongName()+"\");");
