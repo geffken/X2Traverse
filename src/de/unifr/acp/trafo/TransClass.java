@@ -114,7 +114,7 @@ public class TransClass {
         Set<CtClass> transformed = tc.performTransformation(reachable);
         return transformed;
     }
-    
+        
     public static Set<CtClass> defaultAnnotateHierarchy(String className)
             throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         TransClass tc = new TransClass();
@@ -575,6 +575,10 @@ public class TransClass {
             for (CtConstructor ctor : ctors) {
                 instrumentNew(ctor);
             }
+            
+            for (CtBehavior methodOrCtor : methodsAndCtors) {
+                instrumentNewArray(methodOrCtor);
+            }
             for (CtBehavior methodOrCtor : ownMethods) {
                 logger.fine("Consider adding traversal to behavior: "+methodOrCtor.getLongName());
                 if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
@@ -650,17 +654,17 @@ public class TransClass {
                         // TODO: factor out this code in external class, parameterize over i and allPermissions
                         // a location permission is a Map<Object, Map<String, Permission>>
                         sb.append("{");
-                        sb.append("System.out.println(\"start of traversal ...\");");
+//                        sb.append("System.out.println(\"start of traversal ...\");");
                         sb.append("  de.unifr.acp.fst.FST fst = fSTs["+i+"];");
-                        sb.append("System.out.println(\"got FST ...\");");
+//                        sb.append("System.out.println(\"got FST ...\");");
                         sb.append("  de.unifr.acp.fst.FSTRunner runner = new de.unifr.acp.fst.FSTRunner(fst);");
-                        sb.append("System.out.println(\"got runner ...\");");
+//                        sb.append("System.out.println(\"got runner ...\");");
                         
                         // step to reach FST runner state that corresponds to anchor object
                         // for explicitly anchored contracts
                         if (i == 0) {
                             sb.append("  runner.resetAndStep(\"this\");");
-                            sb.append("System.out.println(\"after reset of runner ...\");");
+//                            sb.append("System.out.println(\"after reset of runner ...\");");
                         }
                         
                         // here the runner should be in synch with the parameter object
@@ -669,27 +673,27 @@ public class TransClass {
                             sb.append("  if ($"
                                     + i
                                     + " instanceof de.unifr.acp.templates.TraversalTarget__) {");
-                            sb.append("System.out.println(\"found traversal target ...\");");
+//                            sb.append("System.out.println(\"found traversal target ...\");");
                             sb.append("    de.unifr.acp.templates.TraversalImpl visitor = new de.unifr.acp.templates.TraversalImpl(runner,allLocPerms);");
-                            sb.append("System.out.println(\"got visitor ...\");");
+//                            sb.append("System.out.println(\"got visitor ...\");");
                             sb.append("    ((de.unifr.acp.templates.TraversalTarget__)$"
                                     + i + ").traverse__(visitor);");
-                            sb.append("System.out.println(\"traversal ...\");");
+//                            sb.append("System.out.println(\"traversal ...\");");
                             sb.append("  }");
                         }
                         // TODO: explicit representation of locations and location permissions (supporting join)
                         // (currently it's all generic maps and implicit joins in visitor similar to Maxine implementation)
-                        sb.append("System.out.println(\"end of traversal ...\");");
+//                        sb.append("System.out.println(\"end of traversal ...\");");
                         sb.append("}");
                     }
                     
                     // install allLocPerms and push new objects set on (current thread's) stack
                     //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
-                    sb.append("System.out.println(\"before push ...\");");
-                    sb.append("de.unifr.acp.templates.Global.locPermStack.push(allLocPerms);");
-                    sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
-                    sb.append("System.out.println(\"Push in "+methodOrCtor.getLongName()+"\");");
+                    //sb.append("System.out.println(\"before push ...\");");
+                    sb.append("de.unifr.acp.templates.Global.installPermission(allLocPerms);");
+                    //sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
+                    //sb.append("System.out.println(\"Push in "+methodOrCtor.getLongName()+"\");");
                     
                     // TODO: figure out how to instrument thread start/end and field access
                     
@@ -703,9 +707,8 @@ public class TransClass {
                     // (current thread's) stack
                     //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
-                    sb.append("System.out.println(\"Pop in "+methodOrCtor.getLongName()+"\");");
-                    sb.append("de.unifr.acp.templates.Global.locPermStack.pop();");
-                    sb.append("de.unifr.acp.templates.Global.newObjectsStack.pop();");
+//                    sb.append("System.out.println(\"Pop in "+methodOrCtor.getLongName()+"\");");
+                    sb.append("de.unifr.acp.templates.Global.uninstallPermission();");
                     String footer = sb.toString();
                     
                     // make sure all method exits are covered (exceptions, multiple returns)
@@ -970,8 +973,9 @@ public class TransClass {
             CtClass tf = f.getType();
             String fname = f.getName();
             if (!fname.equals(FST_CACHE_FIELD_NAME)/* && !f.getType().isArray()*/) {
-                sb.append("System.out.println(\""+fname +"\");");
+//                sb.append("System.out.println(\"Before visitor calls for field "+fname +"\");");
                 appendVisitorCalls(sb, target, tf, fname);
+//                sb.append("System.out.println(\"After visitor calls for field "+fname +"\");");
             }
         }
         if (hasSuperclass) {
@@ -992,13 +996,20 @@ public class TransClass {
             sb.append("for (int " + var + " = 0; ");
             
             // static type of 'this' corresponds to field's declaring class, no cast needed
-            sb.append(var + "<this."+fname+index+".length; ");
+            sb.append(var + "<((this."+fname+index+" != null) ? this."+fname+index+".length : 0); ");
             sb.append(var + "++");
             sb.append(")\n");
             index = index + "[" + var + "]";
             nesting++;
             tf = tf.getComponentType();
         }
+        sb.append("{\n");
+//        sb.append("System.out.println(\"Visit field (element) " + fname
+//                + index.replace("[", "[\"+").replace("]", "+\"]") + "\");\n");
+//        if (!tf.isPrimitive()) {
+//            sb.append("System.out.println(\"\"+System.identityHashCode(this."
+//                    + fname + index + "));");
+//        }
         if (tf.isPrimitive()) {
             sb.append("t.visitPrimitive__(");
         } else {
@@ -1016,6 +1027,7 @@ public class TransClass {
             sb.append(fname + index);
         }
         sb.append(");\n");
+        sb.append("}\n");
     }
 
 }

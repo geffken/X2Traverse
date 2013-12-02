@@ -53,6 +53,8 @@ public class TraversalImpl implements Traversal__ {
             // step automaton according to field name
             // (for now contracts contain unqualified field names)
             Permission newPerm = runner.step(unqualifiedFieldNameFromFieldName(fieldName));
+//            System.out.println("runner contract :"+runner.getMachine().getContracts());
+//            System.out.println("NEW PERM :"+newPerm + " for field "+fieldName);
 
             // calculate effective permission from installed permission,
             // this automaton's permission and permissions for this object/field
@@ -123,6 +125,8 @@ public class TraversalImpl implements Traversal__ {
             // step automaton according to field name
             // (for now contracts contain unqualified field names)
             Permission newPerm = runner.step(unqualifiedFieldNameFromFieldName(fieldName));
+//            System.out.println("runner contract :"+runner.getMachine().getContracts());
+//            System.out.println("NEW PERM :"+newPerm + " for field "+fieldName);
 
             // calculate effective permission from installed permission,
             // this automaton's permission and permissions for this object/field
@@ -132,9 +136,19 @@ public class TraversalImpl implements Traversal__ {
             Permission resultPerm = intersection(
                     Global.installedPermission(obj, fieldName),
                     union(currentLocPerm, newPerm));
+//            System.out.println("CURRENT LOC PERM :"+currentLocPerm + " for field "+fieldName);
+//            System.out.println("INSTALLED PERM :"+Global.installedPermission(obj, fieldName) + " for field "+fieldName);
+//            System.out.println("RESULT PERM :"+resultPerm + " for field "+fieldName);
 
             // save resulting permission
+//            System.out.println("Old field perm: "+fp);
             fp.put(fieldName, resultPerm);
+//            System.out.println("Current field perm: "+fp);
+//            System.out.println("----------------------");
+//            for (Map.Entry<Object, Map<String, Permission>> entry : locPerms.entrySet()) {
+//                System.out.println("ENTRY: "
+//                        + System.identityHashCode(entry.getKey()) + ", "+entry.getValue());
+//            }
             
             // backtrack to previous automaton state
             this.runner = currentRunner;
