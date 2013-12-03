@@ -741,10 +741,9 @@ public class TransClass {
     
     private static void instrumentFieldAccess(final CtBehavior methodOrCtor)
             throws CannotCompileException {
-//        if (!isInstrumented.get()) {
-            methodOrCtor.instrument(new ExprEditor() {
-                public void edit(FieldAccess expr)
-                        throws CannotCompileException {
+        // if (!isInstrumented.get()) {
+        methodOrCtor.instrument(new ExprEditor() {
+            public void edit(FieldAccess expr) throws CannotCompileException {
                 if (!expr.isStatic()) {
                     String qualifiedFieldName = expr.getClassName() + "."
                             + expr.getFieldName();
@@ -788,10 +787,10 @@ public class TransClass {
 
                         expr.replace(code.toString());
                     }
-                    }
                 }
-            });
-//        }
+            }
+        });
+        // }
     }
     
 
