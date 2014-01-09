@@ -812,6 +812,8 @@ public class TransClass {
             public void edit(ConstructorCall expr)
                     throws CannotCompileException {
                 StringBuilder code = new StringBuilder();
+
+                // instrumentation only needed if super() call?
                 code.append("{");
                 code.append("  $_ = $proceed($$);");
                 code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
