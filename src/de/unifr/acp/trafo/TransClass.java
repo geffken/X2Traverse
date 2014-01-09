@@ -693,7 +693,7 @@ public class TransClass {
                     //sb.append("System.out.println(\"before push ...\");");
                     sb.append("de.unifr.acp.templates.Global.installPermission(allLocPerms);");
                     //sb.append("de.unifr.acp.templates.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
-                    //sb.append("System.out.println(\"Push in "+methodOrCtor.getLongName()+"\");");
+                    sb.append("System.out.println(\"Push in "+methodOrCtor.getLongName()+"\");");
                     
                     // TODO: figure out how to instrument thread start/end and field access
                     
@@ -707,7 +707,7 @@ public class TransClass {
                     // (current thread's) stack
                     //sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.templates.Global.locPermStack);");
                     //sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.templates.Global.locPermStack.peek());");
-//                    sb.append("System.out.println(\"Pop in "+methodOrCtor.getLongName()+"\");");
+                    sb.append("System.out.println(\"Pop in "+methodOrCtor.getLongName()+"\");");
                     sb.append("de.unifr.acp.templates.Global.uninstallPermission();");
                     String footer = sb.toString();
                     
@@ -834,7 +834,7 @@ public class TransClass {
                 StringBuilder code = new StringBuilder();
                 code.append("{");
                 code.append("  $_ = $proceed($$);");
-                code.append("  de.unifr.acp.templates.Global.addNewObject($0);");
+                code.append("  de.unifr.acp.templates.Global.addNewObject($_);");
                 code.append("}");
                 
                 expr.replace(code.toString());
