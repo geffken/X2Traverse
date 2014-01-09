@@ -16,10 +16,14 @@ import de.unifr.acp.trafo.TransClass;
 public class Global {
     static {
         try {
-            logger = Logger.getLogger("de.unifr.acp.templates.Global");
+            Global.logger = Logger.getLogger("de.unifr.acp.templates.Global");
             fh = new FileHandler("traverse.log");
-            Global.logger.addHandler(Global.fh);
-            Global.logger.setLevel(Level.ALL);
+            if (Global.enableDebugOutput) {
+                Global.logger.addHandler(Global.fh);
+            }
+            Global.logger.setLevel(Global.enableDebugOutput ? Level.ALL
+                    : Level.OFF);
+
         } catch (SecurityException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -27,7 +31,7 @@ public class Global {
     private static Logger logger;
     private static FileHandler fh;
 
-    public static final boolean enableDebugOutput = false;
+    public static final boolean enableDebugOutput = true;
 
     /**
      * A permission stack is a stack of (weak identity) maps from (Object x
@@ -62,20 +66,20 @@ public class Global {
      */
     public static Permission installedPermission(Object obj, String fieldName) {
         if (enableDebugOutput) {
-            for (Set<Object> newObjs : Global.newObjectsStack) {
-                System.out.println("----------------------");
-                for (Object newObj : newObjs) {
-                    System.out.println("NEW OBJECT: "
-                            + System.identityHashCode(newObj));
-                }
-            }
-            for (Map<Object, Map<String, Permission>> locPerms : Global.locPermStack) {
-                System.out.println("----------------------");
-                for (Map.Entry<Object, Map<String, Permission>> entry : locPerms.entrySet()) {
-                    System.out.println("ENTRY: "
-                            + System.identityHashCode(entry.getKey()) + ", "+entry.getValue());
-                }
-            }
+//            for (Set<Object> newObjs : Global.newObjectsStack) {
+//                System.out.println("----------------------");
+//                for (Object newObj : newObjs) {
+//                    System.out.println("NEW OBJECT: "
+//                            + System.identityHashCode(newObj));
+//                }
+//            }
+//            for (Map<Object, Map<String, Permission>> locPerms : Global.locPermStack) {
+//                System.out.println("----------------------");
+//                for (Map.Entry<Object, Map<String, Permission>> entry : locPerms.entrySet()) {
+//                    System.out.println("ENTRY: "
+//                            + System.identityHashCode(entry.getKey()) + ", "+entry.getValue());
+//                }
+//            }
         }
         Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
         if (!newObjectsStack.isEmpty()) {
@@ -91,7 +95,7 @@ public class Global {
                     obj);
 
             // in case there is a field permission map we expect all instance
-            // fields to have an entry (once the implementation is completed ;-)
+            // fields to have an entry
             // assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName)
             // : true);
             return (fieldPerm != null) ? (fieldPerm.containsKey(fieldName) ? fieldPerm
