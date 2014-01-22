@@ -1,4 +1,4 @@
-package de.unifr.acp.trafo;
+package de.unifr.acp.trafo.test;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -13,6 +13,7 @@ public class TreeNode {
     double force;
     TreeNode left;
     TreeNode right;
+    TreeNode parent = null;
 
     TreeNode(double mass, TreeNode left, TreeNode right) {
         this.mass = mass;
@@ -107,6 +108,52 @@ public class TreeNode {
          */
         if (right != null)
             right.computeForcesUnannotated();
+    }
+    
+    public void setParentNodes(TreeNode parent) {
+        this.parent = parent;
+
+        if (left != null)
+            left.setParentNodes(this);
+
+        if (right != null)
+            right.setParentNodes(this);
+    }
+    
+    public void computeForcesLoopUnannotated() {
+        TreeNode current = this;
+        TreeNode last = null;
+        boolean down = true;
+        while (true) {
+            /* reads mass writes force */
+            if (down)
+                current.force = current.mass * R_GRAV;
+            TreeNode currentLeft = current.left;
+            if (down && currentLeft != null) {
+                down = true;
+                //current.left.parent = current;
+                last = current;
+                current = currentLeft;
+                continue;
+            }
+            TreeNode currentRight = current.right;
+            if (currentRight != null
+                    && (down || (!down && last != currentRight))) {
+                down = true;
+                //current.right.parent = current;
+                last = current;
+                current = currentRight;
+                continue;
+            }
+            TreeNode currentParent = current.parent;
+            if (currentParent != null) {
+                last = current;
+                current = currentParent;
+                down = false;
+            } else {
+                break;
+            }
+        }
     }
     
     @Grant("this.force, this.mass.@")

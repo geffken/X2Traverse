@@ -1,4 +1,4 @@
-package de.unifr.acp.templates;
+package de.unifr.acp.runtime;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -6,11 +6,13 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.unifr.acp.fst.Permission;
+import de.unifr.acp.trafo.ACPException;
 import de.unifr.acp.trafo.TransClass;
 
 public class Global {
@@ -40,7 +42,7 @@ public class Global {
      * Using an array deque as no null elements are required - for
      * contract-less/ignored methods no location permission is pushed/popped.
      */
-    public static Deque<Map<Object, Map<String, Permission>>> locPermStack = new ArrayDeque<Map<Object, Map<String, Permission>>>();
+    public static Deque<Map<Object, Map<String, Permission>>> objPermStack = new ObjectPermissionDequeImpl();
 
     /**
      * A stack of (weak identity) object sets. Each set represents the newly
@@ -49,7 +51,7 @@ public class Global {
      * Using an array deque as no null elements are required - for
      * contract-less/ignored methods no new permission is pushed/popped.
      */
-    public static Deque<Set<Object>> newObjectsStack = new ArrayDeque<Set<Object>>();
+    public static Deque<Set<Object>> newObjectsStack = new NewObjectDequeImpl();
 
     // possibly one more stack is required for debugging/logging/error messages
 
@@ -65,33 +67,25 @@ public class Global {
      * @return the installed permission for the specified location
      */
     public static Permission installedPermission(Object obj, String fieldName) {
-        if (enableDebugOutput) {
-//            for (Set<Object> newObjs : Global.newObjectsStack) {
-//                System.out.println("----------------------");
-//                for (Object newObj : newObjs) {
-//                    System.out.println("NEW OBJECT: "
-//                            + System.identityHashCode(newObj));
-//                }
-//            }
-//            for (Map<Object, Map<String, Permission>> locPerms : Global.locPermStack) {
-//                System.out.println("----------------------");
-//                for (Map.Entry<Object, Map<String, Permission>> entry : locPerms.entrySet()) {
-//                    System.out.println("ENTRY: "
-//                            + System.identityHashCode(entry.getKey()) + ", "+entry.getValue());
-//                }
-//            }
-        }
         Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
-        if (!newObjectsStack.isEmpty()) {
+        if (enableDebugOutput) {
+            // System.out.println(newObjectsStack);
+            // System.out.println(Global.objPermStack);
+        }
+
+        Set<Object> topNewObjects = newObjectsStack.peek();
+
+        // if there is a permission installed
+        if (topNewObjects != null) {
 
             // consider new objects
-            if (newObjectsStack.peek().contains(obj)) {
+            if (topNewObjects.contains(obj)) {
                 return Permission.READ_WRITE;
             }
 
             // consider topmost location permissions;
             // access to unmarked locations is forbidden
-            Map<String, Permission> fieldPerm = Global.locPermStack.peek().get(
+            Map<String, Permission> fieldPerm = Global.objPermStack.peek().get(
                     obj);
 
             // in case there is a field permission map we expect all instance
@@ -124,9 +118,10 @@ public class Global {
     public static Permission installedPermissionStackNotEmpty(Object obj,
             String fieldName) {
         if (enableDebugOutput) {
-            System.out.println("installedPermissions(" + obj + ", " + fieldName
-                    + ")");
-            System.out.println("locPerms: " + locPermStack.peek());
+            // System.out.println("installedPermissions(" + obj + ", " +
+            // fieldName
+            // + ")");
+            // System.out.println("locPerms: " + locPermStack.peek());
         }
         Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
 
@@ -137,7 +132,7 @@ public class Global {
 
         // consider topmost location permissions;
         // access to unmarked locations is forbidden
-        Map<String, Permission> fieldPerm = Global.locPermStack.peek().get(obj);
+        Map<String, Permission> fieldPerm = Global.objPermStack.peek().get(obj);
 
         // in case there is a field permission map we expect all instance
         // fields to have an entry (once the implementation is completed ;-)
@@ -147,23 +142,26 @@ public class Global {
                 .get(fieldName) : Permission.NONE)
                 : Permission.NONE;
     }
-    
-    public static void installPermission(Map<Object, Map<String, Permission>> locPerms) {
+
+    public static void installPermission(
+            Map<Object, Map<String, Permission>> objPerms) {
         if (enableDebugOutput) {
-            System.out.println("----------------------");
-            for (Map.Entry<Object, Map<String, Permission>> entry : locPerms
-                    .entrySet()) {
-                System.out.println("ENTRY: "
-                        + System.identityHashCode(entry.getKey()) + ", "
-                        + entry.getValue());
-            }
+            // System.out.println("----------------------");
+            // for (Map.Entry<Object, Map<String, Permission>> entry : objPerms
+            // .entrySet()) {
+            // System.out.println("ENTRY: "
+            // + System.identityHashCode(entry.getKey()) + ", "
+            // + entry.getValue());
+            // }
         }
-        locPermStack.push(locPerms);
-        newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap<Object, Boolean>()));
+        objPermStack.push(objPerms);
+        newObjectsStack
+                .push(Collections
+                        .newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap<Object, Boolean>()));
     }
-    
+
     public static void uninstallPermission() {
-        locPermStack.pop();
+        objPermStack.pop();
         Set<Object> newLocSinceInstallation = newObjectsStack.pop();
         if (!newObjectsStack.isEmpty()) {
             newObjectsStack.peek().addAll(newLocSinceInstallation);
@@ -184,34 +182,29 @@ public class Global {
         }
     }
 
-    public static void printViolation(Object obj, String qualifiedFieldName,
-            String methodName, Permission effectivePerm, Permission requiredPerm) {
+    public static void throwOrPrintViolation(Object obj,
+            String qualifiedFieldName, String methodName,
+            Permission effectivePerm, Permission requiredPerm,
+            boolean disableThrowing) {
         logger.fine("ACCESS VIOLATION in: " + System.identityHashCode(obj)
                 + " of type "
                 + ((obj != null) ? obj.getClass().getSimpleName() : ""));
-        System.out.println("ACCESS VIOLATION:");
-        System.out.println("Instance: " + System.identityHashCode(obj)
-                + " of type " + obj.getClass().getSimpleName());
-        System.out.println("Field: " + qualifiedFieldName);
-        System.out.println("Effective permission: " + effectivePerm);
-        System.out.println("Required permission: " + requiredPerm);
-        System.out.println("in method " + methodName);
-        // System.out.println(de.unifr.acp.templates.Global.locPermStack);
-        // System.out.println(de.unifr.acp.templates.Global.newObjectsStack);
-        for (Set<Object> newObjs : Global.newObjectsStack) {
-            System.out.println("----------------------");
-            for (Object newObj : newObjs) {
-                System.out.println("NEW OBJECT: "
-                        + System.identityHashCode(newObj));
-            }
+        ACPException e = new ACPException(obj, qualifiedFieldName, methodName,
+                effectivePerm, requiredPerm);
+        if (disableThrowing) {
+            System.out.println(e);
+        } else {
+            throw e;
         }
-        for (Map<Object, Map<String, Permission>> locPerms : Global.locPermStack) {
-            System.out.println("----------------------");
-            for (Map.Entry<Object, Map<String, Permission>> entry : locPerms.entrySet()) {
-                System.out.println("ENTRY: "
-                        + System.identityHashCode(entry.getKey()) + ", "+entry.getValue());
-            }
-        }
-        System.out.println();
+        // System.out.println("ACCESS VIOLATION:");
+        // System.out.println("Instance: " + System.identityHashCode(obj)
+        // + " of type " + obj.getClass().getSimpleName());
+        // System.out.println("Field: " + qualifiedFieldName);
+        // System.out.println("Effective permission: " + effectivePerm);
+        // System.out.println("Required permission: " + requiredPerm);
+        // System.out.println("in method " + methodName);
+        // // System.out.println(newObjectsStack);
+        // // System.out.println(objPermStack);
+
     }
 }

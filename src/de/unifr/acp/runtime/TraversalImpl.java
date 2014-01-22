@@ -1,4 +1,4 @@
-package de.unifr.acp.templates;
+package de.unifr.acp.runtime;
 
 import static de.unifr.acp.fst.Permission.union;
 import static de.unifr.acp.fst.Permission.intersection;

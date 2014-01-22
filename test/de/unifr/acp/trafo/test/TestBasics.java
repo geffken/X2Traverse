@@ -1,11 +1,12 @@
-package de.unifr.acp.trafo;
+package de.unifr.acp.trafo.test;
 
-public class TestClassWithAnnotatedMethod {
+public class TestBasics {
     Object a = new Object();
     
     @de.unifr.acp.annot.Grant("this.a.*")
-    public void m(@de.unifr.acp.annot.Grant("b.*") Object x) {
+    public void m(@de.unifr.acp.annot.Grant("a.*") TestBasics x) {
         System.out.println(this.a);
+        System.out.println(x.a);
     }
     
     public static void m() {
@@ -17,7 +18,7 @@ public class TestClassWithAnnotatedMethod {
     }
     
     public static void main(String[] args) {
-        new TestClassWithAnnotatedMethod().m(new Object());
+        new TestBasics().m(new TestBasics());
     }
 
 }

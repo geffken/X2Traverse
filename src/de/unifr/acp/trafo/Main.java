@@ -35,7 +35,7 @@ public class Main {
             // TransClass.doTransform(target,
             // !target.getSuperclass().equals(objectClass));
         
-            TransClass.transformAndFlushHierarchy(className, outputDir);
+            TransClass.transformAndFlushHierarchy(defaultPool, className, outputDir, true);
 
             // condition needed to avoid bug in writing unmodified class files
             // causing invalid class files

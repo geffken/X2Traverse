@@ -6,8 +6,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -21,8 +21,22 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import de.unifr.acp.runtime.TraversalTarget__;
+import de.unifr.acp.trafo.test.TestAbstractBase;
+import de.unifr.acp.trafo.test.TestArrayClass;
+import de.unifr.acp.trafo.test.TestCompoundSubclass;
+import de.unifr.acp.trafo.test.TestConcreteSub;
+import de.unifr.acp.trafo.test.TestConstructor;
+import de.unifr.acp.trafo.test.TestEmptyClass;
+import de.unifr.acp.trafo.test.TestBasics;
+import de.unifr.acp.trafo.test.TestCompoundClass;
+import de.unifr.acp.trafo.test.TestEmptySubclass;
+import de.unifr.acp.trafo.test.TestInnerClass;
+import de.unifr.acp.trafo.test.TestIntClass;
+
 public class TransClassTest {
 
+    private static ClassPool defaultPool = ClassPool.getDefault();
     private static CtClass objectClass;
     private static final boolean verbose = true;
     private static final String TEST_BASICS_NAME = TestBasics.class
@@ -31,16 +45,25 @@ public class TransClassTest {
             .getCanonicalName();
     private static final String TEST_EMPTY_CLASS_NAME = TestEmptyClass.class
             .getCanonicalName();
+    private static final String TEST_EMPTY_SUBCLASS_NAME = TestEmptySubclass.class
+            .getCanonicalName();
     private static final String TEST_INT_CLASS_NAME = TestIntClass.class
             .getCanonicalName();
     private static final String TEST_COMPOUND_CLASS_NAME = TestCompoundClass.class
             .getCanonicalName();
-    private static final String TREE_NODE_NAME = TreeNode.class
+    private static final String TEST_COMPOUND_SUBCLASS_NAME = TestCompoundSubclass.class
             .getCanonicalName();
-    
+    private static final String TEST_CONCONSTRUCTOR_NAME = TestConstructor.class
+            .getCanonicalName();
+    private static final String TEST_ABSTRACT_BASE_CLASS_NAME = TestAbstractBase.class
+            .getCanonicalName();
+    private static final String TEST_CONCRETE_SUB_CLASS_NAME = TestConcreteSub.class
+            .getCanonicalName();
+    private static final String TEST_INNER_CLASS_NAME = TestInnerClass.class
+            .getCanonicalName();
+
     // test data
-    
-    
+
     @BeforeClass
     public static void oneTimeSetup() throws Exception {
         objectClass = ClassPool.getDefault().get("java.lang.Object");
@@ -48,11 +71,12 @@ public class TransClassTest {
 
     @Before
     public void setUp() throws Exception {
-
+        defaultPool = ClassPool.getDefault();
     }
 
     @After
     public void tearDown() throws Exception {
+
     }
 
     @Test
@@ -73,51 +97,90 @@ public class TransClassTest {
     @Test
     public void testDoTransformDoesNotThrow() throws NotFoundException,
             ClassNotFoundException, IOException, CannotCompileException {
-        ClassPool defaultPool = ClassPool.getDefault();
-        CtClass target = defaultPool.get(TEST_BASICS_NAME);
-        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
-        
-        target = defaultPool.get(
-                TEST_ARRAY_CLASS_NAME);
-        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
+        TransClass.transformSingleClass(defaultPool, TEST_BASICS_NAME, false);
+
+        TransClass.transformSingleClass(defaultPool, TEST_ARRAY_CLASS_NAME,
+                false);
+        TransClass.transformSingleClass(defaultPool,
+                TEST_ABSTRACT_BASE_CLASS_NAME, false);
     }
-    
+
     @Test
-    public void testDoTransformAndRun() throws Throwable {
-        ClassPool defaultPool = ClassPool.getDefault();
-        CtClass target = defaultPool.get(TEST_BASICS_NAME);
-        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
-//        if (target.isModified()) {
-//            target.debugWriteFile("bin");
-//        }
+    public void testDoTransformAndRunBasics() throws Throwable {
+        TransClass.transformSingleClass(defaultPool, TEST_BASICS_NAME, false);
+        // if (target.isModified()) {
+        // target.debugWriteFile("bin");
+        // }
         javassist.Loader cl = new javassist.Loader(defaultPool);
-        
+
         // run with javassist's class loader to enable 'reloading' of test class
         cl.run(TEST_BASICS_NAME, new String[] {});
+        TransClass.defrostHierarchy(defaultPool, TEST_BASICS_NAME);
+    }
+
+    @Test
+    public void testDoTransformAndRunArrays() throws Throwable {
+        TransClass.transformSingleClass(defaultPool, TEST_ARRAY_CLASS_NAME,
+                false);
+        javassist.Loader cl = new javassist.Loader(defaultPool);
+
+        // run with javassist's class loader to enable 'reloading' of test class
+        cl.run(TEST_ARRAY_CLASS_NAME, new String[] {});
+
+        TransClass.defrostHierarchy(defaultPool, TEST_ARRAY_CLASS_NAME);
+        CtClass target = defaultPool.get(TraversalTarget__.class
+                .getCanonicalName());
+        target.rebuildClassFile();
+        // target.defrost();
+        TransClass.defrostHierarchy(defaultPool,
+                TraversalTarget__.class.getCanonicalName());
+    }
+
+    @Test
+    public void testDoTransformAndRunConstructor() throws Throwable {
+        TransClass.transformHierarchy(defaultPool, TEST_CONCONSTRUCTOR_NAME,
+                false);
+        javassist.Loader cl = new javassist.Loader(defaultPool);
+
+        // run with javassist's class loader to enable 'reloading' of test class
+        // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
+        // "output");
+        cl.run(TEST_CONCONSTRUCTOR_NAME, new String[] {});
+        TransClass.defrostHierarchy(defaultPool, TEST_CONCONSTRUCTOR_NAME);
+
+    }
+
+    @Test
+    public void testDoTransformAndRunConcretSubClass() throws Throwable {
+        TransClass.transformHierarchy(defaultPool,
+                TEST_CONCRETE_SUB_CLASS_NAME, false);
+        javassist.Loader cl = new javassist.Loader(defaultPool);
+
+        // run with javassist's class loader to enable 'reloading' of test class
+        // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
+        // "output");
+        cl.run(TEST_CONCRETE_SUB_CLASS_NAME, new String[] {});
+        TransClass.defrostHierarchy(defaultPool, TEST_CONCRETE_SUB_CLASS_NAME);
     }
     
     @Test
-    public void testDoTransformTreeNode() throws Throwable {
-        ClassPool defaultPool = ClassPool.getDefault();
-        CtClass target = defaultPool.get(TREE_NODE_NAME);
-//        TransClass.doTransform(target, !target.getSuperclass().equals(objectClass));
-        TransClass.transformHierarchy(TREE_NODE_NAME);
-//        if (target.isModified()) {
-//            target.writeFile("bin");
-//        }
+    public void testDoTransformAndRunInnerClass() throws Throwable {
+        TransClass.transformHierarchy(defaultPool,
+                TEST_INNER_CLASS_NAME, false);
         javassist.Loader cl = new javassist.Loader(defaultPool);
-        
+
         // run with javassist's class loader to enable 'reloading' of test class
-        cl.run(TREE_NODE_NAME, new String[] { "280", "degenerate", "delegator" });
-        //TreeNode.main(new String[] { "1280", "degenerate", "delegator" });
+        // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
+        // "output");
+        cl.run(TEST_INNER_CLASS_NAME, new String[] {});
+        TransClass.defrostHierarchy(defaultPool, TEST_INNER_CLASS_NAME);
     }
 
     @Test
     public void testComputeReachableClasses() throws NotFoundException,
             IOException, CannotCompileException {
-        TransClass tc = new TransClass();
-        List<String> expected = Arrays
-                .asList(TEST_EMPTY_CLASS_NAME);
+        TransClass tc = new TransClass(defaultPool, false);
+        List<String> expected = Arrays.asList(TEST_EMPTY_CLASS_NAME);
         checkMap(tc, TEST_EMPTY_CLASS_NAME, expected);
 
         tc = new TransClass();
@@ -126,21 +189,19 @@ public class TransClassTest {
 
         tc = new TransClass();
         expected = Arrays.asList(TEST_COMPOUND_CLASS_NAME,
-                TEST_EMPTY_CLASS_NAME,
-                TEST_INT_CLASS_NAME);
+                TEST_EMPTY_CLASS_NAME, TEST_INT_CLASS_NAME);
         checkMap(tc, TEST_COMPOUND_CLASS_NAME, expected);
 
         tc = new TransClass();
-        expected = Arrays.asList("de.unifr.acp.trafo.TestEmptySubclass",
+        expected = Arrays.asList(TEST_EMPTY_SUBCLASS_NAME,
                 TEST_EMPTY_CLASS_NAME);
-        checkMap(tc, "de.unifr.acp.trafo.TestEmptySubclass", expected);
+        checkMap(tc, TEST_EMPTY_SUBCLASS_NAME, expected);
 
         tc = new TransClass();
-        expected = Arrays.asList("de.unifr.acp.trafo.TestCompoundSubclass",
-                TEST_EMPTY_CLASS_NAME,
-                TEST_INT_CLASS_NAME,
+        expected = Arrays.asList(TEST_COMPOUND_SUBCLASS_NAME,
+                TEST_EMPTY_CLASS_NAME, TEST_INT_CLASS_NAME,
                 TEST_COMPOUND_CLASS_NAME);
-        checkMap(tc, "de.unifr.acp.trafo.TestCompoundSubclass", expected);
+        checkMap(tc, TEST_COMPOUND_SUBCLASS_NAME, expected);
 
     }
 
@@ -153,7 +214,8 @@ public class TransClassTest {
      */
     private void checkMap(TransClass tc, String classname, List<String> expected)
             throws NotFoundException, IOException, CannotCompileException {
-        Set<CtClass> visited = tc.computeReachableClasses(ClassPool.getDefault().get(classname));
+        Set<CtClass> visited = tc.computeReachableClasses(ClassPool
+                .getDefault().get(classname), false);
         if (verbose) {
             System.out.println("<<<");
             for (CtClass cls : visited) {
@@ -165,8 +227,9 @@ public class TransClassTest {
             assertTrue(expected.contains(cls.getName()));
         }
     }
-    
-    private String contentFromFileName(String filename) throws FileNotFoundException {
+
+    private String contentFromFileName(String filename)
+            throws FileNotFoundException {
         String path = "testoutputs/" + filename + ".out";
         Scanner scanner = null;
         try {
@@ -182,8 +245,7 @@ public class TransClassTest {
     @Test
     public void testCreateBody() throws NotFoundException,
             FileNotFoundException {
-        CtClass target = ClassPool.getDefault().get(
-                TEST_EMPTY_CLASS_NAME);
+        CtClass target = defaultPool.get(TEST_EMPTY_CLASS_NAME);
         String result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
@@ -192,7 +254,7 @@ public class TransClassTest {
                         "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\n}",
                         result);
 
-        target = ClassPool.getDefault().get(TEST_INT_CLASS_NAME);
+        target = defaultPool.get(TEST_INT_CLASS_NAME);
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
@@ -209,8 +271,7 @@ public class TransClassTest {
                         "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(this, \"de.unifr.acp.trafo.TestIntClass.myField\");\nsuper.traverse__(t);\n}",
                         result);
 
-        target = ClassPool.getDefault().get(
-                TEST_COMPOUND_CLASS_NAME);
+        target = defaultPool.get(TEST_COMPOUND_CLASS_NAME);
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
@@ -218,14 +279,13 @@ public class TransClassTest {
                 "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visit__(this, \"de.unifr.acp.trafo.TestCompoundClass.x1\", this.x1);\nt.visit__(this, \"de.unifr.acp.trafo.TestCompoundClass.x2\", this.x2);\n}",
                 result);
 
-        target = ClassPool.getDefault()
-                .get(TEST_ARRAY_CLASS_NAME);
+        target = defaultPool.get(TEST_ARRAY_CLASS_NAME);
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);
         assertEquals(result, contentFromFileName("createBody-TestArrayClass"));
 
-        target = ClassPool.getDefault().get("java.lang.String");
+        target = defaultPool.get("java.lang.String");
         result = TransClass.createBody(target, false);
         if (verbose)
             System.out.println(result);

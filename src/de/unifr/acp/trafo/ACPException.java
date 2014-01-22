@@ -1,7 +1,7 @@
 package de.unifr.acp.trafo;
 
 import de.unifr.acp.fst.Permission;
-import de.unifr.acp.templates.Global;
+import de.unifr.acp.runtime.Global;
 
 public class ACPException extends RuntimeException {
 
