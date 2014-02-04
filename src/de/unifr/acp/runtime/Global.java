@@ -173,9 +173,9 @@ public class Global {
             logger.fine("Adding new object " + System.identityHashCode(obj)
                     + " of type "
                     + ((obj != null) ? obj.getClass().getSimpleName() : ""));
-            System.out.println("Adding new object "
-                    + System.identityHashCode(obj) + " of type "
-                    + ((obj != null) ? obj.getClass().getSimpleName() : ""));
+//            System.out.println("Adding new object "
+//                    + System.identityHashCode(obj) + " of type "
+//                    + ((obj != null) ? obj.getClass().getSimpleName() : ""));
         }
         if (!newObjectsStack.isEmpty()) {
             newObjectsStack.peek().add(obj);

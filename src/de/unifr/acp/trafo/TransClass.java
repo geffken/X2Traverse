@@ -702,29 +702,29 @@ public class TransClass {
                     // type-anchored
                     // contracts, 1 to n: FTSs for unanchored parameter
                     // contracts)
-                    sb.append("de.unifr.acp.fst.FST[] fSTs;");
+                    sb.append("de.unifr.acp.fst.APCAutomaton[] automata;");
                     sb.append("if (" + FST_CACHE_FIELD_NAME
                             + ".containsKey(longName)) {");
-                    sb.append("  fSTs = ((de.unifr.acp.fst.FST[])"
+                    sb.append("  automata = ((de.unifr.acp.fst.APCAutomaton[])"
                             + FST_CACHE_FIELD_NAME + ".get(longName));");
                     sb.append("}");
                     sb.append("else {");
 
                     // build array of FSTs indexed by parameter
-                    sb.append("  fSTs = new de.unifr.acp.fst.FST["
+                    sb.append("  automata = new de.unifr.acp.fst.APCAutomaton["
                             + (parameterCountOf(methodOrCtor) + 1) + "];");
                     for (int i = 0; i < parameterCountOf(methodOrCtor) + 1; i++) {
                         Grant grant = grantAnno(methodOrCtor, i);
                         if (grant != null) {
-                            sb.append("    fSTs[" + i
-                                    + "] = new de.unifr.acp.fst.FST(\""
+                            sb.append("    automata[" + i
+                                    + "] = new de.unifr.acp.fst.APCAutomaton(\""
                                     + grant.value() + "\");");
                         }
                     }
 
                     // cache generated automata indexed by long method name
                     sb.append("  " + FST_CACHE_FIELD_NAME
-                            + ".put(longName, fSTs);");
+                            + ".put(longName, automata);");
                     sb.append("}");
 
                     // now we expect to have all FSTs available and cached
@@ -752,10 +752,10 @@ public class TransClass {
                         // Permission>>
                         sb.append("{");
                         // sb.append("System.out.println(\"start of traversal ...\");");
-                        sb.append("  de.unifr.acp.fst.FST fst = fSTs[" + i
+                        sb.append("  de.unifr.acp.fst.APCAutomaton fst = automata[" + i
                                 + "];");
                         // sb.append("System.out.println(\"got FST ...\");");
-                        sb.append("  de.unifr.acp.fst.FSTRunner runner = new de.unifr.acp.fst.FSTRunner(fst);");
+                        sb.append("  de.unifr.acp.fst.APCRunner runner = new de.unifr.acp.fst.APCRunner(fst);");
                         // sb.append("System.out.println(\"got runner ...\");");
 
                         // step to reach FST runner state that corresponds to
@@ -763,7 +763,7 @@ public class TransClass {
                         // for explicitly anchored contracts
                         if (i == 0) {
                             sb.append("  runner.resetAndStep(\"this\");");
-                            // sb.append("System.out.println(\"after reset of runner ...\");");
+                            //sb.append("System.out.println(\"after reset of runner ...\");");
                         }
 
                         // here the runner should be in synch with the parameter
@@ -779,10 +779,10 @@ public class TransClass {
                                     + " instanceof de.unifr.acp.runtime.TraversalTarget__) {");
                             // sb.append("System.out.println(\"found traversal target ...\");");
                             sb.append("    de.unifr.acp.runtime.TraversalImpl visitor = new de.unifr.acp.runtime.TraversalImpl(runner,allLocPerms);");
-                            // sb.append("System.out.println(\"got visitor ...\");");
+                            //sb.append("System.out.println(\"got visitor ...\");");
                             sb.append("    ((de.unifr.acp.runtime.TraversalTarget__)$"
                                     + i + ").traverse__(visitor);");
-                            // sb.append("System.out.println(\"traversal ...\");");
+                            //sb.append("System.out.println(\"traversal ...\");");
                             sb.append("  }");
                         }
                         // TODO: explicit representation of locations and
@@ -797,11 +797,11 @@ public class TransClass {
                     // thread's) stack
                     // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
                     // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
-                    // sb.append("System.out.println(\"before push ...\");");
+                    //sb.append("System.out.println(\"before push ...\");");
                     sb.append("de.unifr.acp.runtime.Global.installPermission(allLocPerms);");
                     // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
-                    sb.append("System.out.println(\"Push in "
-                            + methodOrCtor.getLongName() + "\");");
+//                    sb.append("System.out.println(\"Push in "
+//                            + methodOrCtor.getLongName() + "\");");
 
                     // TODO: figure out how to instrument thread start/end and
                     // field access
@@ -824,8 +824,8 @@ public class TransClass {
                     // (current thread's) stack
                     // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
                     // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
-                    sb.append("System.out.println(\"Pop in "
-                            + methodOrCtor.getLongName() + "\");");
+//                    sb.append("System.out.println(\"Pop in "
+//                            + methodOrCtor.getLongName() + "\");");
                     sb.append("de.unifr.acp.runtime.Global.uninstallPermission();");
                     String footer = sb.toString();
 
