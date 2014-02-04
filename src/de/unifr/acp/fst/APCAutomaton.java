@@ -7,11 +7,9 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import de.unifr.acp.contract.Concat;
@@ -24,121 +22,33 @@ import de.unifr.acp.contract.QMarkLit;
 import de.unifr.acp.contract.Star;
 import de.unifr.acp.contract.SuffixOp;
 import de.unifr.acp.parser.MyParser;
-import de.unifr.acp.parser.MyParser.yyException;
 import de.unifr.acp.parser.MyScanner;
+import de.unifr.acp.parser.MyParser.yyException;
+
+import static de.unifr.acp.fst.ExtPermission.valueOf;
 
 /**
- * This class represents a finite state transducer. Supports epsilon transitions
- * in the input component of the transitions relation. Currently no support for
- * epsilons in the output component of the transition relation. Generation from
- * contract avoids epsilon cycles. No support for final states.
+ * A weighted automaton over the {@link ExtPermission} semiring.
  * 
  * @author geffken
- * @author Mohammad Shahabi
+ * 
  */
-public class FST {
+public final class APCAutomaton extends WeightedAutomaton<ExtPermission> {
 
     /**
-     * To see the generated ({@link FST}).
-     * 
-     * @see FST#debugPrint()
+     * The contract that this automaton was generated from.
      */
-    public static boolean debug = false;
+    private final String contract;
 
-    /**
-     * The allowed {@link Alphabet}.
-     */
-    private Alphabet inputAlphabet;
-
-    /**
-     * States of this state machine indexed by state name. Used for debug
-     * printing this {@link FST}. Redundant information if only reachable states
-     * need to be printed.
-     */
-    private Map<Integer, State> statesByName = new HashMap<Integer, State>();
-
-    /**
-     * The contract that this {@link FST} was made out of.
-     */
-    final private String contract;
-
-    /**
-     * Indicates the start state of the {@link FST}.<br>
-     * In order to run the {@link FST} correctly, the start state has to be
-     * given.
-     */
-    private State startState;
-
-    private State finalState;
-
-    /**
-     * Indicates the the next fresh number of a State.
-     */
-    private int freshStateNum = 0;
-
-    /**
-     * Create a new machine representation for the specified contracts.
-     * 
-     * @param ctrct
-     *            the contract to generate a machine representation for
-     */
-    public FST(final String ctrct) {
-
-        // generate start state (by convention has number 0 to simplify
-        // debugging)
-        State startState = addFreshState();
-        setStartState(startState);
-
-        State finalState = addFreshState();
-        this.finalState = finalState;
-
-        // set standard ASCII-based input alphabet
-        setInputAlphabet(new Alphabet());
+    public APCAutomaton(String ctrct) {
+        super();
         this.contract = ctrct;
-
         generate(ctrct);
     }
 
     /**
-     * @return {@link FST#inputAlphabet}
-     */
-    public final Alphabet getInputAlphabet() {
-        return inputAlphabet;
-    }
-
-    /**
-     * @param input
-     *            to set the {@link FST} an inputAlphabet
-     */
-    public final void setInputAlphabet(final Alphabet input) {
-        this.inputAlphabet = input;
-    }
-
-    /**
-     * @return {@link FST#startState}
-     */
-    public final State getStartState() {
-        return startState;
-    }
-
-    /**
-     * @param startSt
-     *            to set the {@link FST} a startState
-     */
-    private void setStartState(final State startSt) {
-        this.startState = startSt;
-    }
-
-    /**
-     * @return {@link FST#contract}
-     */
-    public String getContract() {
-        return contract;
-    }
-
-    /**
-     * Generates one FST for all path expressions in the specified composite
-     * contract.
+     * Generates one weighted automaton for all path expressions in the
+     * specified composite contract.
      * 
      * @param contract
      *            the composite contract
@@ -151,34 +61,15 @@ public class FST {
 
             // recursively generate this FST (interpret contract as
             // read-prefix-closed r/w contract)
-            recursivePut(path, Permission.READ_WRITE);
+            recursivePut(path, valueOf(Permission.READ_WRITE), startState,
+                    finalState);
 
-            this.debugPrint();
+            // this.debugPrint();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (yyException e) {
             e.printStackTrace();
         }
-    }
-
-    private State addFreshState() {
-        State state = new State(freshStateNum++);
-        statesByName.put(state.getStateName(), state);
-        return state;
-    }
-
-    /**
-     * Convenience method that calls
-     * <code>recursivePut(path, permission, addFreshState())</code>.
-     * 
-     * @param path
-     *            the abstract {@link Path} to generate machine states for.
-     * @param permission
-     *            the {@link Permission} to use for the paths matching the
-     *            abstract path
-     */
-    private void recursivePut(final Path path, final Permission permission) {
-        recursivePut(path, permission, startState, finalState);
     }
 
     /**
@@ -198,8 +89,8 @@ public class FST {
      * @param the
      *            final state of the path to generate
      */
-    private void recursivePut(final Path path, final Permission permission,
-            State start, State end) {
+    private void recursivePut(final Path path, final ExtPermission permission,
+            WAState<ExtPermission> start, WAState<ExtPermission> end) {
         /*
          * Pattern matching on path object.
          */
@@ -215,13 +106,13 @@ public class FST {
             Concat concat = (Concat) path;
 
             ListIterator<Path> it = concat.listIterator(concat.size());
-            Permission currentPerm = permission;
-            State nextState = end;
-            State previousState;
+            ExtPermission currentPerm = permission;
+            WAState<ExtPermission> nextState = end;
+            WAState<ExtPermission> previousState;
             while (it.hasPrevious()) {
                 Path element = it.previous();
                 if (it.hasPrevious()) {
-                    previousState = addFreshState();
+                    previousState = genFreshState();
                     recursivePut(element, currentPerm, previousState, nextState);
                     nextState = previousState;
                 } else {
@@ -230,15 +121,14 @@ public class FST {
                 }
 
                 if (!element.isNullable()) {
-                    currentPerm = Permission.READ_ONLY;
+                    currentPerm = ExtPermission.valueOf(Permission.READ_ONLY);
                 }
             }
         } else if (path instanceof Or) {
             for (Path element : ((Or) path)) {
-                State startOfSingle = addFreshState();
-
-                // TODO: epsilon/epsilon transition needed
-                start.addTransition(MetaCharacters.EPSILON, Permission.NONE,
+                WAState<ExtPermission> startOfSingle = genFreshState();
+                
+                start.addTransition(MetaCharacters.EPSILON, ExtPermission.EPSILON,
                         startOfSingle);
                 recursivePut(element, permission, startOfSingle, end);
             }
@@ -250,16 +140,14 @@ public class FST {
                 // invariant: only ever loop on start states
                 recursivePut(operand.getPath(), permission, start, start);
 
-                // TODO: epsilon/epsilon transition needed
                 // skip edge
-                start.addTransition(MetaCharacters.EPSILON, Permission.NONE,
+                start.addTransition(MetaCharacters.EPSILON, ExtPermission.EPSILON,
                         end);
             } else if (path instanceof QMark) {
                 recursivePut(operand.getPath(), permission, start, end);
 
-                // TODO: epsilon/epsilon transition needed
                 // skip edge
-                start.addTransition(MetaCharacters.EPSILON, Permission.NONE,
+                start.addTransition(MetaCharacters.EPSILON, ExtPermission.EPSILON,
                         end);
             } else if (path instanceof Plus) {
                 Path inner = operand.getPath();
@@ -274,7 +162,17 @@ public class FST {
     }
 
     /**
-     * Prints this {@link FST} if {@link FST#debug} is <code>true</code>.
+     * Returns the contract this automaton was generated from.
+     * 
+     * @return the contract
+     */
+    public String getContract() {
+        return contract;
+    }
+
+    /**
+     * Prints this weighted automaton if {@link WeightedAutomaton#debug} is
+     * <code>true</code>.
      */
     public void debugPrint() {
         if (debug) {
@@ -286,30 +184,32 @@ public class FST {
             /*
              * Orders mapping by number of state.
              */
-            ArrayList<Map.Entry<Integer, State>> stateArrList = new ArrayList<Entry<Integer, State>>(
-                    statesByName.entrySet());
-            Collections.sort(stateArrList,
-                    new Comparator<Map.Entry<Integer, State>>() {
-                        public final int compare(
-                                final Map.Entry<Integer, State> o1,
-                                final Map.Entry<Integer, State> o2) {
-                            return o1.getKey().compareTo(o2.getKey());
-                        }
-                    });
+            ArrayList<Map.Entry<Integer, WAState<ExtPermission>>> stateArrList = new ArrayList<>(
+                    getStatesByName().entrySet());
+            Collections
+                    .sort(stateArrList,
+                            new Comparator<Map.Entry<Integer, WAState<ExtPermission>>>() {
+                                public final int compare(
+                                        final Map.Entry<Integer, WAState<ExtPermission>> o1,
+                                        final Map.Entry<Integer, WAState<ExtPermission>> o2) {
+                                    return o1.getKey().compareTo(o2.getKey());
+                                }
+                            });
 
             /* Print ordered state list */
             for (int i = 0; i < stateArrList.size(); i++) {
                 System.out.println("State:  "
                         + stateArrList.get(i).getValue().getStateName());
-                Iterator<Map.Entry<String, Set<StateAndPermission>>> it = stateArrList
+                Iterator<Map.Entry<String, Set<StateAndWeight<ExtPermission>>>> it = stateArrList
                         .get(i).getValue().getTransitionRelation().entrySet()
                         .iterator();
                 while (it.hasNext()) {
-                    Map.Entry<String, Set<StateAndPermission>> entry = it
+                    Map.Entry<String, Set<StateAndWeight<ExtPermission>>> entry = it
                             .next();
-                    for (StateAndPermission stateAndPerm : entry.getValue()) {
+                    for (StateAndWeight<ExtPermission> stateAndPerm : entry
+                            .getValue()) {
                         System.out.println("    " + entry.getKey() + " / "
-                                + stateAndPerm.getPermission() + "  ==> "
+                                + stateAndPerm.getWeight() + "  ==> "
                                 + stateAndPerm.getState().getStateName());
                     }
                 }
@@ -321,5 +221,4 @@ public class FST {
                     .println("=============================================================================================================");
         }
     }
-
 }

@@ -4,9 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static de.unifr.acp.fst.Permission.NONE;
 import static de.unifr.acp.fst.Permission.READ_ONLY;
 import static de.unifr.acp.fst.Permission.READ_WRITE;
-import static java.util.Arrays.asList;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -117,6 +115,12 @@ public class FSTTest {
         assertEquals(toPermissionsString(READ_ONLY,READ_ONLY), runner.runFromScratch("x.a"));
         assertEquals(toPermissionsString(READ_ONLY,READ_ONLY,READ_ONLY), runner.runFromScratch("x.a.a"));
         assertEquals(toPermissionsString(READ_ONLY,READ_ONLY,READ_WRITE), runner.runFromScratch("x.a.b"));
+        machine = new FST("x.a+.c*");
+        runner = new FSTRunner(machine);
+        assertEquals(toPermissionsString(READ_ONLY), runner.runFromScratch("x"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_WRITE), runner.runFromScratch("x.a"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_WRITE,READ_WRITE), runner.runFromScratch("x.a.c"));
+        assertEquals(toPermissionsString(READ_ONLY,READ_WRITE,READ_WRITE, NONE), runner.runFromScratch("x.a.c.a"));
     }
 
     /**

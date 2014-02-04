@@ -24,12 +24,6 @@ public class State {
     private Map<String, Set<StateAndPermission>> transitionRelation = new HashMap<String, Set<StateAndPermission>>();
 
     /**
-     * String representation for epsilon transitions in nondeterministic
-     * automaton.
-     */
-    public static final String EPSILON = "(EPSI)";
-
-    /**
      * The constructor.
      * @param i indicating the name of the {@link State}
      */
@@ -80,7 +74,8 @@ public class State {
         }
         
         // ? matches every input symbol but epsilon
-        if (!inputChar.equals(State.EPSILON)) {
+        // identity equality is OK as we only have a singleton epsilon (null)
+        if (!inputChar.equals(MetaCharacters.EPSILON)) {
             stateAndPerms = getTransitionRelation().get(
                     MetaCharacters.QUESTION_MARK);
             if (stateAndPerms != null) {

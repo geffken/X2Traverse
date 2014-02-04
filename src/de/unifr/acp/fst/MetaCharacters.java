@@ -21,4 +21,9 @@ public final class MetaCharacters {
      * whole alphabet ( e.g. in x.? ).
      */
     public static final String QUESTION_MARK = "(QUESTION)";
+    
+    /**
+     * The epsilon character (input alphabet).
+     */
+    public static final String EPSILON = "(EPSILON)";
 }
