@@ -12,8 +12,8 @@ import java.util.Set;
 public class State {
 
     /**
-     * The number indicating the name of an {@link State}.
-     * Useful when printing the {@link de.unifr.acp.fst.FST}.
+     * The number indicating the name of a state.
+     * Useful when printing the automaton.
      */
     final private int stateName;
     
@@ -25,7 +25,7 @@ public class State {
 
     /**
      * The constructor.
-     * @param i indicating the name of the {@link State}
+     * @param i indicating the name of the state
      */
     public State(final int i) {
         this.stateName = i;
