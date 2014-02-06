@@ -1,8 +1,8 @@
 package de.unifr.acp.fst;
 
-import static de.unifr.acp.fst.ExtPermission.NONE;
-import static de.unifr.acp.fst.ExtPermission.READ_ONLY;
-import static de.unifr.acp.fst.ExtPermission.READ_WRITE;
+import static de.unifr.acp.fst.Permission.NONE;
+import static de.unifr.acp.fst.Permission.READ_ONLY;
+import static de.unifr.acp.fst.Permission.READ_WRITE;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
@@ -178,17 +178,17 @@ public class APCAutomatonTest {
                 "(x|y).(a|b).(c|d|e).(i|j|k)");
         APCRunner runner = new APCRunner(PermissionAutomaton);
         PermissionAutomaton.debugPrint();
-        assertEquals(READ_ONLY, runner.step("x"));
-        assertEquals(READ_ONLY, runner.step("b"));
-        assertEquals(READ_ONLY, runner.step("c"));
+        assertEquals(READ_ONLY, runner.step("x").toPermission());
+        assertEquals(READ_ONLY, runner.step("b").toPermission());
+        assertEquals(READ_ONLY, runner.step("c").toPermission());
         APCAutomaton machine2 = new APCAutomaton("x.b.(f|g|h)");
         runner = new APCRunner(machine2);
-        assertEquals(NONE, runner.step("j"));
-        assertEquals(NONE, runner.step("k"));
+        assertEquals(NONE, runner.step("j").toPermission());
+        assertEquals(NONE, runner.step("k").toPermission());
         runner.reset();
-        assertEquals(READ_ONLY, runner.step("x"));
-        assertEquals(READ_ONLY, runner.step("b"));
-        assertEquals(READ_WRITE, runner.step("f"));
+        assertEquals(READ_ONLY, runner.step("x").toPermission());
+        assertEquals(READ_ONLY, runner.step("b").toPermission());
+        assertEquals(READ_WRITE, runner.step("f").toPermission());
     }
 
     /**

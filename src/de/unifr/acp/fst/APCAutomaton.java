@@ -28,7 +28,8 @@ import de.unifr.acp.parser.MyParser.yyException;
 import static de.unifr.acp.fst.ExtPermission.valueOf;
 
 /**
- * A weighted automaton over the {@link ExtPermission} semiring.
+ * A weighted automaton over the {@link ExtPermission} semiring. Implicitly all
+ * states are final.
  * 
  * @author geffken
  * 
@@ -40,6 +41,15 @@ public final class APCAutomaton extends WeightedAutomaton<ExtPermission> {
      */
     private final String contract;
 
+    /**
+     * Constructs a new APC automaton representation for a path expression.
+     * 
+     * @param ctrct
+     *            the path expression to generate an automaton for. Paths
+     *            matching the path expression are considered {R,W}, prefixes of
+     *            these {R}.
+     * 
+     */
     public APCAutomaton(String ctrct) {
         super();
         this.contract = ctrct;
@@ -59,10 +69,13 @@ public final class APCAutomaton extends WeightedAutomaton<ExtPermission> {
             Path path = (Path) new MyParser().yyparse(new MyScanner(
                     new StringReader(contract)));
 
+            // generate a final state first
+            WAState<ExtPermission> end = genFreshState();
+
             // recursively generate this FST (interpret contract as
             // read-prefix-closed r/w contract)
-            recursivePut(path, valueOf(Permission.READ_WRITE), startState,
-                    finalState);
+            recursivePut(path, valueOf(Permission.READ_WRITE), this.startState,
+                    end);
 
             // this.debugPrint();
         } catch (IOException e) {
@@ -127,9 +140,9 @@ public final class APCAutomaton extends WeightedAutomaton<ExtPermission> {
         } else if (path instanceof Or) {
             for (Path element : ((Or) path)) {
                 WAState<ExtPermission> startOfSingle = genFreshState();
-                
-                start.addTransition(MetaCharacters.EPSILON, ExtPermission.EPSILON,
-                        startOfSingle);
+
+                start.addTransition(MetaCharacters.EPSILON,
+                        ExtPermission.EPSILON, startOfSingle);
                 recursivePut(element, permission, startOfSingle, end);
             }
         } else if (path instanceof SuffixOp) {
@@ -141,14 +154,14 @@ public final class APCAutomaton extends WeightedAutomaton<ExtPermission> {
                 recursivePut(operand.getPath(), permission, start, start);
 
                 // skip edge
-                start.addTransition(MetaCharacters.EPSILON, ExtPermission.EPSILON,
-                        end);
+                start.addTransition(MetaCharacters.EPSILON,
+                        ExtPermission.EPSILON, end);
             } else if (path instanceof QMark) {
                 recursivePut(operand.getPath(), permission, start, end);
 
                 // skip edge
-                start.addTransition(MetaCharacters.EPSILON, ExtPermission.EPSILON,
-                        end);
+                start.addTransition(MetaCharacters.EPSILON,
+                        ExtPermission.EPSILON, end);
             } else if (path instanceof Plus) {
                 Path inner = operand.getPath();
                 // on the fly AST transformation from path+ to path.path*

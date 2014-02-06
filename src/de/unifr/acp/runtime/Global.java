@@ -1,19 +1,16 @@
 package de.unifr.acp.runtime;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.unifr.acp.fst.Permission;
 import de.unifr.acp.trafo.ACPException;
-import de.unifr.acp.trafo.TransClass;
 
 public class Global {
     static {

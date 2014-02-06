@@ -702,22 +702,22 @@ public class TransClass {
                     // type-anchored
                     // contracts, 1 to n: FTSs for unanchored parameter
                     // contracts)
-                    sb.append("de.unifr.acp.fst.APCAutomaton[] automata;");
+                    sb.append("de.unifr.acp.nfa.NFA[] automata;");
                     sb.append("if (" + FST_CACHE_FIELD_NAME
                             + ".containsKey(longName)) {");
-                    sb.append("  automata = ((de.unifr.acp.fst.APCAutomaton[])"
+                    sb.append("  automata = ((de.unifr.acp.nfa.NFA[])"
                             + FST_CACHE_FIELD_NAME + ".get(longName));");
                     sb.append("}");
                     sb.append("else {");
 
                     // build array of FSTs indexed by parameter
-                    sb.append("  automata = new de.unifr.acp.fst.APCAutomaton["
+                    sb.append("  automata = new de.unifr.acp.nfa.NFA["
                             + (parameterCountOf(methodOrCtor) + 1) + "];");
                     for (int i = 0; i < parameterCountOf(methodOrCtor) + 1; i++) {
                         Grant grant = grantAnno(methodOrCtor, i);
                         if (grant != null) {
                             sb.append("    automata[" + i
-                                    + "] = new de.unifr.acp.fst.APCAutomaton(\""
+                                    + "] = new de.unifr.acp.nfa.NFA(\""
                                     + grant.value() + "\");");
                         }
                     }
@@ -752,10 +752,10 @@ public class TransClass {
                         // Permission>>
                         sb.append("{");
                         // sb.append("System.out.println(\"start of traversal ...\");");
-                        sb.append("  de.unifr.acp.fst.APCAutomaton fst = automata[" + i
+                        sb.append("  de.unifr.acp.nfa.NFA nfa = automata[" + i
                                 + "];");
                         // sb.append("System.out.println(\"got FST ...\");");
-                        sb.append("  de.unifr.acp.fst.APCRunner runner = new de.unifr.acp.fst.APCRunner(fst);");
+                        sb.append("  de.unifr.acp.nfa.NFARunner runner = new de.unifr.acp.nfa.NFARunner(nfa);");
                         // sb.append("System.out.println(\"got runner ...\");");
 
                         // step to reach FST runner state that corresponds to

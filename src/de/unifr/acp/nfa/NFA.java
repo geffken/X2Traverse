@@ -67,6 +67,7 @@ public class NFA {
     /**
      * Generates one weighted automaton for all path expressions in the
      * specified composite contract.
+     * Caches coaccessibility during generation.
      * 
      * @param contract
      *            the composite contract
@@ -96,6 +97,7 @@ public class NFA {
     /**
      * Recursively generates transitions and states as required for the
      * specified path expression to be recognized by this machine.
+     * Caches coaccessibility during generation.
      * 
      * @param path
      *            the abstract {@link Path} to generate machine states for.
@@ -202,8 +204,33 @@ public class NFA {
             newStates = brandNewStates;
         }
     }
+    
+    /**
+     * Caches coaccessibility is (reachable) states.
+     */
+    public void cacheCoaccessibility() {
+        isAndSetCoaccessibility(this.startState);
+    }
+    
+    private boolean isAndSetCoaccessibility(NFAState state) {
+        
+        if (state.isFinal()) {
+            state.setCoaccessible(true);
+            return true;
+        }
+        
+        boolean isCoaccessible = false;
+        for (Set<NFAState> reachSet : state.getTransitionRelation()
+                .values()) {
+            for (NFAState reachState : reachSet) {
+                isCoaccessible |= isAndSetCoaccessibility(reachState);
+            }
+        }
+        state.setCoaccessible(isCoaccessible);
+        return isCoaccessible;
+    }
 
-    protected NFAState genFreshState() {
+    public NFAState genFreshState() {
         NFAState state = new NFAState(freshStateNum++);
         return state;
     }

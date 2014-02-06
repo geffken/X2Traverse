@@ -5,9 +5,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import de.unifr.acp.fst.APCRunner;
+import de.unifr.acp.fst.ExtPermission;
 import de.unifr.acp.fst.FST;
 import de.unifr.acp.fst.FSTRunner;
 import de.unifr.acp.fst.MetaCharacters;
+import de.unifr.acp.fst.Permission;
 import de.unifr.acp.fst.State;
 
 public class NFARunner implements Cloneable {
@@ -46,7 +49,7 @@ public class NFARunner implements Cloneable {
     public Set<NFAState> getStatusQuo() {
         return statusQuo;
     }
-    
+
     /**
      * A set of states is coaccessible if at least one state is coaccessible.
      * 
@@ -64,17 +67,18 @@ public class NFARunner implements Cloneable {
     }
 
     /**
-     * Returns true if it exist a state in set of current states that is
-     * coaccessible.
+     * Returns true if it exists a state in set of current states that is
+     * coaccessible. Assumes that coaccessibility is cached for all (reachable)
+     * states.
      * 
      * @return true if one or more current states are coaccessible, false
      *         otherwise.
      */
     public boolean isCoaccessible() {
         return isCoaccessible(statusQuo);
-        //Set<NFAState> reachSet = new HashSet<>(statusQuo);
-        //NFA.transitiveReachabilityClosure(reachSet);
-        //return isFinal(reachSet);
+        // Set<NFAState> reachSet = new HashSet<>(statusQuo);
+        // NFA.transitiveReachabilityClosure(reachSet);
+        // return isFinal(reachSet);
     }
 
     /**
@@ -147,6 +151,27 @@ public class NFARunner implements Cloneable {
     }
 
     /**
+     * Takes one step with the specified input character from the current states
+     * and returns the resulting maximal permission.
+     * 
+     * @param inputChar
+     *            The input char to consume
+     * @return maximum {@link Permission} of the path represented by this step
+     */
+    public Permission stepPerm(final String inputChar) {
+        step(inputChar);
+        if (isFinal()) {
+            return Permission.READ_WRITE;
+        } else {
+            if (this.isCoaccessible()) {
+                return Permission.READ_ONLY;
+            } else {
+                return Permission.NONE;
+            }
+        }
+    }
+
+    /**
      * Returns all the states reachable from the input states, consuming the
      * input character.
      * 
@@ -180,6 +205,17 @@ public class NFARunner implements Cloneable {
         statusQuo = Collections.unmodifiableSet(result);
 
         return isFinal(statusQuo);
+    }
+    
+    /**
+     * Convenience method. Calls {@link fst.FST#step(inputChar)} after a reset.
+     * 
+     * @param inputChar
+     *            the input character to consume.
+     */
+    public void resetAndStep(final String inputChar) {
+        reset();
+        step(inputChar);
     }
 
     /**

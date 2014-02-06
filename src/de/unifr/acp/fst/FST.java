@@ -28,10 +28,12 @@ import de.unifr.acp.parser.MyParser.yyException;
 import de.unifr.acp.parser.MyScanner;
 
 /**
- * This class represents a finite state transducer. Supports epsilon transitions
- * in the input component of the transitions relation. Currently no support for
- * epsilons in the output component of the transition relation. Generation from
- * contract avoids epsilon cycles. No support for final states.
+ * This class represents a finite state transducer. The automaton's input
+ * alphabet is the set of all strings. Supports epsilon transitions in the input
+ * component of the transitions relation. Currently no support for epsilons in
+ * the output component of the transition relation. Generation from contract
+ * avoids epsilon cycles. No support for final states (all states are implicitly
+ * final).
  * 
  * @author geffken
  * @author Mohammad Shahabi
@@ -64,12 +66,10 @@ public class FST {
 
     /**
      * Indicates the start state of the {@link FST}.<br>
-     * In order to run the {@link FST} correctly, the start state has to be
+     * In order to run the FST correctly, the start state has to be
      * given.
      */
-    private State startState;
-
-    private State finalState;
+    final private State startState;
 
     /**
      * Indicates the the next fresh number of a State.
@@ -87,10 +87,7 @@ public class FST {
         // generate start state (by convention has number 0 to simplify
         // debugging)
         State startState = addFreshState();
-        setStartState(startState);
-
-        State finalState = addFreshState();
-        this.finalState = finalState;
+        this.startState = startState;
 
         // set standard ASCII-based input alphabet
         setInputAlphabet(new Alphabet());
@@ -119,14 +116,6 @@ public class FST {
      */
     public final State getStartState() {
         return startState;
-    }
-
-    /**
-     * @param startSt
-     *            to set the {@link FST} a startState
-     */
-    private void setStartState(final State startSt) {
-        this.startState = startSt;
     }
 
     /**
@@ -178,7 +167,11 @@ public class FST {
      *            abstract path
      */
     private void recursivePut(final Path path, final Permission permission) {
-        recursivePut(path, permission, startState, finalState);
+
+        // generate a final state first
+        State end = addFreshState();
+
+        recursivePut(path, permission, startState, end);
     }
 
     /**

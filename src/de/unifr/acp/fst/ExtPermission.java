@@ -109,29 +109,16 @@ public enum ExtPermission {
         case TOP:
             return p2;
         case BOTTOM:
-            return BOTTOM;
+            return p1; // BOTTOM
         default:
             switch (p2) {
             case TOP:
                 return p1;
             case BOTTOM:
-                return BOTTOM;
+                return p2; // BOTTOM
             default:
                 return p2;
             }
         }
     }
-
-    // public static ExtPermission union(ExtPermission p1,
-    // ExtPermission p2) {
-    // if (p1 == ExtPermission.TOP || p2 == ExtPermission.TOP) {
-    // return ExtPermission.TOP;
-    // } else if (p1 == ExtPermission.BOTTOM) {
-    // return p2;
-    // } else if (p2 == ExtPermission.BOTTOM) {
-    // return p1;
-    // } else {
-    // return ExtPermission.valueOf(Permission.union(p1.perm, p2.perm));
-    // }
-    // }
 }

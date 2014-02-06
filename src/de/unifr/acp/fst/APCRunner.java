@@ -58,11 +58,11 @@ public final class APCRunner implements Cloneable {
      * convenience method.
      * 
      * @param input
-     *            the input to run the {@link FST} on.
-     * @return The result of the {@link FST} run
+     *            the input to run the automaton on.
+     * @return The result of the automaton run
      * @see FSTRunner#runFromScratch(String)
      */
-    public ExtPermission runFromScratch(final String input) {
+    public Permission runFromScratch(final String input) {
         reset();
 
         /*
@@ -75,7 +75,7 @@ public final class APCRunner implements Cloneable {
         }
 
         printResult(getMachine(), input, result.toString());
-        return result;
+        return result.toPermission();
     }
 
     /**
@@ -91,12 +91,12 @@ public final class APCRunner implements Cloneable {
     }
 
     /**
-     * Take one step from the current state set based on a single input and adds
-     * all the possible state transitions.
+     * Take one step from the current state set based on a single input
+     * and returns the resulting maximal permission. 
      * 
      * @param inputChar
      *            The input char to consume
-     * @return maximum {@link Permission} in the {@link FSTRunner#statusQuo}
+     * @return maximum {@link ExtPermission} in the {@link APCRunner#statusQuo}
      *         transitions
      */
     public ExtPermission step(final String inputChar) {
@@ -104,8 +104,8 @@ public final class APCRunner implements Cloneable {
             System.out.println("Consume " + inputChar + "\n---------------");
         }
 
-        ExtPermission maxPerm = step(statusQuo, inputChar); // step multiple
-                                                            // states
+        // step from multiple states
+        ExtPermission maxPerm = step(statusQuo, inputChar);
 
         if (FSTRunner.debug) {
             System.out.println("The permission is: " + maxPerm);
@@ -195,7 +195,7 @@ public final class APCRunner implements Cloneable {
     private ExtPermission getMaxPermission(
             final Set<StateAndWeight<ExtPermission>> set) {
         // formally BOTTOM should be used are
-        ExtPermission ret = ExtPermission.valueOf(Permission.NONE);
+        ExtPermission ret = ExtPermission.BOTTOM;
         for (StateAndWeight<ExtPermission> stateAndWeight : set) {
             final ExtPermission permission = stateAndWeight.getWeight();
             ret = ExtPermission.join(ret, permission);
@@ -292,7 +292,7 @@ public final class APCRunner implements Cloneable {
     private void transitiveEpsilonClosure(Set<WAState<ExtPermission>> states) {
         Set<WAState<ExtPermission>> newStates = states;
 
-        while (!newStates.isEmpty()) {
+        while (true) {
             Set<WAState<ExtPermission>> brandNewStates = new HashSet<>();
             for (WAState<ExtPermission> state : newStates) {
                 for (WAState<ExtPermission> st : state
@@ -300,7 +300,9 @@ public final class APCRunner implements Cloneable {
                     brandNewStates.add(st);
                 }
             }
-            states.addAll(brandNewStates);
+            if (!states.addAll(brandNewStates)) {
+                break;
+            }
             newStates = brandNewStates;
         }
     }
@@ -311,7 +313,6 @@ public final class APCRunner implements Cloneable {
     public void reset() {
         Set<WAState<ExtPermission>> startStates = new HashSet<>();
         startStates.add(getMachine().getStartState());
-        // statusQuo = Collections.unmodifiableSet(startStates);
 
         // transitive epsilon closure of inputState (ignore output permissions)
         startStates.addAll(transitiveEpsilonClosure(getMachine()
@@ -378,7 +379,7 @@ public final class APCRunner implements Cloneable {
      */
     private static void printResult(final APCAutomaton automaton,
             final String input, final String result) {
-        System.out.println("-----------FSTRun-----------");
+        System.out.println("-----------APCRun-----------");
         System.out.println(automaton.getContract().trim());
         System.out.println(input);
         System.out.println(result);

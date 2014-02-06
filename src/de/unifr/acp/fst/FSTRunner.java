@@ -80,10 +80,11 @@ public final class FSTRunner implements Cloneable {
                 output.append(perm);
                 output.append(',');
             }
-            String result = output.toString();
 
             // removes the last ',' from the String
-            result = result.substring(0, result.length() - 1);
+            output.deleteCharAt(output.length() - 1);
+            String result = output.toString();
+
             printResult(getMachine(), input, result);
             return result;
         } else {
@@ -117,7 +118,7 @@ public final class FSTRunner implements Cloneable {
         if (FSTRunner.debug) {
             System.out.println("Consume " + inputChar + "\n---------------");
         }
-        
+
         Set<StateAndPermission> set;
         set = step(statusQuo, inputChar); // step multiple states
 
@@ -168,7 +169,7 @@ public final class FSTRunner implements Cloneable {
      *            The (non-epsilon) input that has to be consumed on the
      *            generated {@link FST}
      * @return A set of {@link StateAndPermission} which are possible to take
-     *         consuming the {@code inputCharacter}
+     *         consuming the {@code inputChar}
      */
     private Set<StateAndPermission> step(final Set<State> inputStates,
             final String inputChar) {
@@ -299,8 +300,9 @@ public final class FSTRunner implements Cloneable {
         while (!newStates.isEmpty()) {
             Set<State> brandNewStates = new HashSet<State>();
             for (State state : newStates) {
-                for (State st : state.applyStateTransition(MetaCharacters.EPSILON)) {
-                    if ((!result.contains(st))/* && (!newStates.contains(st))*/) {
+                for (State st : state
+                        .applyStateTransition(MetaCharacters.EPSILON)) {
+                    if ((!result.contains(st))/* && (!newStates.contains(st)) */) {
                         brandNewStates.add(st);
                     }
                 }
@@ -317,7 +319,6 @@ public final class FSTRunner implements Cloneable {
     public void reset() {
         Set<State> startStates = new HashSet<State>();
         startStates.add(getMachine().getStartState());
-        // statusQuo = Collections.unmodifiableSet(startStates);
 
         // transitive epsilon closure of inputState (ignore output permissions)
         startStates.addAll(transitiveEpsilonClosure(getMachine()

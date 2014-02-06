@@ -8,20 +8,18 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import de.unifr.acp.fst.APCRunner;
-import de.unifr.acp.fst.FSTRunner;
-import de.unifr.acp.fst.ObjectAndAPCRunner;
-import de.unifr.acp.fst.ObjectAndFSTRunner;
 import de.unifr.acp.fst.Permission;
+import de.unifr.acp.nfa.NFARunner;
+import de.unifr.acp.nfa.ObjectAndNFARunner;
 
 public class TraversalImpl implements Traversal__ {
     // instance variable to keep automaton state
-    private APCRunner runner;
+    private NFARunner runner;
     
     /*
      * a Set<Object x FSTRunner> of already visited pairs
      */
-    private Set<ObjectAndAPCRunner> visitedPairs = new HashSet<>();
+    private Set<ObjectAndNFARunner> visitedPairs = new HashSet<>();
     Map<Object, Map<String, Permission>> locPerms;
 
     /**
@@ -29,7 +27,7 @@ public class TraversalImpl implements Traversal__ {
      * @param runner the FST runner to use for the heap traversal
      * @param locPerms the location permission to update
      */
-    public TraversalImpl(APCRunner runner, Map<Object, Map<String, Permission>> locPerms) {
+    public TraversalImpl(NFARunner runner, Map<Object, Map<String, Permission>> locPerms) {
         this.runner = runner; // initialize automaton state
         this.locPerms = locPerms;
     }
@@ -46,7 +44,7 @@ public class TraversalImpl implements Traversal__ {
         
         try {
             // remember automaton state
-            APCRunner currentRunner = runner.clone();
+            NFARunner currentRunner = runner.clone();
 
             // get field permissions for object under consideration
             final Map<String, Permission> fp = getOrCreateFieldPerms(
@@ -54,7 +52,7 @@ public class TraversalImpl implements Traversal__ {
 
             // step automaton according to field name
             // (for now contracts contain unqualified field names)
-            Permission newPerm = runner.step(unqualifiedFieldNameFromFieldName(fieldName)).toPermission();
+            Permission newPerm = runner.stepPerm(unqualifiedFieldNameFromFieldName(fieldName));
 //            System.out.println("runner contract :"+runner.getMachine().getContracts());
 //            System.out.println("NEW PERM :"+newPerm + " for field "+fieldName);
 
@@ -71,7 +69,7 @@ public class TraversalImpl implements Traversal__ {
             fp.put(fieldName, resultPerm);
 
             // make sure termination
-            ObjectAndAPCRunner currentObjAndRunner = new ObjectAndAPCRunner(fieldvalue, runner);
+            ObjectAndNFARunner currentObjAndRunner = new ObjectAndNFARunner(fieldvalue, runner);
             if (runner.getStatusQuo().isEmpty()) {
                 return; // no chance to reach locations with non-standard permission - terminate
             } else if (visitedPairs.contains(currentObjAndRunner)) {    
@@ -118,7 +116,7 @@ public class TraversalImpl implements Traversal__ {
     public void visitPrimitive__(Object obj, String fieldName) {
         try {
             // remember automaton state
-            APCRunner currentRunner = runner.clone();
+            NFARunner currentRunner = runner.clone();
 
             // get field permissions for object under consideration
             final Map<String, Permission> fp = getOrCreateFieldPerms(
@@ -126,7 +124,7 @@ public class TraversalImpl implements Traversal__ {
 
             // step automaton according to field name
             // (for now contracts contain unqualified field names)
-            Permission newPerm = runner.step(unqualifiedFieldNameFromFieldName(fieldName)).toPermission();
+            Permission newPerm = runner.stepPerm(unqualifiedFieldNameFromFieldName(fieldName));
 //            System.out.println("runner contract :"+runner.getMachine().getContracts());
 //            System.out.println("NEW PERM :"+newPerm + " for field "+fieldName);
 

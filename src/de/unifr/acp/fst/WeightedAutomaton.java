@@ -7,11 +7,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * This class represents a weighted automaton over a specific semiring: (Perm u
- * {Top} (!= {R,W})} u {Bottom (!= \epsilon)} Supports epsilon transitions in
- * the input component of the transitions relation. Currently no support for
- * epsilons in the output component of the transition relation. Generation from
- * contract avoids epsilon cycles. No support for final states.
+ * This class represents a weighted automaton over the specified semiring. The
+ * automaton's input alphabet is the set of all strings. Supports epsilon
+ * transitions in the input component of the transitions relation.
+ * 
+ * @param <W>
+ *            the type of semiring
  * 
  * @author geffken
  */
@@ -31,8 +32,7 @@ public class WeightedAutomaton<W> {
      */
     protected final WAState<W> startState;
 
-
-    protected final WAState<W> finalState;
+    protected Set<WAState<W>> finalStates = new HashSet<>();
 
     /**
      * Indicates the the next fresh number of a State.
@@ -47,22 +47,19 @@ public class WeightedAutomaton<W> {
     // private Map<Integer, WAState<W>> statesByName = new HashMap<>();
 
     /**
-     * Create a new machine representation for the specified contracts.
+     * Create a new weighted automaton with a start state.
      * 
-     * @param ctrct
-     *            the contract to generate a machine representation for
      */
     public WeightedAutomaton() {
 
         // generate start state (0 by convention)
         this.startState = genFreshState();
-        this.finalState = genFreshState();
-        
+
         // set standard ASCII-based input alphabet
         // setInputAlphabet(new Alphabet());
     }
-    
-    protected <W> WAState<W> genFreshState() {
+
+    protected WAState<W> genFreshState() {
         WAState<W> state = new WAState<>(freshStateNum++);
         return state;
     }
@@ -92,12 +89,16 @@ public class WeightedAutomaton<W> {
         }
         return statesByName;
     }
-    
+
     public WAState<W> getStartState() {
         return startState;
     }
 
-    public WAState<W> getFinalState() {
-        return finalState;
+    public Set<WAState<W>> getFinalStates() {
+        return finalStates;
+    }
+
+    public void setFinalStates(Set<WAState<W>> states) {
+        this.finalStates = states;
     }
 }
