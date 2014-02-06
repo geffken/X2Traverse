@@ -5,12 +5,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import de.unifr.acp.fst.ExtPermission;
 import de.unifr.acp.fst.FST;
 import de.unifr.acp.fst.FSTRunner;
 import de.unifr.acp.fst.MetaCharacters;
 import de.unifr.acp.fst.State;
-import de.unifr.acp.fst.WAState;
 
 public class NFARunner implements Cloneable {
 
@@ -48,6 +46,22 @@ public class NFARunner implements Cloneable {
     public Set<NFAState> getStatusQuo() {
         return statusQuo;
     }
+    
+    /**
+     * A set of states is coaccessible if at least one state is coaccessible.
+     * 
+     * @param states
+     *            the set of states to check
+     * @return true if one or more states are coaccessible, false otherwise
+     */
+    public static boolean isCoaccessible(Collection<NFAState> states) {
+        for (NFAState state : states) {
+            if (state.isCoaccessible()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Returns true if it exist a state in set of current states that is
@@ -57,9 +71,10 @@ public class NFARunner implements Cloneable {
      *         otherwise.
      */
     public boolean isCoaccessible() {
-        Set<NFAState> reachSet = new HashSet<>(statusQuo);
-        transitiveReachabilityClosure(reachSet);
-        return isFinal(reachSet);
+        return isCoaccessible(statusQuo);
+        //Set<NFAState> reachSet = new HashSet<>(statusQuo);
+        //NFA.transitiveReachabilityClosure(reachSet);
+        //return isFinal(reachSet);
     }
 
     /**
@@ -141,8 +156,8 @@ public class NFARunner implements Cloneable {
      * @param inputChar
      *            The (non-epsilon) input that has to be consumed on the
      *            generated {@link FST}
-     * @return true if the NFA accepts the input char from the current states,
-     *         false otherwise
+     * @return true if the NFA can reach a final state via the specified input
+     *         character
      */
     private boolean step(final Set<NFAState> inputStates, final String inputChar) {
 
@@ -179,30 +194,6 @@ public class NFARunner implements Cloneable {
                 .getStartState()));
 
         statusQuo = Collections.unmodifiableSet(startStates);
-    }
-
-    /**
-     * Reachability-closes the specified (mutable) set of states.
-     * 
-     * @param states
-     *            the set of states
-     */
-    private void transitiveReachabilityClosure(Collection<NFAState> states) {
-        Collection<NFAState> newStates = states;
-
-        while (true) {
-            Collection<NFAState> brandNewStates = new HashSet<>();
-            for (NFAState state : newStates) {
-                for (Set<NFAState> reachSet : state.getTransitionRelation()
-                        .values()) {
-                    brandNewStates.addAll(reachSet);
-                }
-            }
-            if (!states.addAll(brandNewStates)) {
-                break;
-            }
-            newStates = brandNewStates;
-        }
     }
 
     private Set<NFAState> transitiveEpsilonClosure(NFAState state) {

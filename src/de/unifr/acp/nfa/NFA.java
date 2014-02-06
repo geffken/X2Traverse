@@ -4,7 +4,10 @@ import static de.unifr.acp.fst.MetaCharacters.QUESTION_MARK;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.ListIterator;
+import java.util.Set;
 
 import de.unifr.acp.contract.Concat;
 import de.unifr.acp.contract.Identifier;
@@ -33,7 +36,7 @@ public class NFA {
      * In order to run the NFA correctly, the start state has to be
      * given.
      */
-    private final NFAState startState;
+    protected final NFAState startState;
 
     /**
      * Indicates the the next fresh state number.
@@ -44,18 +47,16 @@ public class NFA {
      * Constructs an NFA with a start state.
      * 
      */
-    public NFA() {
+    private NFA() {
         super();
         this.startState = genFreshState();
     }
     
     /**
-     * Constructs a new APC automaton representation for a path expression.
+     * Constructs a new NFA representation for a path expression.
      * 
      * @param ctrct
-     *            the path expression to generate an automaton for. Paths
-     *            matching the path expression are considered {R,W}, prefixes of
-     *            these {R}.
+     *            the path expression to generate an automaton for.
      * 
      */
     public NFA(String ctrct) {
@@ -114,9 +115,11 @@ public class NFA {
         // base cases
         if (path instanceof QMarkLit) {
             end.setFinal(isFinal);
+            end.setCoaccessible(true); // cache coaccessibility in construction
             start.addTransition(QUESTION_MARK, end);
         } else if (path instanceof Identifier) {
             end.setFinal(isFinal);
+            end.setCoaccessible(true); // cache coaccessibility in construction            
             start.addTransition(((Identifier) path).getName(), end);
 
             // recursive cases
@@ -173,6 +176,30 @@ public class NFA {
 
         } else {
             throw new IllegalArgumentException("Unknown path type");
+        }
+    }
+    
+    /**
+     * Reachability-closes the specified (mutable) set of states.
+     * 
+     * @param states
+     *            the set of states
+     */
+    public static void transitiveReachabilityClosure(Collection<NFAState> states) {
+        Collection<NFAState> newStates = states;
+
+        while (true) {
+            Collection<NFAState> brandNewStates = new HashSet<>();
+            for (NFAState state : newStates) {
+                for (Set<NFAState> reachSet : state.getTransitionRelation()
+                        .values()) {
+                    brandNewStates.addAll(reachSet);
+                }
+            }
+            if (!states.addAll(brandNewStates)) {
+                break;
+            }
+            newStates = brandNewStates;
         }
     }
 
