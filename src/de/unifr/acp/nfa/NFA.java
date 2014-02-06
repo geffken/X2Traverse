@@ -42,6 +42,8 @@ public class NFA {
      * Indicates the the next fresh state number.
      */
     private static int freshStateNum = 0;
+    
+    private String contract = null;
 
     /**
      * Constructs an NFA with a start state.
@@ -61,6 +63,7 @@ public class NFA {
      */
     public NFA(String ctrct) {
         this();
+        this.contract = ctrct;
         generate(ctrct);
     }
     

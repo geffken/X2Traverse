@@ -5,8 +5,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import de.unifr.acp.fst.APCRunner;
-import de.unifr.acp.fst.ExtPermission;
 import de.unifr.acp.fst.FST;
 import de.unifr.acp.fst.FSTRunner;
 import de.unifr.acp.fst.MetaCharacters;
@@ -173,7 +171,7 @@ public class NFARunner implements Cloneable {
 
     /**
      * Returns all the states reachable from the input states, consuming the
-     * input character.
+     * input character. Updates the current set of states.
      * 
      * @param inputStates
      *            The set of input {@link State}s in which we are supposed to

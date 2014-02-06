@@ -1,7 +1,7 @@
 package de.unifr.acp.trafo.test;
 
 public class TestBasics {
-    Object a = new Object();
+    Object a = this; // recursive object structure (tests termination)
     
     @de.unifr.acp.annot.Grant("this.a.*")
     public void m(@de.unifr.acp.annot.Grant("a.*") TestBasics x) {

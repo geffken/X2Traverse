@@ -37,7 +37,7 @@ public class TraversalImpl implements Traversal__ {
     }
 
     @Override
-    public void visit__(Object obj, String fieldName, Object fieldvalue) {
+    public void visit__(Object obj, String fieldName, Object fieldValue) {
 //        if (!(fieldvalue instanceof TraversalTarget__)) {
 //            return;
 //        }
@@ -59,8 +59,11 @@ public class TraversalImpl implements Traversal__ {
             // calculate effective permission from installed permission,
             // this automaton's permission and permissions for this object/field
             // from current location permission (or NONE)
-            Permission currentLocPerm = fp.containsKey(fieldName) ? fp
-                    .get(fieldName) : Permission.NONE;
+            Permission currentLocPerm = fp.get(fieldName);
+            if (currentLocPerm == null) {
+                currentLocPerm = Permission.NONE;
+            }
+            
             Permission resultPerm = intersection(
                     Global.installedPermission(obj, fieldName), // redundant if fp.containsKey(fieldName)
                     union(currentLocPerm, newPerm));
@@ -69,15 +72,18 @@ public class TraversalImpl implements Traversal__ {
             fp.put(fieldName, resultPerm);
 
             // make sure termination
-            ObjectAndNFARunner currentObjAndRunner = new ObjectAndNFARunner(fieldvalue, runner);
-            if (runner.getStatusQuo().isEmpty()) {
+            if (fieldValue == null) {
+                return;
+            } else if (runner.getStatusQuo().isEmpty()) {
                 return; // no chance to reach locations with non-standard permission - terminate
-            } else if (visitedPairs.contains(currentObjAndRunner)) {    
-                return; // terminate heap traversal
             } else {
-                visitedPairs.add(currentObjAndRunner);
-                if ((fieldvalue instanceof TraversalTarget__)) {
-                    ((TraversalTarget__) fieldvalue).traverse__(this);
+                if (!visitedPairs.add(new ObjectAndNFARunner(fieldValue, runner))) {
+                    return; // terminate heap traversal
+                }
+                try {
+                    ((TraversalTarget__) fieldValue).traverse__(this);
+                } catch (ClassCastException e) {
+                    return; // forced to stop traversal here
                 }
             }
             
@@ -91,14 +97,7 @@ public class TraversalImpl implements Traversal__ {
     
     public static String unqualifiedFieldNameFromFieldName(
             String fieldName) {
-        String result = fieldName;
-        int lastDotIndex = -1;
-        int i = 0;
-        while ((i = fieldName.indexOf('.', lastDotIndex+1)) != -1) {
-            lastDotIndex = i;
-        }
-        result = fieldName.substring(lastDotIndex + 1);
-        return result;
+        return fieldName.substring(fieldName.lastIndexOf('.') + 1);
     }
     
     public Map<String, Permission> getOrCreateFieldPerms(Map<Object, Map<String, Permission>>permissions, Object obj) {

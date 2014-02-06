@@ -87,10 +87,9 @@ public class Global {
 
             // in case there is a field permission map we expect all instance
             // fields to have an entry
-            // assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName)
-            // : true);
-            return (fieldPerm != null) ? (fieldPerm.containsKey(fieldName) ? fieldPerm
-                    .get(fieldName) : Permission.NONE)
+            assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName)
+                    : true);
+            return (fieldPerm != null) ? (fieldPerm.get(fieldName))
                     : Permission.NONE;
 
         } else {
@@ -133,10 +132,9 @@ public class Global {
 
         // in case there is a field permission map we expect all instance
         // fields to have an entry (once the implementation is completed ;-)
-        // assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName)
-        // : true);
-        return (fieldPerm != null) ? (fieldPerm.containsKey(fieldName) ? fieldPerm
-                .get(fieldName) : Permission.NONE)
+        assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName)
+                : true);
+        return (fieldPerm != null) ? (fieldPerm.get(fieldName))
                 : Permission.NONE;
     }
 
@@ -170,9 +168,9 @@ public class Global {
             logger.fine("Adding new object " + System.identityHashCode(obj)
                     + " of type "
                     + ((obj != null) ? obj.getClass().getSimpleName() : ""));
-//            System.out.println("Adding new object "
-//                    + System.identityHashCode(obj) + " of type "
-//                    + ((obj != null) ? obj.getClass().getSimpleName() : ""));
+            // System.out.println("Adding new object "
+            // + System.identityHashCode(obj) + " of type "
+            // + ((obj != null) ? obj.getClass().getSimpleName() : ""));
         }
         if (!newObjectsStack.isEmpty()) {
             newObjectsStack.peek().add(obj);

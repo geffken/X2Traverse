@@ -77,9 +77,11 @@ public class TransClass {
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     // private final CtClass objectClass =
     // ClassPool.getDefault().get(Object.class.getName());
-    public final String FILTER_TRANSFORM_REGEX_DEFAULT = "java\\..*";
+    //public final String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.runtime\\..*)";
+    public final String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)";
     private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
-    public final String FILTER_VISIT_REGEX_DEFAULT = "java\\..*";
+    //public final String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unif\\.acp\\.runtime\\..*)";
+    public final String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)";
     private String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
     private ClassPool cp;
     private final boolean convertExceptions2Warnings;
