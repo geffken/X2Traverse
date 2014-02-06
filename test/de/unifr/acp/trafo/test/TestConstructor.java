@@ -6,7 +6,8 @@ public class TestConstructor {
     int j;
     TestBasics a;
     
-    @de.unifr.acp.annot.Grant("*")
+    // no permission required for fields of this object in constructor
+    @de.unifr.acp.annot.Grant("@")
     public TestConstructor(@de.unifr.acp.annot.Grant("a")TestBasics x) {
         this.i = 1;
         this.a = x;
