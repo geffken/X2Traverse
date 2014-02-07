@@ -1,19 +1,17 @@
 package de.unifr.acp.trafo;
 
+import static de.unifr.acp.trafo.TranslationHelper.filterClassesToTransform;
+import static de.unifr.acp.trafo.TranslationHelper.parameterCountOf;
+
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.logging.FileHandler;
@@ -29,16 +27,7 @@ import javassist.CtField;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
-import javassist.bytecode.AnnotationsAttribute;
-import javassist.bytecode.AttributeInfo;
-import javassist.bytecode.ClassFile;
-import javassist.bytecode.ConstPool;
-import javassist.bytecode.ParameterAnnotationsAttribute;
 import javassist.bytecode.SyntheticAttribute;
-import javassist.bytecode.annotation.Annotation;
-import javassist.bytecode.annotation.ClassMemberValue;
-import javassist.bytecode.annotation.IntegerMemberValue;
-import javassist.bytecode.annotation.StringMemberValue;
 import javassist.expr.Cast;
 import javassist.expr.ConstructorCall;
 import javassist.expr.ExprEditor;
@@ -48,15 +37,9 @@ import javassist.expr.Instanceof;
 import javassist.expr.MethodCall;
 import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
-import javassist.tools.reflect.CannotInvokeException;
-
 import de.unifr.acp.annot.Grant;
-import de.unifr.acp.runtime.TraversalTarget__;
-
-import de.unifr.acp.trafo.TranslationHelper;
-
-import static de.unifr.acp.trafo.TranslationHelper.filterClassesToTransform;
-import static de.unifr.acp.trafo.TranslationHelper.parameterCountOf;
+import de.unifr.acp.nfa.NFA;
+import de.unifr.acp.nfa.NFARunner;
 
 // TODO: consider fully qualified field names
 
@@ -71,16 +54,23 @@ public class TransClass {
             throw new RuntimeException(e);
         }
     }
+    private static final String AUTOMATON_CLASS_NAME = NFA.class
+            .getCanonicalName();
+    private static final String RUNNER_CLASS_NAME = NFARunner.class
+            .getCanonicalName();
+
     private static Logger logger;
     private static FileHandler fh;
     private static final String TRAVERSAL_TARGET = "de.unifr.acp.runtime.TraversalTarget__";
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     // private final CtClass objectClass =
     // ClassPool.getDefault().get(Object.class.getName());
-    //public final String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.runtime\\..*)";
+    // public final String FILTER_TRANSFORM_REGEX_DEFAULT =
+    // "(java\\..*)|(de\\.unifr\\.acp\\.runtime\\..*)";
     public final String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)";
     private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
-    //public final String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unif\\.acp\\.runtime\\..*)";
+    // public final String FILTER_VISIT_REGEX_DEFAULT =
+    // "(java\\..*)|(de\\.unif\\.acp\\.runtime\\..*)";
     public final String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)";
     private String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
     private ClassPool cp;
@@ -704,22 +694,22 @@ public class TransClass {
                     // type-anchored
                     // contracts, 1 to n: FTSs for unanchored parameter
                     // contracts)
-                    sb.append("de.unifr.acp.nfa.NFA[] automata;");
+                    sb.append(""+AUTOMATON_CLASS_NAME+"[] automata;");
                     sb.append("if (" + FST_CACHE_FIELD_NAME
                             + ".containsKey(longName)) {");
-                    sb.append("  automata = ((de.unifr.acp.nfa.NFA[])"
+                    sb.append("  automata = (("+AUTOMATON_CLASS_NAME+"[])"
                             + FST_CACHE_FIELD_NAME + ".get(longName));");
                     sb.append("}");
                     sb.append("else {");
 
                     // build array of FSTs indexed by parameter
-                    sb.append("  automata = new de.unifr.acp.nfa.NFA["
+                    sb.append("  automata = new "+AUTOMATON_CLASS_NAME+"["
                             + (parameterCountOf(methodOrCtor) + 1) + "];");
                     for (int i = 0; i < parameterCountOf(methodOrCtor) + 1; i++) {
                         Grant grant = grantAnno(methodOrCtor, i);
                         if (grant != null) {
                             sb.append("    automata[" + i
-                                    + "] = new de.unifr.acp.nfa.NFA(\""
+                                    + "] = new "+AUTOMATON_CLASS_NAME+"(\""
                                     + grant.value() + "\");");
                         }
                     }
@@ -754,10 +744,10 @@ public class TransClass {
                         // Permission>>
                         sb.append("{");
                         // sb.append("System.out.println(\"start of traversal ...\");");
-                        sb.append("  de.unifr.acp.nfa.NFA nfa = automata[" + i
+                        sb.append("  "+AUTOMATON_CLASS_NAME+" nfa = automata[" + i
                                 + "];");
                         // sb.append("System.out.println(\"got FST ...\");");
-                        sb.append("  de.unifr.acp.nfa.NFARunner runner = new de.unifr.acp.nfa.NFARunner(nfa);");
+                        sb.append("  "+RUNNER_CLASS_NAME+" runner = new "+RUNNER_CLASS_NAME+"(nfa);");
                         // sb.append("System.out.println(\"got runner ...\");");
 
                         // step to reach FST runner state that corresponds to
@@ -765,7 +755,7 @@ public class TransClass {
                         // for explicitly anchored contracts
                         if (i == 0) {
                             sb.append("  runner.resetAndStep(\"this\");");
-                            //sb.append("System.out.println(\"after reset of runner ...\");");
+                            // sb.append("System.out.println(\"after reset of runner ...\");");
                         }
 
                         // here the runner should be in synch with the parameter
@@ -781,10 +771,10 @@ public class TransClass {
                                     + " instanceof de.unifr.acp.runtime.TraversalTarget__) {");
                             // sb.append("System.out.println(\"found traversal target ...\");");
                             sb.append("    de.unifr.acp.runtime.TraversalImpl visitor = new de.unifr.acp.runtime.TraversalImpl(runner,allLocPerms);");
-                            //sb.append("System.out.println(\"got visitor ...\");");
+                            // sb.append("System.out.println(\"got visitor ...\");");
                             sb.append("    ((de.unifr.acp.runtime.TraversalTarget__)$"
                                     + i + ").traverse__(visitor);");
-                            //sb.append("System.out.println(\"traversal ...\");");
+                            // sb.append("System.out.println(\"traversal ...\");");
                             sb.append("  }");
                         }
                         // TODO: explicit representation of locations and
@@ -799,11 +789,11 @@ public class TransClass {
                     // thread's) stack
                     // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
                     // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
-                    //sb.append("System.out.println(\"before push ...\");");
+                    // sb.append("System.out.println(\"before push ...\");");
                     sb.append("de.unifr.acp.runtime.Global.installPermission(allLocPerms);");
                     // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
-//                    sb.append("System.out.println(\"Push in "
-//                            + methodOrCtor.getLongName() + "\");");
+                    // sb.append("System.out.println(\"Push in "
+                    // + methodOrCtor.getLongName() + "\");");
 
                     // TODO: figure out how to instrument thread start/end and
                     // field access
@@ -826,8 +816,8 @@ public class TransClass {
                     // (current thread's) stack
                     // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
                     // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
-//                    sb.append("System.out.println(\"Pop in "
-//                            + methodOrCtor.getLongName() + "\");");
+                    // sb.append("System.out.println(\"Pop in "
+                    // + methodOrCtor.getLongName() + "\");");
                     sb.append("de.unifr.acp.runtime.Global.uninstallPermission();");
                     String footer = sb.toString();
 
@@ -874,8 +864,8 @@ public class TransClass {
 
                         // String qualifiedFieldName = expr.getClassName() + "."
                         // + expr.getFieldName();
-                        String qualifiedFieldName = field.getDeclaringClass().getName()
-                                + "." + field.getName();
+                        String qualifiedFieldName = field.getDeclaringClass()
+                                .getName() + "." + field.getName();
 
                         // exclude standard API (to be factored out)
                         if (!(qualifiedFieldName.startsWith("java") || qualifiedFieldName
