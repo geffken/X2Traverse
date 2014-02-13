@@ -1,4 +1,4 @@
-package de.unifr.acp.trafo.test;
+package de.unifr.acp.test;
 
 public class TestArrayClass {
 	TestEmptyClass[][] nestedArray;

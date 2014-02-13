@@ -22,17 +22,17 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import de.unifr.acp.runtime.TraversalTarget__;
-import de.unifr.acp.trafo.test.TestAbstractBase;
-import de.unifr.acp.trafo.test.TestArrayClass;
-import de.unifr.acp.trafo.test.TestCompoundSubclass;
-import de.unifr.acp.trafo.test.TestConcreteSub;
-import de.unifr.acp.trafo.test.TestConstructor;
-import de.unifr.acp.trafo.test.TestEmptyClass;
-import de.unifr.acp.trafo.test.TestBasics;
-import de.unifr.acp.trafo.test.TestCompoundClass;
-import de.unifr.acp.trafo.test.TestEmptySubclass;
-import de.unifr.acp.trafo.test.TestInnerClass;
-import de.unifr.acp.trafo.test.TestIntClass;
+import de.unifr.acp.test.TestAbstractBase;
+import de.unifr.acp.test.TestArrayClass;
+import de.unifr.acp.test.TestBasics;
+import de.unifr.acp.test.TestCompoundClass;
+import de.unifr.acp.test.TestCompoundSubclass;
+import de.unifr.acp.test.TestConcreteSub;
+import de.unifr.acp.test.TestConstructor;
+import de.unifr.acp.test.TestEmptyClass;
+import de.unifr.acp.test.TestEmptySubclass;
+import de.unifr.acp.test.TestInnerClass;
+import de.unifr.acp.test.TestIntClass;
 
 public class TransClassTest {
 

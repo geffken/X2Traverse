@@ -1,15 +1,15 @@
-package de.unifr.acp.trafo.test;
+package de.unifr.acp.test;
 
 public class TestConcreteSub extends TestAbstractBase {
     
     @Override
-    @de.unifr.acp.annot.Grant("this.a")
+    @de.unifr.acp.runtime.annot.Grant("this.a")
     public Object m1() {
         return ((TestAbstractBase)this).a;
     }
     
     @Override
-    @de.unifr.acp.annot.Grant("this.a")
+    @de.unifr.acp.runtime.annot.Grant("this.a")
     public Object m2() {
         return this.a;
     }

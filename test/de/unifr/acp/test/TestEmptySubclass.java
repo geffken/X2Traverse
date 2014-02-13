@@ -1,4 +1,4 @@
-package de.unifr.acp.trafo.test;
+package de.unifr.acp.test;
 
 public class TestEmptySubclass extends TestEmptyClass {
 	public String name;

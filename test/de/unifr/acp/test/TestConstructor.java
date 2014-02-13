@@ -1,4 +1,4 @@
-package de.unifr.acp.trafo.test;
+package de.unifr.acp.test;
 
 
 public class TestConstructor {
@@ -7,21 +7,21 @@ public class TestConstructor {
     TestBasics a;
     
     // no permission required for fields of this object in constructor
-    @de.unifr.acp.annot.Grant("@")
-    public TestConstructor(@de.unifr.acp.annot.Grant("a")TestBasics x) {
+    @de.unifr.acp.runtime.annot.Grant("@")
+    public TestConstructor(@de.unifr.acp.runtime.annot.Grant("a")TestBasics x) {
         this.i = 1;
         this.a = x;
         System.out.println(this.i);
         System.out.println(x.a);
     }
     
-    @de.unifr.acp.annot.Grant("this.(a|i|j).*")
-    public void m(@de.unifr.acp.annot.Grant("a.*") TestBasics x) {
+    @de.unifr.acp.runtime.annot.Grant("this.(a|i|j).*")
+    public void m(@de.unifr.acp.runtime.annot.Grant("a.*") TestBasics x) {
         System.out.println(this.i);
         System.out.println(x.a);
     }
     
-    @de.unifr.acp.annot.Grant("*")
+    @de.unifr.acp.runtime.annot.Grant("*")
     public static void n(int x, TestBasics[] args2, int y) {
         //System.out.println(args2[1].a);
     }

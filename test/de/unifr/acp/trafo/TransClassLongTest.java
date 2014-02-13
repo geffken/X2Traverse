@@ -4,7 +4,7 @@ import javassist.ClassPool;
 
 import org.junit.Test;
 
-import de.unifr.acp.trafo.test.TreeNode;
+import de.unifr.acp.test.TreeNode;
 
 public class TransClassLongTest {
     

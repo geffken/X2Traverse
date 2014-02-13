@@ -1,4 +1,4 @@
-package de.unifr.acp.trafo.test;
+package de.unifr.acp.test;
 
 public class TestInnerClass {
     Inner a = new Inner();
@@ -7,12 +7,12 @@ public class TestInnerClass {
         public Object b = new Object();
     }
     
-    @de.unifr.acp.annot.Grant("this.a.b")
+    @de.unifr.acp.runtime.annot.Grant("this.a.b")
     public Object m1() {
         return ((TestInnerClass)this).a.b;
     }
     
-    @de.unifr.acp.annot.Grant("this.a.b")
+    @de.unifr.acp.runtime.annot.Grant("this.a.b")
     public Object m2() {
         return this.a.b;
     }

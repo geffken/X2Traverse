@@ -1,11 +1,9 @@
-package de.unifr.acp.trafo.test;
+package de.unifr.acp.test;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashSet;
-import java.util.Set;
 
-import de.unifr.acp.annot.Grant;
+import de.unifr.acp.runtime.annot.Grant;
 
 public class TreeNode {
     private static final double R_GRAV = 9.81;
