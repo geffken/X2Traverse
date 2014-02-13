@@ -1,6 +1,7 @@
 package de.unifr.acp.runtime;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
@@ -9,8 +10,9 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import de.unifr.acp.fst.Permission;
-import de.unifr.acp.trafo.ACPException;
+import de.unifr.acp.runtime.ACPException;
+import de.unifr.acp.runtime.fst.Permission;
+import de.unifr.acp.runtime.util.WeakIdentityHashMap;
 
 public class Global {
     static {
@@ -50,6 +52,22 @@ public class Global {
      */
     public static Deque<Set<Object>> newObjectsStack = new NewObjectDequeImpl();
 
+    /**
+     * A map from new objects to the their generations. 
+     */
+    public static Map<Object, Long> newObjectGens = new de.unifr.acp.runtime.util.WeakIdentityHashMap<>();
+
+    /**
+     * A stack for representing the generation of the installed contracts.
+     */
+    public static Deque<Long> objectGenStack = new ArrayDeque<>();
+
+    
+    /*
+     * The next fresh generation to be used by the next installed contract. 
+     */
+    private static long nextFreshContractGeneration = 0;
+
     // possibly one more stack is required for debugging/logging/error messages
 
     /**
@@ -64,21 +82,34 @@ public class Global {
      * @return the installed permission for the specified location
      */
     public static Permission installedPermission(Object obj, String fieldName) {
+        @Deprecated
         Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
+        Deque<Long> objectGenStack = Global.objectGenStack;
         if (enableDebugOutput) {
             // System.out.println(newObjectsStack);
             // System.out.println(Global.objPermStack);
         }
 
         Set<Object> topNewObjects = newObjectsStack.peek();
+        Long topObjectGen = objectGenStack.peek();
+
+        assert (topNewObjects != null) == (topObjectGen != null);
 
         // if there is a permission installed
         if (topNewObjects != null) {
 
-            // consider new objects
-            if (topNewObjects.contains(obj)) {
+            Long objectGen = newObjectGens.get(obj);
+
+            assert (topNewObjects.contains(obj) == (objectGen != null && objectGen >= topObjectGen));
+
+            if (objectGen != null && objectGen >= topObjectGen) {
                 return Permission.READ_WRITE;
             }
+            
+            // consider new objects
+            // if (topNewObjects.contains(obj)) {
+            // return Permission.READ_WRITE;
+            // }
 
             // consider topmost location permissions;
             // access to unmarked locations is forbidden
@@ -119,12 +150,25 @@ public class Global {
             // + ")");
             // System.out.println("locPerms: " + locPermStack.peek());
         }
+        @Deprecated
         Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
+        Deque<Long> objectGenStack = Global.objectGenStack;
 
-        // consider new objects
-        if (newObjectsStack.peek().contains(obj)) {
+        Set<Object> topNewObjects = newObjectsStack.peek();
+        Long topObjectGen = objectGenStack.peek();
+
+        assert (topNewObjects.contains(obj) == (newObjectGens.get(obj) != null && newObjectGens
+                .get(obj) >= topObjectGen));
+
+        Long objectGen = newObjectGens.get(obj);
+        if (objectGen != null && objectGen >= topObjectGen) {
             return Permission.READ_WRITE;
         }
+
+        // consider new objects
+        // if (topNewObjects.contains(obj)) {
+        // return Permission.READ_WRITE;
+        // }
 
         // consider topmost location permissions;
         // access to unmarked locations is forbidden
@@ -132,8 +176,7 @@ public class Global {
 
         // in case there is a field permission map we expect all instance
         // fields to have an entry (once the implementation is completed ;-)
-        assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName)
-                : true);
+        assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName) : true);
         return (fieldPerm != null) ? (fieldPerm.get(fieldName))
                 : Permission.NONE;
     }
@@ -152,7 +195,8 @@ public class Global {
         objPermStack.push(objPerms);
         newObjectsStack
                 .push(Collections
-                        .newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap<Object, Boolean>()));
+                        .newSetFromMap(new de.unifr.acp.runtime.util.WeakIdentityHashMap<Object, Boolean>()));
+        objectGenStack.push(nextFreshContractGeneration++);
     }
 
     public static void uninstallPermission() {
@@ -161,6 +205,7 @@ public class Global {
         if (!newObjectsStack.isEmpty()) {
             newObjectsStack.peek().addAll(newLocSinceInstallation);
         }
+        objectGenStack.pop();
     }
 
     public static void addNewObject(Object obj) {
@@ -175,6 +220,10 @@ public class Global {
         if (!newObjectsStack.isEmpty()) {
             newObjectsStack.peek().add(obj);
         }
+        if (!objectGenStack.isEmpty()) {
+            newObjectGens.put(obj, objectGenStack.peek());
+        }
+
     }
 
     public static void throwOrPrintViolation(Object obj,

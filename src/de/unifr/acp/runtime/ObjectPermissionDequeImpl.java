@@ -3,7 +3,7 @@ package de.unifr.acp.runtime;
 import java.util.ArrayDeque;
 import java.util.Map;
 
-import de.unifr.acp.fst.Permission;
+import de.unifr.acp.runtime.fst.Permission;
 
 public class ObjectPermissionDequeImpl extends
         ArrayDeque<Map<Object, Map<String, Permission>>> implements ObjectPermissionDeque {

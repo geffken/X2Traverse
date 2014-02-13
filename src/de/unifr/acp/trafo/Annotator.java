@@ -8,7 +8,7 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import de.unifr.acp.annot.Grant;
+import de.unifr.acp.runtime.annot.Grant;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;

@@ -10,7 +10,7 @@ public class NewObjectDequeImpl extends ArrayDeque<Set<Object>> {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (Set<Object> newObjs : Global.newObjectsStack) {
+        for (Set<Object> newObjs : this) {
             sb.append("----------------------\n");
             for (Object newObj : newObjs) {
                 sb.append("NEW OBJECT: "

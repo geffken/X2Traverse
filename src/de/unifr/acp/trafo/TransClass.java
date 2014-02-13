@@ -37,9 +37,9 @@ import javassist.expr.Instanceof;
 import javassist.expr.MethodCall;
 import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
-import de.unifr.acp.annot.Grant;
-import de.unifr.acp.nfa.NFA;
-import de.unifr.acp.nfa.NFARunner;
+import de.unifr.acp.runtime.annot.Grant;
+import de.unifr.acp.runtime.nfa.NFA;
+import de.unifr.acp.runtime.nfa.NFARunner;
 
 // TODO: consider fully qualified field names
 
@@ -58,10 +58,15 @@ public class TransClass {
             .getCanonicalName();
     private static final String RUNNER_CLASS_NAME = NFARunner.class
             .getCanonicalName();
+    private static final String TRAVERSAL_TARGET_CLASS_NAME = de.unifr.acp.runtime.TraversalTarget__.class
+            .getCanonicalName();
+    private static final String VISITOR_CLASS_NAME = de.unifr.acp.runtime.TraversalImpl.class
+            .getCanonicalName();
+    private static final String GLOBAL_CLASS_NAME = de.unifr.acp.runtime.Global.class
+            .getCanonicalName();
 
     private static Logger logger;
     private static FileHandler fh;
-    private static final String TRAVERSAL_TARGET = "de.unifr.acp.runtime.TraversalTarget__";
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     // private final CtClass objectClass =
     // ClassPool.getDefault().get(Object.class.getName());
@@ -71,7 +76,7 @@ public class TransClass {
     private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
     // public final String FILTER_VISIT_REGEX_DEFAULT =
     // "(java\\..*)|(de\\.unif\\.acp\\.runtime\\..*)";
-    public final String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)";
+    public final String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
     private String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
     private ClassPool cp;
     private final boolean convertExceptions2Warnings;
@@ -474,7 +479,8 @@ public class TransClass {
         for (CtClass type : referredTypes) {
             // if (type.isPrimitive())
             // continue;
-            if (type.getName().matches(filterVisitRegex))
+            String typeName = type.getName();
+            if (typeName.matches(filterVisitRegex))
                 continue;
             enter(type, pending, visited);
         }
@@ -570,7 +576,7 @@ public class TransClass {
         // "de.unifr.acp.runtime.TraversalTarget__",
         // "de.unifr.acp.runtime.TraversalImpl",
         // "de.unifr.acp.runtime.Traversal__",
-        // "de.unifr.acp.runtime.Global", "de.unifr.acp.fst.Permission" };
+        // "de.unifr.acp.runtime.Global", "de.unifr.acp.runtime.fst.Permission" };
         // CtClass[] libClasses = this.cp.get(libClassNames);
         // for (CtClass libClass : libClasses) {
         // libClass.writeFile(outputDir);
@@ -615,7 +621,7 @@ public class TransClass {
         // present
         // use traversal interface as marker for availability of other
         // instrumentation
-        CtClass traversalTargetIf = this.cp.get(TRAVERSAL_TARGET);
+        CtClass traversalTargetIf = this.cp.get(TRAVERSAL_TARGET_CLASS_NAME);
         if (!targetIfs.contains(traversalTargetIf)) {
 
             // change methods carrying contracts
@@ -694,22 +700,22 @@ public class TransClass {
                     // type-anchored
                     // contracts, 1 to n: FTSs for unanchored parameter
                     // contracts)
-                    sb.append(""+AUTOMATON_CLASS_NAME+"[] automata;");
+                    sb.append(AUTOMATON_CLASS_NAME + "[] automata;");
                     sb.append("if (" + FST_CACHE_FIELD_NAME
                             + ".containsKey(longName)) {");
-                    sb.append("  automata = (("+AUTOMATON_CLASS_NAME+"[])"
+                    sb.append("  automata = ((" + AUTOMATON_CLASS_NAME + "[])"
                             + FST_CACHE_FIELD_NAME + ".get(longName));");
                     sb.append("}");
                     sb.append("else {");
 
                     // build array of FSTs indexed by parameter
-                    sb.append("  automata = new "+AUTOMATON_CLASS_NAME+"["
+                    sb.append("  automata = new " + AUTOMATON_CLASS_NAME + "["
                             + (parameterCountOf(methodOrCtor) + 1) + "];");
                     for (int i = 0; i < parameterCountOf(methodOrCtor) + 1; i++) {
                         Grant grant = grantAnno(methodOrCtor, i);
                         if (grant != null) {
-                            sb.append("    automata[" + i
-                                    + "] = new "+AUTOMATON_CLASS_NAME+"(\""
+                            sb.append("    automata[" + i + "] = new "
+                                    + AUTOMATON_CLASS_NAME + "(\""
                                     + grant.value() + "\");");
                         }
                     }
@@ -721,7 +727,7 @@ public class TransClass {
 
                     // now we expect to have all FSTs available and cached
 
-                    sb.append("  Map allLocPerms = new de.unifr.acp.util.WeakIdentityHashMap();");
+                    sb.append("  Map allLocPerms = new de.unifr.acp.runtime.util.WeakIdentityHashMap();");
 
                     int i = ((isStatic(methodOrCtor)) ? 1 : 0);
                     int limit = ((isStatic(methodOrCtor)) ? (parameterCountOf(methodOrCtor))
@@ -744,10 +750,11 @@ public class TransClass {
                         // Permission>>
                         sb.append("{");
                         // sb.append("System.out.println(\"start of traversal ...\");");
-                        sb.append("  "+AUTOMATON_CLASS_NAME+" nfa = automata[" + i
-                                + "];");
+                        sb.append("  " + AUTOMATON_CLASS_NAME
+                                + " nfa = automata[" + i + "];");
                         // sb.append("System.out.println(\"got FST ...\");");
-                        sb.append("  "+RUNNER_CLASS_NAME+" runner = new "+RUNNER_CLASS_NAME+"(nfa);");
+                        sb.append("  " + RUNNER_CLASS_NAME + " runner = new "
+                                + RUNNER_CLASS_NAME + "(nfa);");
                         // sb.append("System.out.println(\"got runner ...\");");
 
                         // step to reach FST runner state that corresponds to
@@ -766,14 +773,15 @@ public class TransClass {
                                 || !methodOrCtor.getParameterTypes()[isStatic(methodOrCtor) ? i
                                         : i - 1].isArray()) {
                             // if (true) {
-                            sb.append("  if ($"
-                                    + i
-                                    + " instanceof de.unifr.acp.runtime.TraversalTarget__) {");
+                            sb.append("  if ($" + i + " instanceof "
+                                    + TRAVERSAL_TARGET_CLASS_NAME + ") {");
                             // sb.append("System.out.println(\"found traversal target ...\");");
-                            sb.append("    de.unifr.acp.runtime.TraversalImpl visitor = new de.unifr.acp.runtime.TraversalImpl(runner,allLocPerms);");
+                            sb.append("    " + VISITOR_CLASS_NAME
+                                    + " visitor = new " + VISITOR_CLASS_NAME
+                                    + "(runner,allLocPerms);");
                             // sb.append("System.out.println(\"got visitor ...\");");
-                            sb.append("    ((de.unifr.acp.runtime.TraversalTarget__)$"
-                                    + i + ").traverse__(visitor);");
+                            sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME
+                                    + ")$" + i + ").traverse__(visitor);");
                             // sb.append("System.out.println(\"traversal ...\");");
                             sb.append("  }");
                         }
@@ -790,7 +798,8 @@ public class TransClass {
                     // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
                     // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
                     // sb.append("System.out.println(\"before push ...\");");
-                    sb.append("de.unifr.acp.runtime.Global.installPermission(allLocPerms);");
+                    sb.append(GLOBAL_CLASS_NAME
+                            + ".installPermission(allLocPerms);");
                     // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
                     // sb.append("System.out.println(\"Push in "
                     // + methodOrCtor.getLongName() + "\");");
@@ -818,7 +827,7 @@ public class TransClass {
                     // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
                     // sb.append("System.out.println(\"Pop in "
                     // + methodOrCtor.getLongName() + "\");");
-                    sb.append("de.unifr.acp.runtime.Global.uninstallPermission();");
+                    sb.append(GLOBAL_CLASS_NAME + ".uninstallPermission();");
                     String footer = sb.toString();
 
                     // make sure all method exits are covered (exceptions,
@@ -874,24 +883,27 @@ public class TransClass {
                             code.append("{");
 
                             // get active permission for location to access
-                            code.append("if (!de.unifr.acp.runtime.Global.newObjectsStack.isEmpty()) {");
+                            code.append("if (!" + GLOBAL_CLASS_NAME
+                                    + ".newObjectsStack.isEmpty()) {");
 
-                            code.append("de.unifr.acp.fst.Permission effectivePerm = de.unifr.acp.runtime.Global.installedPermissionStackNotEmpty($0, \""
+                            code.append("de.unifr.acp.runtime.fst.Permission effectivePerm = "
+                                    + GLOBAL_CLASS_NAME
+                                    + ".installedPermissionStackNotEmpty($0, \""
                                     + qualifiedFieldName + "\");");
 
                             // get permission needed for this access
-                            code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission."
+                            code.append("de.unifr.acp.runtime.fst.Permission accessPerm = de.unifr.acp.runtime.fst.Permission."
                                     + (expr.isReader() ? "READ_ONLY"
                                             : "WRITE_ONLY") + ";");
-                            // code.append("de.unifr.acp.fst.Permission accessPerm = de.unifr.acp.fst.Permission.values()["
+                            // code.append("de.unifr.acp.runtime.fst.Permission accessPerm = de.unifr.acp.runtime.fst.Permission.values()["
                             // + (expr.isReader() ? "1" : "2")
                             // + "];");
 
                             // code.append("if (!effectivePerm.containsAll(accessPerm)) {");
-                            code.append("if (!de.unifr.acp.fst.Permission.containsAll(effectivePerm, accessPerm)) {");
-                            code.append("  de.unifr.acp.runtime.Global.throwOrPrintViolation($0, \""
-                                    + qualifiedFieldName
-                                    + "\", \""
+                            code.append("if (!de.unifr.acp.runtime.fst.Permission.containsAll(effectivePerm, accessPerm)) {");
+                            code.append("  " + GLOBAL_CLASS_NAME
+                                    + ".throwOrPrintViolation($0, \""
+                                    + qualifiedFieldName + "\", \""
                                     + methodOrCtor.getLongName()
                                     + "\",effectivePerm, accessPerm,"
                                     + convertExceptions2Warnings + ");");
@@ -944,7 +956,7 @@ public class TransClass {
                 // TODO: instrumentation only needed if super() call?!
                 code.append("{");
                 code.append("  $_ = $proceed($$);");
-                code.append("  de.unifr.acp.runtime.Global.addNewObject($0);");
+                code.append("  " + GLOBAL_CLASS_NAME + ".addNewObject($0);");
                 code.append("}");
                 expr.replace(code.toString());
             }
@@ -963,7 +975,7 @@ public class TransClass {
                 StringBuilder code = new StringBuilder();
                 code.append("{");
                 code.append("  $_ = $proceed($$);");
-                code.append("  de.unifr.acp.runtime.Global.addNewObject($_);");
+                code.append("  " + GLOBAL_CLASS_NAME + ".addNewObject($_);");
                 code.append("}");
 
                 expr.replace(code.toString());
