@@ -15,7 +15,7 @@ public class TransClassLongTest {
     public void testDoTransformTreeNode() throws Throwable {
         ClassPool defaultPool = ClassPool.getDefault();
         
-        TransClass.transformHierarchy(defaultPool, TREE_NODE_NAME, false);
+        TransClass.transformReachableClasses(defaultPool, TREE_NODE_NAME, false);
         // if (target.isModified()) {
         // target.writeFile("bin");
         // }

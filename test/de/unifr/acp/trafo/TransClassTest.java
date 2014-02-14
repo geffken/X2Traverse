@@ -33,6 +33,7 @@ import de.unifr.acp.test.TestEmptyClass;
 import de.unifr.acp.test.TestEmptySubclass;
 import de.unifr.acp.test.TestInnerClass;
 import de.unifr.acp.test.TestIntClass;
+import de.unifr.acp.test.TestStatics;
 
 public class TransClassTest {
 
@@ -60,6 +61,8 @@ public class TransClassTest {
     private static final String TEST_CONCRETE_SUB_CLASS_NAME = TestConcreteSub.class
             .getCanonicalName();
     private static final String TEST_INNER_CLASS_NAME = TestInnerClass.class
+            .getCanonicalName();
+    private static final String TEST_STATICS_NAME = TestStatics.class
             .getCanonicalName();
 
     // test data
@@ -115,7 +118,7 @@ public class TransClassTest {
 
         // run with javassist's class loader to enable 'reloading' of test class
         cl.run(TEST_BASICS_NAME, new String[] {});
-        TransClass.defrostHierarchy(defaultPool, TEST_BASICS_NAME);
+        TransClass.defrostReachableClasses(defaultPool, TEST_BASICS_NAME);
     }
 
     @Test
@@ -127,18 +130,18 @@ public class TransClassTest {
         // run with javassist's class loader to enable 'reloading' of test class
         cl.run(TEST_ARRAY_CLASS_NAME, new String[] {});
 
-        TransClass.defrostHierarchy(defaultPool, TEST_ARRAY_CLASS_NAME);
+        TransClass.defrostReachableClasses(defaultPool, TEST_ARRAY_CLASS_NAME);
         CtClass target = defaultPool.get(TraversalTarget__.class
                 .getCanonicalName());
         target.rebuildClassFile();
         // target.defrost();
-        TransClass.defrostHierarchy(defaultPool,
+        TransClass.defrostReachableClasses(defaultPool,
                 TraversalTarget__.class.getCanonicalName());
     }
 
     @Test
     public void testDoTransformAndRunConstructor() throws Throwable {
-        TransClass.transformHierarchy(defaultPool, TEST_CONCONSTRUCTOR_NAME,
+        TransClass.transformReachableClasses(defaultPool, TEST_CONCONSTRUCTOR_NAME,
                 false);
         javassist.Loader cl = new javassist.Loader(defaultPool);
 
@@ -146,13 +149,13 @@ public class TransClassTest {
         // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
         // "output");
         cl.run(TEST_CONCONSTRUCTOR_NAME, new String[] {});
-        TransClass.defrostHierarchy(defaultPool, TEST_CONCONSTRUCTOR_NAME);
+        TransClass.defrostReachableClasses(defaultPool, TEST_CONCONSTRUCTOR_NAME);
 
     }
 
     @Test
     public void testDoTransformAndRunConcretSubClass() throws Throwable {
-        TransClass.transformHierarchy(defaultPool,
+        TransClass.transformReachableClasses(defaultPool,
                 TEST_CONCRETE_SUB_CLASS_NAME, false);
         javassist.Loader cl = new javassist.Loader(defaultPool);
 
@@ -160,20 +163,33 @@ public class TransClassTest {
         // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
         // "output");
         cl.run(TEST_CONCRETE_SUB_CLASS_NAME, new String[] {});
-        TransClass.defrostHierarchy(defaultPool, TEST_CONCRETE_SUB_CLASS_NAME);
+        TransClass.defrostReachableClasses(defaultPool, TEST_CONCRETE_SUB_CLASS_NAME);
     }
-    
+
     @Test
     public void testDoTransformAndRunInnerClass() throws Throwable {
-        TransClass.transformHierarchy(defaultPool,
-                TEST_INNER_CLASS_NAME, false);
+        TransClass
+                .transformReachableClasses(defaultPool, TEST_INNER_CLASS_NAME, false);
         javassist.Loader cl = new javassist.Loader(defaultPool);
 
         // run with javassist's class loader to enable 'reloading' of test class
         // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
         // "output");
         cl.run(TEST_INNER_CLASS_NAME, new String[] {});
-        TransClass.defrostHierarchy(defaultPool, TEST_INNER_CLASS_NAME);
+        TransClass.defrostReachableClasses(defaultPool, TEST_INNER_CLASS_NAME);
+    }
+
+    @Test
+    public void testDoTransformAndRunStaticsClass() throws Throwable {
+        TransClass
+                .transformReachableClasses(defaultPool, TEST_STATICS_NAME, false);
+        javassist.Loader cl = new javassist.Loader(defaultPool);
+
+        // run with javassist's class loader to enable 'reloading' of test class
+        // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
+        // "output");
+        cl.run(TEST_STATICS_NAME, new String[] {});
+        TransClass.defrostReachableClasses(defaultPool, TEST_INNER_CLASS_NAME);
     }
 
     @Test
@@ -246,7 +262,7 @@ public class TransClassTest {
     public void testCreateBody() throws NotFoundException,
             FileNotFoundException {
         CtClass target = defaultPool.get(TEST_EMPTY_CLASS_NAME);
-        String result = TransClass.createBody(target, false);
+        String result = TransClass.createTraverseBody(target, false);
         if (verbose)
             System.out.println(result);
         org.junit.Assert
@@ -255,7 +271,7 @@ public class TransClassTest {
                         result);
 
         target = defaultPool.get(TEST_INT_CLASS_NAME);
-        result = TransClass.createBody(target, false);
+        result = TransClass.createTraverseBody(target, false);
         if (verbose)
             System.out.println(result);
         org.junit.Assert
@@ -263,7 +279,7 @@ public class TransClassTest {
                         "public void traverse__(de.unifr.acp.templates.Traversal__ t) {\nt.visitPrimitive__(this, \"de.unifr.acp.trafo.TestIntClass.myField\");\n}",
                         result);
 
-        result = TransClass.createBody(target, true);
+        result = TransClass.createTraverseBody(target, true);
         if (verbose)
             System.out.println(result);
         org.junit.Assert
@@ -272,7 +288,7 @@ public class TransClassTest {
                         result);
 
         target = defaultPool.get(TEST_COMPOUND_CLASS_NAME);
-        result = TransClass.createBody(target, false);
+        result = TransClass.createTraverseBody(target, false);
         if (verbose)
             System.out.println(result);
         assertEquals(
@@ -280,13 +296,13 @@ public class TransClassTest {
                 result);
 
         target = defaultPool.get(TEST_ARRAY_CLASS_NAME);
-        result = TransClass.createBody(target, false);
+        result = TransClass.createTraverseBody(target, false);
         if (verbose)
             System.out.println(result);
         assertEquals(result, contentFromFileName("createBody-TestArrayClass"));
 
         target = defaultPool.get("java.lang.String");
-        result = TransClass.createBody(target, false);
+        result = TransClass.createTraverseBody(target, false);
         if (verbose)
             System.out.println(result);
         assertEquals(result, contentFromFileName("createBody-String"));

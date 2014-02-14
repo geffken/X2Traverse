@@ -7,9 +7,7 @@ import java.util.Set;
 
 import de.unifr.acp.runtime.fst.FST;
 import de.unifr.acp.runtime.fst.FSTRunner;
-import de.unifr.acp.runtime.fst.MetaCharacters;
 import de.unifr.acp.runtime.fst.Permission;
-import de.unifr.acp.runtime.fst.State;
 
 public class NFARunner implements Cloneable {
 

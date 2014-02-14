@@ -20,8 +20,8 @@ public class ACPException extends RuntimeException {
             String methodName, Permission effectivePerm, Permission requiredPerm) {
         StringBuilder sb = new StringBuilder();
         sb.append("ACCESS VIOLATION:\n");
-        sb.append("Instance: " + System.identityHashCode(obj)
-                + " of type " + obj.getClass().getSimpleName() + "\n");
+        sb.append("Instance: " + ((obj != null) ? System.identityHashCode(obj) : "null")
+                + " of dynamic type " + ((obj != null) ? obj.getClass().getSimpleName() : "null") + "\n");
         sb.append("Field: " + qualifiedFieldName+"\n");
         sb.append("Effective permission: " + effectivePerm + "\n");
         sb.append("Required permission: " + requiredPerm + "\n");

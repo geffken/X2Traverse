@@ -40,6 +40,9 @@ public class TraversalImpl implements Traversal__ {
         return locPerms;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void visit__(Object obj, String fieldName, Object fieldValue) {
         try {
@@ -73,7 +76,7 @@ public class TraversalImpl implements Traversal__ {
                 resultPerm = Permission.NONE;
             } else {
                 resultPerm = intersection(
-                        Global.installedPermission(obj, fieldName), unionPerm);
+                        Global.effectivePermission(obj, fieldName), unionPerm);
             }
 
             // save resulting permission
@@ -119,6 +122,9 @@ public class TraversalImpl implements Traversal__ {
         return fp;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void visitPrimitive__(Object obj, String fieldName) {
         try {
@@ -152,7 +158,7 @@ public class TraversalImpl implements Traversal__ {
                 resultPerm = Permission.NONE;
             } else {
                 resultPerm = intersection(
-                        Global.installedPermission(obj, fieldName), unionPerm);
+                        Global.effectivePermission(obj, fieldName), unionPerm);
             }
             // System.out.println("CURRENT LOC PERM :"+currentLocPerm +
             // " for field "+fieldName);

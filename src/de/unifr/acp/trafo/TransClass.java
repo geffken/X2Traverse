@@ -8,6 +8,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -24,6 +25,7 @@ import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
+import javassist.CtMember;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
@@ -73,6 +75,8 @@ public class TransClass {
     // public final String FILTER_TRANSFORM_REGEX_DEFAULT =
     // "(java\\..*)|(de\\.unifr\\.acp\\.runtime\\..*)";
     public final String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)";
+    // public final String FILTER_TRANSFORM_REGEX_DEFAULT =
+    // "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
     private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
     // public final String FILTER_VISIT_REGEX_DEFAULT =
     // "(java\\..*)|(de\\.unif\\.acp\\.runtime\\..*)";
@@ -167,7 +171,7 @@ public class TransClass {
      *            exceptions
      * @throws ClassNotFoundException
      */
-    public static Set<CtClass> transformHierarchy(ClassPool cp,
+    public static Set<CtClass> transformReachableClasses(ClassPool cp,
             String className, boolean convertExceptions2Warnings)
             throws NotFoundException, IOException, CannotCompileException,
             ClassNotFoundException {
@@ -178,7 +182,7 @@ public class TransClass {
         return transformed;
     }
 
-    public static void defrostHierarchy(ClassPool cp, String className)
+    public static void defrostReachableClasses(ClassPool cp, String className)
             throws NotFoundException, IOException, CannotCompileException {
         TransClass tc = new TransClass(cp);
         Set<CtClass> reachable = tc.computeReachableClasses(cp.get(className),
@@ -192,7 +196,8 @@ public class TransClass {
     }
 
     /**
-     * Transforms a single class of the specified class name.
+     * Transforms a single class of the specified class name. Superclasses are
+     * not transformed. No filtering.
      * 
      * @param cp
      *            the class pool to look up the class name in
@@ -206,10 +211,8 @@ public class TransClass {
             boolean convertExceptions2Warnings) throws NotFoundException,
             ClassNotFoundException, IOException, CannotCompileException {
         TransClass tc = new TransClass(cp, convertExceptions2Warnings);
-        CtClass objectClass = cp.get(Object.class.getName());
         CtClass target = cp.get(className);
-
-        tc.transformClass(target, !target.getSuperclass().equals(objectClass));
+        tc.transformClasses(Collections.singleton(target));
     }
 
     /**
@@ -233,8 +236,8 @@ public class TransClass {
             String className, String outputDir,
             boolean convertExceptions2Warnings) throws NotFoundException,
             IOException, CannotCompileException, ClassNotFoundException {
-        final Set<CtClass> transformed = transformHierarchy(cp, className,
-                convertExceptions2Warnings);
+        final Set<CtClass> transformed = transformReachableClasses(cp,
+                className, convertExceptions2Warnings);
         TransClass.flushClassesToDir(transformed, outputDir);
     }
 
@@ -527,19 +530,20 @@ public class TransClass {
         for (CtClass clazz : toTransform) {
             Deque<CtClass> stack = new ArrayDeque<CtClass>();
             CtClass current = clazz;
-            stack.push(current);
-            while (toTransform.contains(current.getSuperclass())) {
-                current = current.getSuperclass();
+            do {
                 stack.push(current);
-            }
+                current = current.getSuperclass();
+            } while (toTransform.contains(current));
             while (!stack.isEmpty()) {
                 CtClass superclass = stack.pop();
 
                 // if this does not hold we might miss some superclass fields
                 assert (transformed.contains(superclass.getSuperclass()) == toTransform
-                        .contains(superclass.getSuperclass()));
+                        .contains(superclass.getSuperclass())) : toTransform
+                        .contains(superclass.getSuperclass());
                 transformClass(superclass,
-                        transformed.contains(superclass.getSuperclass()));
+                        transformed.contains(superclass.getSuperclass()),
+                        toTransform);
                 transformed.add(superclass);
             }
         }
@@ -551,6 +555,114 @@ public class TransClass {
             logger.finest("Transformed types:\n" + sb.toString());
         }
         return transformed;
+    }
+
+    private static Set<CtField> getStaticFields(Iterable<CtClass> classes) {
+        Set<CtField> staticFields = new HashSet<>();
+        for (CtClass clazz : classes) {
+            CtField[] fields = clazz.getDeclaredFields();
+            for (CtField field : fields) {
+                int modifiers = field.getModifiers();
+                if ((modifiers & javassist.Modifier.STATIC) != 0) {
+                    staticFields.add(field);
+                }
+            }
+        }
+        return staticFields;
+    }
+
+    /**
+     * Returns the sublist of members of the specified list of members that
+     * match one or more of the specified modifiers.
+     * 
+     * @param members
+     *            the sublist of members that match one or more of the specified
+     *            modifiers
+     * @param modifiers
+     *            the modifiers to match
+     * @return the list of members matching one or more of the specified
+     *         modifiers
+     */
+    private static <T extends CtMember> Set<T> membersMatchingOneModifer(
+            Iterable<T> members, int modifiers) {
+        Set<T> matchingMembers = new HashSet<>();
+        for (T member : members) {
+            if ((member.getModifiers() & modifiers) != 0) {
+                matchingMembers.add(member);
+            }
+        }
+        return matchingMembers;
+    }
+
+    /**
+     * Returns the sublist of members of the specified list of members that
+     * match all of the specified modifiers. Sets do not work presumably due to
+     * broken field equality.
+     * 
+     * @param members
+     *            the sublist of members that match all of the specified
+     *            modifiers
+     * @param modifiers
+     *            the modifiers to match
+     * @return the list of members matching all of the specified modifiers
+     */
+    private static <T extends CtMember> Set<T> membersMatchingAllModifers(
+            Iterable<T> members, int modifiers) {
+        Set<T> matchingMembers = new HashSet<>();
+        for (T member : members) {
+            if ((member.getModifiers() & modifiers) == modifiers) {
+                matchingMembers.add(member);
+            }
+        }
+        return matchingMembers;
+    }
+
+    /**
+     * Returns the sublist of members of the specified list of members that do
+     * not match all of the specified modifiers. NOT (AND_members) Sets do not
+     * work presumably due to broken field equality.
+     * 
+     * @param members
+     *            the sublist of members that do not match all of the specified
+     *            modifiers
+     * @param modifiers
+     *            the modifiers to dismatch
+     * @return the list of members not matching all of the specified modifiers
+     * 
+     */
+    private static <T extends CtField> List<T> membersNotMatchingAllModifers(
+            Iterable<T> members, int modifiers) {
+        List<T> matchingMembers = new ArrayList<>();
+        for (T member : members) {
+            int memberModifiers = member.getModifiers();
+            if (((memberModifiers & modifiers) != modifiers)) {
+                matchingMembers.add(member);
+            }
+        }
+        return matchingMembers;
+    }
+
+    /**
+     * Returns the sublist of members of the specified list of members that
+     * match none of the specified modifiers. NOT (OR_members) Sets do not work
+     * presumably due to broken field equality.
+     * 
+     * @param members
+     *            the sublist of members that match none of the specified
+     *            modifiers
+     * @param modifiers
+     *            the modifiers to match
+     * @return the list of members matching none of the specified modifiers
+     */
+    private static <T extends CtField> List<T> membersMatchingNoModifer(
+            Iterable<T> members, int modifiers) {
+        List<T> matchingMembers = new ArrayList<>();
+        for (T member : members) {
+            if ((member.getModifiers() & modifiers) == 0) {
+                matchingMembers.add(member);
+            }
+        }
+        return matchingMembers;
     }
 
     /**
@@ -576,7 +688,8 @@ public class TransClass {
         // "de.unifr.acp.runtime.TraversalTarget__",
         // "de.unifr.acp.runtime.TraversalImpl",
         // "de.unifr.acp.runtime.Traversal__",
-        // "de.unifr.acp.runtime.Global", "de.unifr.acp.runtime.fst.Permission" };
+        // "de.unifr.acp.runtime.Global", "de.unifr.acp.runtime.fst.Permission"
+        // };
         // CtClass[] libClasses = this.cp.get(libClassNames);
         // for (CtClass libClass : libClasses) {
         // libClass.writeFile(outputDir);
@@ -590,12 +703,15 @@ public class TransClass {
      *            the class to transform
      * @param hasTransformedSuperclass
      *            the target has an already transformed superclass
+     * @param toTransform
+     *            all classes to be transformed
      * @throws NotFoundException
      * @throws IOException
      * @throws CannotCompileException
      * @throws ClassNotFoundException
      */
-    public void transformClass(CtClass target, boolean hasTransformedSuperclass)
+    public void transformClass(CtClass target,
+            boolean hasTransformedSuperclass, Set<CtClass> toTransform)
             throws NotFoundException, IOException, CannotCompileException,
             ClassNotFoundException {
         Object[] params4Logging = new Object[2];
@@ -653,188 +769,12 @@ public class TransClass {
             for (CtBehavior methodOrCtor : target.getDeclaredBehaviors()) {
                 instrumentNewArray(methodOrCtor);
 
-                if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
-                    continue;
-                }
-
                 instrumentFieldAccess(methodOrCtor);
             }
 
             // instrument methods
             for (CtBehavior methodOrCtor : target.getDeclaredBehaviors()) {
-                logger.fine("Consider adding traversal to behavior: "
-                        + methodOrCtor.getLongName());
-                if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
-                    continue;
-                }
-
-                // instrumentFieldAccess(methodOrCtor);
-
-                if (hasMethodGrantAnnotations(methodOrCtor)) {
-
-                    // uniquely identifies a method globally
-                    final String longName = methodOrCtor.getLongName();
-
-                    logger.fine("Add traversal to behavior: " + longName);
-
-                    /* generate header and footer */
-
-                    // filter synthetic methods
-                    if (methodOrCtor.getMethodInfo().getAttribute(
-                            SyntheticAttribute.tag) != null) {
-                        continue;
-                    }
-
-                    // generate method header
-
-                    /*
-                     * We keep method contract and parameter contracts separate.
-                     */
-
-                    StringBuilder sb = new StringBuilder();
-
-                    // check if automata for this method already exist
-                    sb.append("String longName = \"" + longName + "\";");
-
-                    // FSTs indexed by parameter position (0: FST for this &
-                    // type-anchored
-                    // contracts, 1 to n: FTSs for unanchored parameter
-                    // contracts)
-                    sb.append(AUTOMATON_CLASS_NAME + "[] automata;");
-                    sb.append("if (" + FST_CACHE_FIELD_NAME
-                            + ".containsKey(longName)) {");
-                    sb.append("  automata = ((" + AUTOMATON_CLASS_NAME + "[])"
-                            + FST_CACHE_FIELD_NAME + ".get(longName));");
-                    sb.append("}");
-                    sb.append("else {");
-
-                    // build array of FSTs indexed by parameter
-                    sb.append("  automata = new " + AUTOMATON_CLASS_NAME + "["
-                            + (parameterCountOf(methodOrCtor) + 1) + "];");
-                    for (int i = 0; i < parameterCountOf(methodOrCtor) + 1; i++) {
-                        Grant grant = grantAnno(methodOrCtor, i);
-                        if (grant != null) {
-                            sb.append("    automata[" + i + "] = new "
-                                    + AUTOMATON_CLASS_NAME + "(\""
-                                    + grant.value() + "\");");
-                        }
-                    }
-
-                    // cache generated automata indexed by long method name
-                    sb.append("  " + FST_CACHE_FIELD_NAME
-                            + ".put(longName, automata);");
-                    sb.append("}");
-
-                    // now we expect to have all FSTs available and cached
-
-                    sb.append("  Map allLocPerms = new de.unifr.acp.runtime.util.WeakIdentityHashMap();");
-
-                    int i = ((isStatic(methodOrCtor)) ? 1 : 0);
-                    int limit = ((isStatic(methodOrCtor)) ? (parameterCountOf(methodOrCtor))
-                            : parameterCountOf(methodOrCtor) + 1);
-                    for (; i < limit; i++) {
-
-                        // only grant-annotated methods/parameters require any
-                        // action
-                        if (grantAnno(methodOrCtor, i) == null) {
-                            continue;
-                        }
-
-                        if (!mightBeReferenceParameter(methodOrCtor, i)) {
-                            continue;
-                        }
-
-                        // TODO: factor out this code in external class,
-                        // parameterize over i and allPermissions
-                        // a location permission is a Map<Object, Map<String,
-                        // Permission>>
-                        sb.append("{");
-                        // sb.append("System.out.println(\"start of traversal ...\");");
-                        sb.append("  " + AUTOMATON_CLASS_NAME
-                                + " nfa = automata[" + i + "];");
-                        // sb.append("System.out.println(\"got FST ...\");");
-                        sb.append("  " + RUNNER_CLASS_NAME + " runner = new "
-                                + RUNNER_CLASS_NAME + "(nfa);");
-                        // sb.append("System.out.println(\"got runner ...\");");
-
-                        // step to reach FST runner state that corresponds to
-                        // anchor object
-                        // for explicitly anchored contracts
-                        if (i == 0) {
-                            sb.append("  runner.resetAndStep(\"this\");");
-                            // sb.append("System.out.println(\"after reset of runner ...\");");
-                        }
-
-                        // here the runner should be in synch with the parameter
-                        // object
-                        // (as far as non-static fields are concerned), the
-                        // visitor implicitly joins locPerms
-                        if (i == 0
-                                || !methodOrCtor.getParameterTypes()[isStatic(methodOrCtor) ? i
-                                        : i - 1].isArray()) {
-                            // if (true) {
-                            sb.append("  if ($" + i + " instanceof "
-                                    + TRAVERSAL_TARGET_CLASS_NAME + ") {");
-                            // sb.append("System.out.println(\"found traversal target ...\");");
-                            sb.append("    " + VISITOR_CLASS_NAME
-                                    + " visitor = new " + VISITOR_CLASS_NAME
-                                    + "(runner,allLocPerms);");
-                            // sb.append("System.out.println(\"got visitor ...\");");
-                            sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME
-                                    + ")$" + i + ").traverse__(visitor);");
-                            // sb.append("System.out.println(\"traversal ...\");");
-                            sb.append("  }");
-                        }
-                        // TODO: explicit representation of locations and
-                        // location permissions (supporting join)
-                        // (currently it's all generic maps and implicit joins
-                        // in visitor similar to Maxine implementation)
-                        // sb.append("System.out.println(\"end of traversal ...\");");
-                        sb.append("}");
-                    }
-
-                    // install allLocPerms and push new objects set on (current
-                    // thread's) stack
-                    // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
-                    // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
-                    // sb.append("System.out.println(\"before push ...\");");
-                    sb.append(GLOBAL_CLASS_NAME
-                            + ".installPermission(allLocPerms);");
-                    // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
-                    // sb.append("System.out.println(\"Push in "
-                    // + methodOrCtor.getLongName() + "\");");
-
-                    // TODO: figure out how to instrument thread start/end and
-                    // field access
-
-                    final String header = sb.toString();
-
-                    if (methodOrCtor instanceof CtConstructor) {
-                        // insert contract installation instrumentation
-                        // in constructor before existing new instrumentation
-                        // thus accesses to constructor fields are allowed
-                        ((CtConstructor) methodOrCtor).insertBeforeBody(header);
-                    } else {
-                        methodOrCtor.insertBefore(header);
-                    }
-
-                    // generate method footer
-                    sb = new StringBuilder();
-
-                    // pop location permissions and new locations entry from
-                    // (current thread's) stack
-                    // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
-                    // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
-                    // sb.append("System.out.println(\"Pop in "
-                    // + methodOrCtor.getLongName() + "\");");
-                    sb.append(GLOBAL_CLASS_NAME + ".uninstallPermission();");
-                    String footer = sb.toString();
-
-                    // make sure all method exits are covered (exceptions,
-                    // multiple returns)
-                    methodOrCtor.insertAfter(footer, true);
-
-                } // end if (hasMethodGrantAnnotations(methodOrCtor))
+                instrumentMethodOrCtor(methodOrCtor, toTransform);
             }
 
             // add traversal target interface
@@ -842,32 +782,214 @@ public class TransClass {
 
             // add: method traverse__
             // TODO: create body before adding new technically required fields)
-            String methodbody = createBody(target, hasTransformedSuperclass);
-            CtMethod m = CtNewMethod.make(methodbody, target);
-            target.addMethod(m);
+            String traverseBody = createTraverseBody(target,
+                    hasTransformedSuperclass);
+            target.addMethod(CtNewMethod.make(traverseBody, target));
+            String traverseStaticsBody = createTraverseStaticsBody(target,
+                    hasTransformedSuperclass);
+            target.addMethod(CtNewMethod.make(traverseStaticsBody, target));
         }
         logger.exiting("TransClass", "doTransform");
     }
 
-    private static boolean isStatic(CtBehavior methodOrCtor) {
-        return ((methodOrCtor.getModifiers() & Modifier.STATIC) != 0);
-    }
+    private void instrumentMethodOrCtor(final CtBehavior methodOrCtor, Set<CtClass> toTransform)
+            throws ClassNotFoundException, NotFoundException,
+            CannotCompileException {
+        logger.fine("Consider adding traversal to behavior: "
+                + methodOrCtor.getLongName());
+        if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
+            return;
+        }
 
-    private static void addInterface(CtClass clazz, CtClass interf)
-            throws NotFoundException {
-        List<CtClass> clazzIfs = Arrays.asList(clazz.getInterfaces());
-        HashSet<CtClass> newClazzIfs = new HashSet<CtClass>(clazzIfs);
-        newClazzIfs.add(interf);
-        clazz.setInterfaces(newClazzIfs.toArray(new CtClass[0]));
+        // instrumentFieldAccess(methodOrCtor);
+
+        if (hasMethodGrantAnnotations(methodOrCtor)) {
+
+            // uniquely identifies a method globally
+            final String longName = methodOrCtor.getLongName();
+
+            logger.fine("Add traversal to behavior: " + longName);
+
+            /* generate header and footer */
+
+            // filter synthetic methods
+            if (methodOrCtor.getMethodInfo().getAttribute(
+                    SyntheticAttribute.tag) != null) {
+                return;
+            }
+
+            // generate method header
+
+            /*
+             * We keep method contract and parameter contracts separate.
+             */
+
+            StringBuilder sb = new StringBuilder();
+
+            // check if automata for this method already exist
+
+            // FSTs indexed by parameter position (0: FST for this &
+            // type-anchored
+            // contracts, 1 to n: FTSs for implicitly anchored parameter
+            // contracts)
+
+            // alternatively generate one automata cache field per method
+            sb.append(AUTOMATON_CLASS_NAME + "[] automata;");
+            sb.append("  automata = ((" + AUTOMATON_CLASS_NAME + "[])"
+                    + FST_CACHE_FIELD_NAME + ".get(\"" + longName + "\"));");
+
+            sb.append("if (automata == null) {");
+
+            // build array of FSTs indexed by parameter
+            sb.append("  automata = new " + AUTOMATON_CLASS_NAME + "["
+                    + (parameterCountOf(methodOrCtor) + 1) + "];");
+            for (int i = 0; i < parameterCountOf(methodOrCtor) + 1; i++) {
+                Grant grant = grantAnno(methodOrCtor, i);
+                if (grant != null) {
+                    sb.append("    automata[" + i + "] = new "
+                            + AUTOMATON_CLASS_NAME + "(\"" + grant.value()
+                            + "\");");
+                }
+            }
+
+            // cache generated automata indexed by long method name
+            sb.append("  " + FST_CACHE_FIELD_NAME + ".put(\"" + longName
+                    + "\", automata);");
+            sb.append("}");
+
+            // now we expect to have all FSTs available and cached
+
+            sb.append("  Map allLocPerms = new de.unifr.acp.runtime.util.WeakIdentityHashMap();");
+
+            final boolean isMethodOrCtorStatic = isStatic(methodOrCtor);
+
+            // 0 represents this, 1 to n the n parameters
+            int i = (isMethodOrCtorStatic ? 1 : 0);
+            int limit = parameterCountOf(methodOrCtor) + 1;
+            for (; i < limit; i++) {
+
+                // only grant-annotated methods/parameters require any
+                // action
+                if (grantAnno(methodOrCtor, i) == null) {
+                    continue;
+                }
+
+                if (!mightBeReferenceParameter(methodOrCtor, i)) {
+                    continue;
+                }
+
+                // TODO: factor out this code in external class,
+                // parameterize over i and allPermissions
+                // a location permission is a Map<Object, Map<String,
+                // Permission>>
+                sb.append("{");
+                // sb.append("System.out.println(\"start of traversal ...\");");
+                // sb.append("  " + AUTOMATON_CLASS_NAME
+                // + " nfa = automata[" + i + "];");
+                // sb.append("System.out.println(\"got FST ...\");");
+                sb.append("  " + RUNNER_CLASS_NAME + " runner = new "
+                        + RUNNER_CLASS_NAME + "(automata[" + i + "]);");
+                // sb.append("System.out.println(\"got runner ...\");");
+
+                // step to reach FST runner state that corresponds to
+                // anchor object
+                // for explicitly anchored contracts
+                if (i == 0) {
+                    sb.append("  runner.step(\"this\");");
+                    // sb.append("System.out.println(\"after reset of runner ...\");");
+                }
+
+                // here the runner should be in synch with the parameter
+                // object
+                // (as far as non-static fields are concerned), the
+                // visitor implicitly joins locPerms
+
+                // parameter types indexed by local variable index
+                CtClass[] paramTypes = methodOrCtor.getParameterTypes();
+                if (i == 0 || !paramTypes[i - 1].isArray()) {
+                    // sb.append("System.out.println(\"found traversal target ...\");");
+                    sb.append("  " + VISITOR_CLASS_NAME + " visitor = new "
+                            + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
+                    // sb.append("System.out.println(\"got visitor ...\");");
+                    sb.append("  try {");
+                    sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$" + i
+                            + ").traverse__(visitor);");
+                    sb.append("  } catch(java.lang.ClassCastException e) {}");
+                    // sb.append("System.out.println(\"traversal ...\");");
+                }
+                
+                if (i == 0) {
+                    for (CtClass clazz : toTransform) {
+                        sb.append("  runner.resetAndStep(\""+clazz.getSimpleName()+"\");");
+                        sb.append("  " + VISITOR_CLASS_NAME + " visitorStatics = new "
+                                + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
+                        sb.append("  try {");
+                        sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$" + i
+                                + ").traverseStatics__(visitorStatics);");
+                        sb.append("  } catch(java.lang.ClassCastException e) {}");
+                    }
+                }
+                // TODO: explicit representation of locations and
+                // location permissions (supporting join)
+                // (currently it's all generic maps and implicit joins
+                // in visitor similar to Maxine implementation)
+                // sb.append("System.out.println(\"end of traversal ...\");");
+                sb.append("}");
+            }
+
+            // install allLocPerms and push new objects set on (current
+            // thread's) stack
+            // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
+            // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
+            // sb.append("System.out.println(\"before push ...\");");
+            sb.append(GLOBAL_CLASS_NAME + ".installPermissions(allLocPerms);");
+            // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
+            // sb.append("System.out.println(\"Push in "
+            // + methodOrCtor.getLongName() + "\");");
+
+            // TODO: figure out how to instrument thread start/end and
+            // field access
+
+            final String header = sb.toString();
+
+            if (methodOrCtor instanceof CtConstructor) {
+                // insert contract installation instrumentation
+                // in constructor before existing new instrumentation
+                // thus accesses to constructor fields are allowed
+                ((CtConstructor) methodOrCtor).insertBeforeBody(header);
+            } else {
+                methodOrCtor.insertBefore(header);
+            }
+
+            // generate method footer
+            sb = new StringBuilder();
+
+            // pop location permissions and new locations entry from
+            // (current thread's) stack
+            // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
+            // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
+            // sb.append("System.out.println(\"Pop in "
+            // + methodOrCtor.getLongName() + "\");");
+            sb.append(GLOBAL_CLASS_NAME + ".uninstallPermissions();");
+            String footer = sb.toString();
+
+            // make sure all method exits are covered (exceptions,
+            // multiple returns)
+            methodOrCtor.insertAfter(footer, true);
+
+        } // end if (hasMethodGrantAnnotations(methodOrCtor))
     }
 
     private void instrumentFieldAccess(final CtBehavior methodOrCtor)
             throws CannotCompileException {
         // if (!isInstrumented.get()) {
         // methodOrCtor.getMethodInfo2().
+        if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
+            return;
+        }
         methodOrCtor.instrument(new ExprEditor() {
             public void edit(FieldAccess expr) throws CannotCompileException {
-                if (!expr.isStatic()) {
+                if (true/* !expr.isStatic() */) {
                     try {
                         CtField field = expr.getField();
 
@@ -888,8 +1010,9 @@ public class TransClass {
 
                             code.append("de.unifr.acp.runtime.fst.Permission effectivePerm = "
                                     + GLOBAL_CLASS_NAME
-                                    + ".installedPermissionStackNotEmpty($0, \""
-                                    + qualifiedFieldName + "\");");
+                                    + ".effectivePermissionStackNotEmpty("
+                                    + (!expr.isStatic() ? "$0" : "null")
+                                    + ", \"" + qualifiedFieldName + "\");");
 
                             // get permission needed for this access
                             code.append("de.unifr.acp.runtime.fst.Permission accessPerm = de.unifr.acp.runtime.fst.Permission."
@@ -981,6 +1104,18 @@ public class TransClass {
                 expr.replace(code.toString());
             }
         });
+    }
+
+    private static boolean isStatic(CtMember member) {
+        return ((member.getModifiers() & Modifier.STATIC) != 0);
+    }
+
+    private static void addInterface(CtClass clazz, CtClass interf)
+            throws NotFoundException {
+        List<CtClass> clazzIfs = Arrays.asList(clazz.getInterfaces());
+        HashSet<CtClass> newClazzIfs = new HashSet<CtClass>(clazzIfs);
+        newClazzIfs.add(interf);
+        clazz.setInterfaces(newClazzIfs.toArray(new CtClass[0]));
     }
 
     /**
@@ -1075,17 +1210,22 @@ public class TransClass {
         return false;
     }
 
-    protected static String createBody(CtClass target,
+    protected static String createTraverseBody(CtClass target,
             boolean hasTransformedSuperclass) throws NotFoundException {
         StringBuilder sb = new StringBuilder();
         sb.append("public void traverse__(de.unifr.acp.runtime.Traversal__ t) {\n");
-        for (CtField f : target.getDeclaredFields()) {
+        for (CtField f : membersMatchingNoModifer(
+                Arrays.asList(target.getDeclaredFields()),
+                javassist.Modifier.STATIC)) {
             CtClass tf = f.getType();
             String fname = f.getName();
-            if (!fname.equals(FST_CACHE_FIELD_NAME)/* && !f.getType().isArray() */) {
+            if (!fname.equals(FST_CACHE_FIELD_NAME)/*
+                                                    * && !f.getType ( ).isArray(
+                                                    * )
+                                                    */) {
                 // sb.append("System.out.println(\"Before visitor calls for field "+fname
                 // +"\");");
-                appendVisitorCalls(sb, target, tf, fname);
+                appendVisitorCalls(sb, target, tf, fname, false);
                 // sb.append("System.out.println(\"After visitor calls for field "+fname
                 // +"\");");
             }
@@ -1097,8 +1237,31 @@ public class TransClass {
         return sb.toString();
     }
 
+    protected static String createTraverseStaticsBody(CtClass target,
+            boolean hasTransformedSuperclass) throws NotFoundException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("public void traverseStatics__(de.unifr.acp.runtime.Traversal__ t) {\n");
+        for (CtField f : membersMatchingAllModifers(
+                Arrays.asList(target.getDeclaredFields()),
+                javassist.Modifier.STATIC)) {// getStaticFields(Collections.singleton(target)))
+                                             // {
+            CtClass tf = f.getType();
+            String fname = f.getName();
+            if (!fname.equals(FST_CACHE_FIELD_NAME)/* && !f.getType().isArray() */) {
+                // sb.append("System.out.println(\"Before visitor calls for field "+fname
+                // +"\");");
+                appendVisitorCalls(sb, target, tf, fname, true);
+                // sb.append("System.out.println(\"After visitor calls for field "+fname
+                // +"\");");
+            }
+        }
+        sb.append('}');
+        return sb.toString();
+    }
+
     protected static void appendVisitorCalls(StringBuilder sb, CtClass target,
-            CtClass tf, String fname) throws NotFoundException {
+            CtClass tf, String fname, boolean isStatic)
+            throws NotFoundException {
         int nesting = 0;
         String index = "";
         while (tf.isArray()) {
@@ -1109,8 +1272,9 @@ public class TransClass {
 
             // static type of 'this' corresponds to field's declaring class, no
             // cast needed
-            sb.append(var + "<((this." + fname + index + " != null) ? this."
-                    + fname + index + ".length : 0); ");
+            sb.append(var + "<((" + /*(isStatic ? "" : "this.") + */fname + index
+                    + " != null) ? " + /*(isStatic ? "" : "this.") + */fname
+                    + index + ".length : 0); ");
             sb.append(var + "++");
             sb.append(")\n");
             index = index + "[" + var + "]";
@@ -1129,7 +1293,7 @@ public class TransClass {
         } else {
             sb.append("t.visit__(");
         }
-        sb.append("this, ");
+        sb.append((isStatic ? "null" : "this") + ", ");
         sb.append('"');
         sb.append(target.getName());
         sb.append('.');
@@ -1138,7 +1302,7 @@ public class TransClass {
         if (!tf.isPrimitive()) {
             // static type of 'this' corresponds to field's declaring class, no
             // cast needed
-            sb.append(", this.");
+            sb.append(", "/* + (isStatic ? "" : "this.")*/);
             sb.append(fname + index);
         }
         sb.append(");\n");

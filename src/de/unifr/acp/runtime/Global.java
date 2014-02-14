@@ -81,7 +81,7 @@ public class Global {
      *            the location's fully qualified field name
      * @return the installed permission for the specified location
      */
-    public static Permission installedPermission(Object obj, String fieldName) {
+    public static Permission effectivePermission(Object obj, String fieldName) {
         @Deprecated
         Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
         Deque<Long> objectGenStack = Global.objectGenStack;
@@ -142,7 +142,7 @@ public class Global {
      *            the location's fully qualified field name
      * @return the installed permission for the specified location
      */
-    public static Permission installedPermissionStackNotEmpty(Object obj,
+    public static Permission effectivePermissionStackNotEmpty(Object obj,
             String fieldName) {
         if (enableDebugOutput) {
             // System.out.println("installedPermissions(" + obj + ", " +
@@ -181,7 +181,7 @@ public class Global {
                 : Permission.NONE;
     }
 
-    public static void installPermission(
+    public static void installPermissions(
             Map<Object, Map<String, Permission>> objPerms) {
         if (enableDebugOutput) {
             // System.out.println("----------------------");
@@ -199,7 +199,7 @@ public class Global {
         objectGenStack.push(nextFreshContractGeneration++);
     }
 
-    public static void uninstallPermission() {
+    public static void uninstallPermissions() {
         objPermStack.pop();
         Set<Object> newLocSinceInstallation = newObjectsStack.pop();
         if (!newObjectsStack.isEmpty()) {
