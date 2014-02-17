@@ -112,7 +112,7 @@ public class TraversalImpl implements Traversal__ {
     @Override
     public void visitArrayField__(Object obj, String fieldName,
             Object[][][] fieldValue) {
-        visitArrayField__(obj, fieldName, (Object[][]) fieldValue);
+        visitArrayField__(obj, fieldName, fieldValue);
     }
 
     @Override
