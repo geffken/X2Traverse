@@ -792,9 +792,9 @@ public class TransClass {
         logger.exiting("TransClass", "doTransform");
     }
 
-    private void instrumentMethodOrCtor(final CtBehavior methodOrCtor, Set<CtClass> toTransform)
-            throws ClassNotFoundException, NotFoundException,
-            CannotCompileException {
+    private void instrumentMethodOrCtor(final CtBehavior methodOrCtor,
+            Set<CtClass> toTransform) throws ClassNotFoundException,
+            NotFoundException, CannotCompileException {
         logger.fine("Consider adding traversal to behavior: "
                 + methodOrCtor.getLongName());
         if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
@@ -906,7 +906,7 @@ public class TransClass {
 
                 // parameter types indexed by local variable index
                 CtClass[] paramTypes = methodOrCtor.getParameterTypes();
-                if (i == 0 || !paramTypes[i - 1].isArray()) {
+                if (true/* i == 0 || !paramTypes[i - 1].isArray() */) {
                     // sb.append("System.out.println(\"found traversal target ...\");");
                     sb.append("  " + VISITOR_CLASS_NAME + " visitor = new "
                             + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
@@ -917,15 +917,17 @@ public class TransClass {
                     sb.append("  } catch(java.lang.ClassCastException e) {}");
                     // sb.append("System.out.println(\"traversal ...\");");
                 }
-                
+
                 if (i == 0) {
                     for (CtClass clazz : toTransform) {
-                        sb.append("  runner.resetAndStep(\""+clazz.getSimpleName()+"\");");
-                        sb.append("  " + VISITOR_CLASS_NAME + " visitorStatics = new "
-                                + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
+                        sb.append("  runner.resetAndStep(\""
+                                + clazz.getSimpleName() + "\");");
+                        sb.append("  " + VISITOR_CLASS_NAME
+                                + " visitorStatics = new " + VISITOR_CLASS_NAME
+                                + "(runner, allLocPerms);");
                         sb.append("  try {");
-                        sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$" + i
-                                + ").traverseStatics__(visitorStatics);");
+                        sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$"
+                                + i + ").traverseStatics__(visitorStatics);");
                         sb.append("  } catch(java.lang.ClassCastException e) {}");
                     }
                 }
@@ -1262,25 +1264,43 @@ public class TransClass {
     protected static void appendVisitorCalls(StringBuilder sb, CtClass target,
             CtClass tf, String fname, boolean isStatic)
             throws NotFoundException {
-        int nesting = 0;
-        String index = "";
-        while (tf.isArray()) {
-            String var = "i" + nesting;
+        // int nesting = 0;
+        // String index = "";
 
-            /* generate for header */
-            sb.append("for (int " + var + " = 0; ");
+        // final boolean isArray = tf.isArray();
+        // final CtClass innerComponentType = innerComponentTypeOf(tf);
+        final boolean isNonPrimitiveArray = tf.isArray()
+                && !innerComponentTypeOf(tf).isPrimitive();
 
-            // static type of 'this' corresponds to field's declaring class, no
-            // cast needed
-            sb.append(var + "<((" + /*(isStatic ? "" : "this.") + */fname + index
-                    + " != null) ? " + /*(isStatic ? "" : "this.") + */fname
-                    + index + ".length : 0); ");
-            sb.append(var + "++");
-            sb.append(")\n");
-            index = index + "[" + var + "]";
-            nesting++;
-            tf = tf.getComponentType();
-        }
+        // // we might care about the reference values during traversal
+        // if (!innerComponentType.isPrimitive()) {
+        // // some array might not be traversed by this code as every Object's
+        // // dynamic type could be an array type
+        // while (tf.isArray()) {
+        // String var = "i" + nesting;
+        //
+        // /* generate for header */
+        // sb.append("for (int " + var + " = 0; ");
+        //
+        // // static type of implicit 'this' corresponds to field's
+        // // declaring class,
+        // // no cast needed, static fields can be accessed using the same
+        // // syntax
+        // sb.append(var + "<((" + /* (isStatic ? "" : "this.") + */fname
+        // + index + " != null) ? " + /*
+        // * (isStatic ? "" : "this.")
+        // * +
+        // */fname + index
+        // + ".length : 0); ");
+        // sb.append(var + "++");
+        // sb.append(")\n");
+        // index = index + "[" + var + "]";
+        // nesting++;
+        // tf = tf.getComponentType();
+        // }
+        // } else {
+        // tf = innerComponentType;
+        // }
         sb.append("{\n");
         // sb.append("System.out.println(\"Visit field (element) " + fname
         // + index.replace("[", "[\"+").replace("]", "+\"]") + "\");\n");
@@ -1288,10 +1308,13 @@ public class TransClass {
         // sb.append("System.out.println(\"\"+System.identityHashCode(this."
         // + fname + index + "));");
         // }
+
         if (tf.isPrimitive()) {
-            sb.append("t.visitPrimitive__(");
+            sb.append("t.visitPrimitiveField__(");
+        } else if (isNonPrimitiveArray) {
+            sb.append("t.visitArrayField__(");
         } else {
-            sb.append("t.visit__(");
+            sb.append("t.visitField__(");
         }
         sb.append((isStatic ? "null" : "this") + ", ");
         sb.append('"');
@@ -1302,11 +1325,43 @@ public class TransClass {
         if (!tf.isPrimitive()) {
             // static type of 'this' corresponds to field's declaring class, no
             // cast needed
-            sb.append(", "/* + (isStatic ? "" : "this.")*/);
-            sb.append(fname + index);
+            sb.append(", "/* + (isStatic ? "" : "this.") */);
+            sb.append(fname/* + index */);
         }
         sb.append(");\n");
         sb.append("}\n");
+    }
+
+    /**
+     * Returns innermost component type.
+     * 
+     * @param clazz
+     *            the type to return the innermost component type for
+     * @return the innermost component type if the specified type is an array,
+     *         the specified type itself otherwise
+     * @throws NotFoundException
+     */
+    private static CtClass innerComponentTypeOf(CtClass clazz)
+            throws NotFoundException {
+        CtClass component = clazz;
+        while (component.isArray()) {
+            component = component.getComponentType();
+        }
+        return component;
+    }
+
+    @Deprecated
+    private static boolean isClassNonPrimitiveArray(CtClass clazz)
+            throws NotFoundException {
+        CtClass component = clazz;
+        if (!clazz.isArray()) {
+            return false;
+        } else {
+            do {
+                component = component.getComponentType();
+            } while (component.isArray());
+            return !component.isPrimitive();
+        }
     }
 
 }

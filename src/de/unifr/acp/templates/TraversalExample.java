@@ -33,19 +33,19 @@ public class TraversalExample extends TraversalExampleSuper
 
     // method needs to be added
     public void traverse__(Traversal__ t) {
-        t.visit__(this, "priv_string", priv_string);
-        t.visit__(this, "prot_string", prot_string);
-        t.visit__(this, "publ_object", publ_object);
-        t.visitPrimitive__(this, "prot_int");
-        t.visitPrimitive__(this, "prot_boolean");
-        t.visitPrimitive__(this, "publ_long");
+        t.visitField__(this, "priv_string", priv_string);
+        t.visitField__(this, "prot_string", prot_string);
+        t.visitField__(this, "publ_object", publ_object);
+        t.visitPrimitiveField__(this, "prot_int");
+        t.visitPrimitiveField__(this, "prot_boolean");
+        t.visitPrimitiveField__(this, "publ_long");
 
         // may have to traverse fields of the superclass
         super.traverse__(t);
     }
 
     public static void traverseStatic__(Traversal__ t) {
-        t.visit__(null, "publ_s_object", publ_s_object);
-        t.visitPrimitive__(null, "prot_s_int");
+        t.visitField__(null, "publ_s_object", publ_s_object);
+        t.visitPrimitiveField__(null, "prot_s_int");
     }
 }
