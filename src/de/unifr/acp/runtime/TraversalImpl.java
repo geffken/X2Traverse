@@ -61,11 +61,19 @@ public class TraversalImpl implements Traversal__ {
             e.printStackTrace();
         }
     }
+    
+    /*
+     * TODO: overloader version dealing with fields of type object that could
+     * well contain arrays. Object >: int[], Object[], ...  
+     */
+//    public void visitPosibleArrayField(Object obj, String, Object fieldValue) {
+//        
+//    }
 
     @Override
     public void visitArrayField__(Object obj, String fieldName,
             Object[] fieldValue) {
-        try {
+        try {            
             // remember automaton state
             NFARunner currentRunner = this.runner.clone();
 
