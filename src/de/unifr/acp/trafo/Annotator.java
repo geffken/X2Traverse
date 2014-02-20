@@ -3,10 +3,18 @@ package de.unifr.acp.trafo;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 import de.unifr.acp.runtime.annot.Grant;
 
@@ -59,6 +67,24 @@ public class Annotator {
      */
     public static void main(String[] args) throws NotFoundException,
             ClassNotFoundException, IOException, CannotCompileException {
+//        Options options = new Options();
+//
+//        Option jarOption = new Option("jar", true,
+//                "annotates all classes in the jar file");
+//        options.addOption(jarOption);
+//        CommandLineParser parser = new org.apache.commons.cli.GnuParser();
+//        try {
+//            CommandLine cmd = parser.parse(options, args);
+//            if (cmd.hasOption("jar")) {
+//                
+//            }
+//            List<String> argList = cmd.getArgList();
+//        } catch (ParseException e1) {
+//            HelpFormatter formatter = new HelpFormatter();
+//            formatter.printHelp( "Annotator", options , true);
+//            System.err.println( "Parsing failed.  Reason: " + e1.getMessage() );
+//        }
+
         try {
             String className = args[0];
             String outputDir = (args.length >= 2) ? args[1] : "bin";
