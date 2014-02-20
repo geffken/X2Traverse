@@ -52,7 +52,7 @@ public class TraversalImpl implements Traversal__ {
             stepAutomatonAndSavePermission(obj, fieldName, this.runner);
 
             // traverses value and make sure termination
-            traverseValue__(fieldValue);
+            traverseNonRefArrayValue__(fieldValue);
 
             // backtrack to previous automaton state
             this.runner = currentRunner;
@@ -61,19 +61,24 @@ public class TraversalImpl implements Traversal__ {
             e.printStackTrace();
         }
     }
-    
-    /*
-     * TODO: overloader version dealing with fields of type object that could
-     * well contain arrays. Object >: int[], Object[], ...  
+
+    /**
+     * {@inheritDoc}
      */
-//    public void visitPosibleArrayField(Object obj, String, Object fieldValue) {
-//        
-//    }
+    @Override
+    public void visitPotentialRefArrayField__(Object obj, String fieldName,
+            Object fieldValue) {
+        try {
+            visitArrayField__(obj, fieldName, (Object[]) fieldValue);
+        } catch (ClassCastException e) {
+            visitField__(obj, fieldName, fieldValue);
+        }
+    }
 
     @Override
     public void visitArrayField__(Object obj, String fieldName,
             Object[] fieldValue) {
-        try {            
+        try {
             // remember automaton state
             NFARunner currentRunner = this.runner.clone();
 
@@ -91,9 +96,10 @@ public class TraversalImpl implements Traversal__ {
 
     /*
      * (non-Javadoc) A copy of
+     * 
      * @link{de.unifr.acp.runtime.Traversal__#visitArrayField__
-     * (java.lang.Object, java.lang.String, java.lang.Object[])} that avoids some
-     * type tests.
+     * (java.lang.Object, java.lang.String, java.lang.Object[])} that avoids
+     * some type tests.
      * 
      * @see de.unifr.acp.runtime.Traversal__#visitArrayField__(java.lang.Object,
      * java.lang.String, java.lang.Object[][])
@@ -116,11 +122,11 @@ public class TraversalImpl implements Traversal__ {
             e.printStackTrace();
         }
     }
-    
+
     @Override
     public void visitArrayField__(Object obj, String fieldName,
             Object[][][] fieldValue) {
-        visitArrayField__(obj, fieldName, fieldValue);
+        visitArrayField__(obj, fieldName, (Object[][])fieldValue);
     }
 
     @Override
@@ -153,7 +159,15 @@ public class TraversalImpl implements Traversal__ {
                         this.visitArray__((Object[]) arrayElement
                         /* , isComponentTypeObject */);
                     } catch (ClassCastException e) {
-                        traverseValue__(arrayElement);
+//                        if (arrayElement != null) {
+//                            if (arrayElement.getClass().isArray()) {
+//                                // this must be a primitive array (i.e.,
+//                                // the direct component type is primitive)
+//                                
+//                            } else {
+                                traverseNonRefArrayValue__(arrayElement);                                
+//                            }
+//                        }
                     }
                     // } else {
                     // traverseValue__(arrayElement);
@@ -182,7 +196,7 @@ public class TraversalImpl implements Traversal__ {
                     // control
 
                     Object[] arrayElement = array[i];
-                        this.visitArray__(arrayElement/* , isComponentTypeObject */);
+                    this.visitArray__(arrayElement/* , isComponentTypeObject */);
                 }
             }
 
@@ -229,7 +243,7 @@ public class TraversalImpl implements Traversal__ {
         fp.put(fieldName, resultPerm);
     }
 
-    private void traverseValue__(Object value) {
+    private void traverseNonRefArrayValue__(Object value) {
         if (value == null) {
             return;
             // } else if (fieldValue.getClass().isArray()) {

@@ -70,8 +70,8 @@ public class TransClass {
     private static Logger logger;
     private static FileHandler fh;
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
-    // private final CtClass objectClass =
-    // ClassPool.getDefault().get(Object.class.getName());
+     private final CtClass objectClass =
+     ClassPool.getDefault().get(Object.class.getName());
     // public final String FILTER_TRANSFORM_REGEX_DEFAULT =
     // "(java\\..*)|(de\\.unifr\\.acp\\.runtime\\..*)";
     public final String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)";
@@ -1268,9 +1268,9 @@ public class TransClass {
         // String index = "";
 
         // final boolean isArray = tf.isArray();
-        // final CtClass innerComponentType = innerComponentTypeOf(tf);
+        final CtClass innerComponentType = innerComponentTypeOf(tf);
         final boolean isNonPrimitiveArray = tf.isArray()
-                && !innerComponentTypeOf(tf).isPrimitive();
+                && !innerComponentType.isPrimitive();
 
         // // we might care about the reference values during traversal
         // if (!innerComponentType.isPrimitive()) {
@@ -1313,6 +1313,8 @@ public class TransClass {
             sb.append("t.visitPrimitiveField__(");
         } else if (isNonPrimitiveArray) {
             sb.append("t.visitArrayField__(");
+        } else if (tf.equals(ClassPool.getDefault().get(Object.class.getName()))) { 
+            sb.append("t.visitPotentialRefArrayField__(");
         } else {
             sb.append("t.visitField__(");
         }
