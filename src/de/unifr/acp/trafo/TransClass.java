@@ -1270,7 +1270,7 @@ public class TransClass {
         // final boolean isArray = tf.isArray();
         final CtClass innerComponentType = innerComponentTypeOf(tf);
         final boolean isNonPrimitiveArray = tf.isArray()
-                && !innerComponentType.isPrimitive();
+                && !tf.getComponentType().isPrimitive();
 
         // // we might care about the reference values during traversal
         // if (!innerComponentType.isPrimitive()) {

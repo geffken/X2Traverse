@@ -6,7 +6,7 @@ public interface Traversal__ {
      * Visits the specified reference field of the specified object. The field's
      * static type is a subtype of Object such that the field's dynamic
      * value is a known not to be a reference array.
-     * It might be a one or multidimensional primitive array but not primitive. 
+     * It might be a one or multidimensional primitive array but not a primitive. 
      * 
      * @param obj
      *            the object containing the specified field (null in case of a
