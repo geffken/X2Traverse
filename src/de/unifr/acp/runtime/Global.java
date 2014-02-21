@@ -53,7 +53,8 @@ public class Global {
     public static Deque<Set<Object>> newObjectsStack = new NewObjectDequeImpl();
 
     /**
-     * A map from new objects to the their generations. 
+     * A map from new objects to the their generations.
+     * Objects that are not in the map are considered as untracked objects.
      */
     public static Map<Object, Long> newObjectGens = new de.unifr.acp.runtime.util.WeakIdentityHashMap<>();
 
