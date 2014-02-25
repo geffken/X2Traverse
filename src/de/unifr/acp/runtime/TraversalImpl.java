@@ -126,7 +126,7 @@ public class TraversalImpl implements Traversal__ {
     @Override
     public void visitArrayField__(Object obj, String fieldName,
             Object[][][] fieldValue) {
-        visitArrayField__(obj, fieldName, (Object[][])fieldValue);
+        visitArrayField__(obj, fieldName, (Object[][]) fieldValue);
     }
 
     @Override
@@ -159,15 +159,15 @@ public class TraversalImpl implements Traversal__ {
                         this.visitArray__((Object[]) arrayElement
                         /* , isComponentTypeObject */);
                     } catch (ClassCastException e) {
-//                        if (arrayElement != null) {
-//                            if (arrayElement.getClass().isArray()) {
-//                                // this must be a primitive array (i.e.,
-//                                // the direct component type is primitive)
-//                                
-//                            } else {
-                                traverseNonRefArrayValue__(arrayElement);                                
-//                            }
-//                        }
+                        // if (arrayElement != null) {
+                        // if (arrayElement.getClass().isArray()) {
+                        // // this must be a primitive array (i.e.,
+                        // // the direct component type is primitive)
+                        //
+                        // } else {
+                        traverseNonRefArrayValue__(arrayElement);
+                        // }
+                        // }
                     }
                     // } else {
                     // traverseValue__(arrayElement);
@@ -208,6 +208,8 @@ public class TraversalImpl implements Traversal__ {
         }
     }
 
+    // step automaton and save permission for object
+    // TODO: consider static fields
     private void stepAutomatonAndSavePermission(Object obj, String fieldName,
             NFARunner runnerToStep) {
         // get field permissions for object under consideration
@@ -243,6 +245,16 @@ public class TraversalImpl implements Traversal__ {
         fp.put(fieldName, resultPerm);
     }
 
+    /**
+     * Traverses the specified object. The object's static type is a subtype of
+     * Object. However, the objects's dynamic type is known not to be a
+     * reference array. It might be a one or multidimensional primitive array
+     * but not a primitive.
+     * 
+     * @param value
+     *            the object containing the specified field (null in case of a
+     *            static field)
+     */
     private void traverseNonRefArrayValue__(Object value) {
         if (value == null) {
             return;

@@ -6,15 +6,24 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.unifr.acp.runtime.ACPException;
 import de.unifr.acp.runtime.fst.Permission;
+import de.unifr.acp.runtime.nfa.NFARunner;
 import de.unifr.acp.runtime.util.WeakIdentityHashMap;
 
 public class Global {
+    /* default filters are needed at runtime and compile time and thus kept here */
+    public final static String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)";
+    // public final String FILTER_TRANSFORM_REGEX_DEFAULT =
+    // "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
+    public final static String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
+    private static String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
+
     static {
         try {
             Global.logger = Logger.getLogger("de.unifr.acp.templates.Global");
@@ -53,8 +62,8 @@ public class Global {
     public static Deque<Set<Object>> newObjectsStack = new NewObjectDequeImpl();
 
     /**
-     * A map from new objects to the their generations.
-     * Objects that are not in the map are considered as untracked objects.
+     * A map from new objects to the their generations. Objects that are not in
+     * the map are considered as untracked objects.
      */
     public static Map<Object, Long> newObjectGens = new de.unifr.acp.runtime.util.WeakIdentityHashMap<>();
 
@@ -63,9 +72,8 @@ public class Global {
      */
     public static Deque<Long> objectGenStack = new ArrayDeque<>();
 
-    
     /*
-     * The next fresh generation to be used by the next installed contract. 
+     * The next fresh generation to be used by the next installed contract.
      */
     private static long nextFreshContractGeneration = 0;
 
@@ -79,7 +87,7 @@ public class Global {
      *            the location's object (null indicates a static field -
      *            unimplemented)
      * @param fieldName
-     *            the location's fully qualified field name
+     *            the resolved field's fully qualified field name
      * @return the installed permission for the specified location
      */
     public static Permission effectivePermission(Object obj, String fieldName) {
@@ -99,14 +107,17 @@ public class Global {
         // if there is a permission installed
         if (topNewObjects != null) {
 
-            Long objectGen = newObjectGens.get(obj);
+            // static fields are not accessed on objects
+            if (obj != null) {
+                Long objectGen = newObjectGens.get(obj);
 
-            assert (topNewObjects.contains(obj) == (objectGen != null && objectGen >= topObjectGen));
+                assert (topNewObjects.contains(obj) == (objectGen != null && objectGen >= topObjectGen));
 
-            if (objectGen != null && objectGen >= topObjectGen) {
-                return Permission.READ_WRITE;
+                if (objectGen != null && objectGen >= topObjectGen) {
+                    return Permission.READ_WRITE;
+                }
             }
-            
+
             // consider new objects
             // if (topNewObjects.contains(obj)) {
             // return Permission.READ_WRITE;
@@ -116,6 +127,12 @@ public class Global {
             // access to unmarked locations is forbidden
             Map<String, Permission> fieldPerm = Global.objPermStack.peek().get(
                     obj);
+
+            // handle 'new' static fields
+            if (obj == null
+                    && (fieldPerm == null || !fieldPerm.containsKey(fieldName))) {
+                return Permission.READ_WRITE;
+            }
 
             // in case there is a field permission map we expect all instance
             // fields to have an entry
@@ -140,7 +157,7 @@ public class Global {
      *            the location's object (null indicates a static field -
      *            unimplemented)
      * @param fieldName
-     *            the location's fully qualified field name
+     *            the resolved field's fully qualified field name
      * @return the installed permission for the specified location
      */
     public static Permission effectivePermissionStackNotEmpty(Object obj,
@@ -161,9 +178,12 @@ public class Global {
         assert (topNewObjects.contains(obj) == (newObjectGens.get(obj) != null && newObjectGens
                 .get(obj) >= topObjectGen));
 
-        Long objectGen = newObjectGens.get(obj);
-        if (objectGen != null && objectGen >= topObjectGen) {
-            return Permission.READ_WRITE;
+        // static fields are not accessed on objects
+        if (obj != null) {
+            Long objectGen = newObjectGens.get(obj);
+            if (objectGen != null && objectGen >= topObjectGen) {
+                return Permission.READ_WRITE;
+            }
         }
 
         // consider new objects
@@ -174,6 +194,12 @@ public class Global {
         // consider topmost location permissions;
         // access to unmarked locations is forbidden
         Map<String, Permission> fieldPerm = Global.objPermStack.peek().get(obj);
+
+        // handle 'new' static fields
+        if (obj == null
+                && (fieldPerm == null || !fieldPerm.containsKey(fieldName))) {
+            return Permission.READ_WRITE;
+        }
 
         // in case there is a field permission map we expect all instance
         // fields to have an entry (once the implementation is completed ;-)
@@ -225,6 +251,44 @@ public class Global {
             newObjectGens.put(obj, objectGenStack.peek());
         }
 
+    }
+
+    public static void traverseInitializedStatics(ClassLoader loader,
+            NFARunner runner, Map<Object, Map<String, Permission>> allLocPerms) {
+        try {
+            java.lang.reflect.Field f = ClassLoader.class
+                    .getDeclaredField("classes");
+            f.setAccessible(true);
+            Vector classes = (Vector) f.get(loader);
+            for (int j = 0; j < classes.size(); j++) {
+                Class clazz = (Class) classes.get(j);
+                if (clazz.getName().matches(filterVisitRegex))
+                    continue;
+                runner.resetAndStep(clazz.getSimpleName());
+                TraversalImpl visitorStatics = new TraversalImpl(runner,
+                        allLocPerms);
+                java.lang.reflect.Method m = clazz.getMethod(
+                        "traverseStatics__",
+                        new Class[] { de.unifr.acp.runtime.Traversal__.class });
+                m.invoke(null, new Object[] { visitorStatics });
+
+            }
+
+        } catch (java.lang.NoSuchFieldException e) {
+            e.printStackTrace(); // unexpected exception
+        } catch (java.lang.SecurityException e) {
+            e.printStackTrace(); // unexpected exception
+        } catch (java.lang.IllegalArgumentException e) {
+            e.printStackTrace(); // unexpected exception
+        } catch (java.lang.IllegalAccessException e) {
+            e.printStackTrace(); // unexpected exception
+        } catch (java.lang.NoSuchMethodException e) {
+            e.printStackTrace(); // unexpected exception
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            e.printStackTrace(); // unexpected exception
+        } catch (Exception e) {
+            e.printStackTrace(); // unexpected exception
+        }
     }
 
     public static void throwOrPrintViolation(Object obj,

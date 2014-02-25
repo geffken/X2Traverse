@@ -39,6 +39,7 @@ import javassist.expr.Instanceof;
 import javassist.expr.MethodCall;
 import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
+import de.unifr.acp.runtime.Global;
 import de.unifr.acp.runtime.annot.Grant;
 import de.unifr.acp.runtime.nfa.NFA;
 import de.unifr.acp.runtime.nfa.NFARunner;
@@ -70,18 +71,11 @@ public class TransClass {
     private static Logger logger;
     private static FileHandler fh;
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
-     private final CtClass objectClass =
-     ClassPool.getDefault().get(Object.class.getName());
-    // public final String FILTER_TRANSFORM_REGEX_DEFAULT =
-    // "(java\\..*)|(de\\.unifr\\.acp\\.runtime\\..*)";
-    public final String FILTER_TRANSFORM_REGEX_DEFAULT = "(java\\..*)";
-    // public final String FILTER_TRANSFORM_REGEX_DEFAULT =
-    // "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
-    private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
-    // public final String FILTER_VISIT_REGEX_DEFAULT =
-    // "(java\\..*)|(de\\.unif\\.acp\\.runtime\\..*)";
-    public final String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
-    private String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
+    private final CtClass objectClass = ClassPool.getDefault().get(
+            Object.class.getName());
+
+    private String filterTransformRegex = Global.FILTER_TRANSFORM_REGEX_DEFAULT;
+    private String filterVisitRegex = Global.FILTER_VISIT_REGEX_DEFAULT;
     private ClassPool cp;
     private final boolean convertExceptions2Warnings;
     private Config config = null;
@@ -187,8 +181,7 @@ public class TransClass {
         TransClass tc = new TransClass(cp);
         Set<CtClass> reachable = tc.computeReachableClasses(cp.get(className),
                 true);
-        System.out.println("Reachable classes:");
-        System.out.println(reachable);
+        logger.finer("Reachable classes:\n" + reachable);
         for (CtClass clazz : reachable) {
             if (clazz.isFrozen() && !clazz.isArray())
                 clazz.defrost();
@@ -459,7 +452,7 @@ public class TransClass {
         visited.add(target);
 
         // collect all types this type refers to in this set
-        final Set<CtClass> referredTypes = new HashSet<CtClass>(1);
+        final Set<CtClass> referredTypes = new HashSet<CtClass>();
 
         if (target.isArray()) {
             CtClass componentType = target.getComponentType();
@@ -511,7 +504,7 @@ public class TransClass {
      * @return the transformed set of classes.
      */
     protected Set<CtClass> transformClasses(Set<CtClass> classes)
-            throws NotFoundException, IOException, CannotCompileException,
+            throws NotFoundException, CannotCompileException,
             ClassNotFoundException {
         cp.importPackage("java.util");
 
@@ -526,7 +519,7 @@ public class TransClass {
             logger.finest("Classes to transform:\n" + sb.toString());
         }
 
-        final HashSet<CtClass> transformed = new HashSet<CtClass>();
+        final HashSet<CtClass> transformedClasses = new HashSet<CtClass>();
         for (CtClass clazz : toTransform) {
             Deque<CtClass> stack = new ArrayDeque<CtClass>();
             CtClass current = clazz;
@@ -538,23 +531,24 @@ public class TransClass {
                 CtClass superclass = stack.pop();
 
                 // if this does not hold we might miss some superclass fields
-                assert (transformed.contains(superclass.getSuperclass()) == toTransform
-                        .contains(superclass.getSuperclass())) : toTransform
-                        .contains(superclass.getSuperclass());
+                assert (transformedClasses.contains(superclass
+                        .getSuperclass()) == toTransform.contains(superclass
+                        .getSuperclass())) : toTransform.contains(superclass
+                        .getSuperclass());
                 transformClass(superclass,
-                        transformed.contains(superclass.getSuperclass()),
-                        toTransform);
-                transformed.add(superclass);
+                        transformedClasses.contains(superclass
+                                .getSuperclass()));
+                transformedClasses.add(superclass);
             }
         }
         if (logger.isLoggable(Level.FINEST)) {
             StringBuilder sb = new StringBuilder();
-            for (CtClass transformedClazz : transformed) {
+            for (CtClass transformedClazz : transformedClasses) {
                 sb.append(transformedClazz.getName() + "\n");
             }
             logger.finest("Transformed types:\n" + sb.toString());
         }
-        return transformed;
+        return transformedClasses;
     }
 
     private static Set<CtField> getStaticFields(Iterable<CtClass> classes) {
@@ -573,7 +567,8 @@ public class TransClass {
 
     /**
      * Returns the sublist of members of the specified list of members that
-     * match one or more of the specified modifiers.
+     * match one or more of the specified modifiers. Sets do not work presumably
+     * due to broken/unimplemented field equality.
      * 
      * @param members
      *            the sublist of members that match one or more of the specified
@@ -597,7 +592,7 @@ public class TransClass {
     /**
      * Returns the sublist of members of the specified list of members that
      * match all of the specified modifiers. Sets do not work presumably due to
-     * broken field equality.
+     * broken/unimplemented field equality.
      * 
      * @param members
      *            the sublist of members that match all of the specified
@@ -620,7 +615,7 @@ public class TransClass {
     /**
      * Returns the sublist of members of the specified list of members that do
      * not match all of the specified modifiers. NOT (AND_members) Sets do not
-     * work presumably due to broken field equality.
+     * work presumably due to broken/unimplemented field equality.
      * 
      * @param members
      *            the sublist of members that do not match all of the specified
@@ -645,7 +640,7 @@ public class TransClass {
     /**
      * Returns the sublist of members of the specified list of members that
      * match none of the specified modifiers. NOT (OR_members) Sets do not work
-     * presumably due to broken field equality.
+     * presumably due to broken/unimplemented field equality.
      * 
      * @param members
      *            the sublist of members that match none of the specified
@@ -703,16 +698,16 @@ public class TransClass {
      *            the class to transform
      * @param hasTransformedSuperclass
      *            the target has an already transformed superclass
-     * @param toTransform
-     *            all classes to be transformed
+     * @param initializedClasses
+     *            already initialized classes
      * @throws NotFoundException
      * @throws IOException
      * @throws CannotCompileException
      * @throws ClassNotFoundException
      */
     public void transformClass(CtClass target,
-            boolean hasTransformedSuperclass, Set<CtClass> toTransform)
-            throws NotFoundException, IOException, CannotCompileException,
+            boolean hasTransformedSuperclass)
+            throws NotFoundException, CannotCompileException,
             ClassNotFoundException {
         Object[] params4Logging = new Object[2];
         params4Logging[0] = (target != null) ? target.getName() : target;
@@ -722,9 +717,6 @@ public class TransClass {
             return;
         }
         this.cp.importPackage("java.util");
-
-        // add: implements TRAVERSALTARGET
-        List<CtClass> targetIfs = Arrays.asList(target.getInterfaces());
 
         // NOTE: Given the equality semantics of CtClass the condition is only
         // valid if the CtClass instance representing the traversal interface is
@@ -738,7 +730,7 @@ public class TransClass {
         // use traversal interface as marker for availability of other
         // instrumentation
         CtClass traversalTargetIf = this.cp.get(TRAVERSAL_TARGET_CLASS_NAME);
-        if (!targetIfs.contains(traversalTargetIf)) {
+        if (!implementsInterface(target, traversalTargetIf)) {
 
             // change methods carrying contracts
             // 1. Find all methods carrying contracts
@@ -772,9 +764,12 @@ public class TransClass {
                 instrumentFieldAccess(methodOrCtor);
             }
 
+            String traverseStaticsBody = createTraverseStaticsBody(target);
+            target.addMethod(CtNewMethod.make(traverseStaticsBody, target));
+
             // instrument methods
             for (CtBehavior methodOrCtor : target.getDeclaredBehaviors()) {
-                instrumentMethodOrCtor(methodOrCtor, toTransform);
+                instrumentMethodOrCtor(methodOrCtor/*, initializedClasses*/);
             }
 
             // add traversal target interface
@@ -785,15 +780,11 @@ public class TransClass {
             String traverseBody = createTraverseBody(target,
                     hasTransformedSuperclass);
             target.addMethod(CtNewMethod.make(traverseBody, target));
-            String traverseStaticsBody = createTraverseStaticsBody(target,
-                    hasTransformedSuperclass);
-            target.addMethod(CtNewMethod.make(traverseStaticsBody, target));
         }
         logger.exiting("TransClass", "doTransform");
     }
 
-    private void instrumentMethodOrCtor(final CtBehavior methodOrCtor,
-            Set<CtClass> toTransform) throws ClassNotFoundException,
+    private void instrumentMethodOrCtor(final CtBehavior methodOrCtor) throws ClassNotFoundException,
             NotFoundException, CannotCompileException {
         logger.fine("Consider adding traversal to behavior: "
                 + methodOrCtor.getLongName());
@@ -917,20 +908,13 @@ public class TransClass {
                     sb.append("  } catch(java.lang.ClassCastException e) {}");
                     // sb.append("System.out.println(\"traversal ...\");");
                 }
-
+                
+                // handle static fields
                 if (i == 0) {
-                    for (CtClass clazz : toTransform) {
-                        sb.append("  runner.resetAndStep(\""
-                                + clazz.getSimpleName() + "\");");
-                        sb.append("  " + VISITOR_CLASS_NAME
-                                + " visitorStatics = new " + VISITOR_CLASS_NAME
-                                + "(runner, allLocPerms);");
-                        sb.append("  try {");
-                        sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$"
-                                + i + ").traverseStatics__(visitorStatics);");
-                        sb.append("  } catch(java.lang.ClassCastException e) {}");
-                    }
+                    sb.append(" ClassLoader loader = "+methodOrCtor.getDeclaringClass().getName()+".class.getClassLoader();");
+                    sb.append(GLOBAL_CLASS_NAME + ".traverseInitializedStatics(loader, runner, allLocPerms);");
                 }
+                
                 // TODO: explicit representation of locations and
                 // location permissions (supporting join)
                 // (currently it's all generic maps and implicit joins
@@ -995,8 +979,8 @@ public class TransClass {
                     try {
                         CtField field = expr.getField();
 
-                        // String qualifiedFieldName = expr.getClassName() + "."
-                        // + expr.getFieldName();
+                        // NOTE: this does field name resolution such that the
+                        // qualified field name represents the resolved field
                         String qualifiedFieldName = field.getDeclaringClass()
                                 .getName() + "." + field.getName();
 
@@ -1112,6 +1096,11 @@ public class TransClass {
         return ((member.getModifiers() & Modifier.STATIC) != 0);
     }
 
+    private static boolean implementsInterface(CtClass clazz, CtClass interf) throws NotFoundException {
+        List<CtClass> clazzIfs = Arrays.asList(clazz.getInterfaces());
+        return clazzIfs.contains(interf);
+    }
+    
     private static void addInterface(CtClass clazz, CtClass interf)
             throws NotFoundException {
         List<CtClass> clazzIfs = Arrays.asList(clazz.getInterfaces());
@@ -1212,7 +1201,7 @@ public class TransClass {
         return false;
     }
 
-    protected static String createTraverseBody(CtClass target,
+    protected String createTraverseBody(CtClass target,
             boolean hasTransformedSuperclass) throws NotFoundException {
         StringBuilder sb = new StringBuilder();
         sb.append("public void traverse__(de.unifr.acp.runtime.Traversal__ t) {\n");
@@ -1232,21 +1221,22 @@ public class TransClass {
                 // +"\");");
             }
         }
-        if (hasTransformedSuperclass) {
+        //if (hasTransformedSuperclass) {
+        CtClass superClass = target.getSuperclass();
+        CtClass traversalTargetIf = this.cp.get(TRAVERSAL_TARGET_CLASS_NAME);
+        if (implementsInterface(superClass, traversalTargetIf)) {
             sb.append("super.traverse__(t);\n");
         }
         sb.append('}');
         return sb.toString();
     }
 
-    protected static String createTraverseStaticsBody(CtClass target,
-            boolean hasTransformedSuperclass) throws NotFoundException {
+    protected static String createTraverseStaticsBody(CtClass target) throws NotFoundException {
         StringBuilder sb = new StringBuilder();
-        sb.append("public void traverseStatics__(de.unifr.acp.runtime.Traversal__ t) {\n");
+        sb.append("public static void traverseStatics__(de.unifr.acp.runtime.Traversal__ t) {\n");
         for (CtField f : membersMatchingAllModifers(
                 Arrays.asList(target.getDeclaredFields()),
-                javassist.Modifier.STATIC)) {// getStaticFields(Collections.singleton(target)))
-                                             // {
+                javassist.Modifier.STATIC)) {
             CtClass tf = f.getType();
             String fname = f.getName();
             if (!fname.equals(FST_CACHE_FIELD_NAME)/* && !f.getType().isArray() */) {
@@ -1313,7 +1303,8 @@ public class TransClass {
             sb.append("t.visitPrimitiveField__(");
         } else if (isNonPrimitiveArray) {
             sb.append("t.visitArrayField__(");
-        } else if (tf.equals(ClassPool.getDefault().get(Object.class.getName()))) { 
+        } else if (tf
+                .equals(ClassPool.getDefault().get(Object.class.getName()))) {
             sb.append("t.visitPotentialRefArrayField__(");
         } else {
             sb.append("t.visitField__(");

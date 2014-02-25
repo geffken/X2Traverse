@@ -4,9 +4,9 @@ public interface Traversal__ {
 
     /**
      * Visits the specified reference field of the specified object. The field's
-     * static type is a subtype of Object such that the field's dynamic
+     * static type is a proper subtype of Object. However, the field's dynamic
      * value is a known not to be a reference array.
-     * It might be a one or multidimensional primitive array but not a primitive. 
+     * It might be a one or multidimensional primitive array but not a primitive.
      * 
      * @param obj
      *            the object containing the specified field (null in case of a
@@ -20,8 +20,8 @@ public interface Traversal__ {
 
     /**
      * Visits the specified reference field of the specified object. Only call
-     * this method if the dynamic type of the field value can but is not know to
-     * be a reference array (static type is object). Call
+     * this method if the dynamic type of the field value can but is not known to
+     * be a reference array (static type is Object). Call
      * {@link #visitField__(Object, String, Object)},
      * {@link #visitPrimitiveField__(Object, String)}, or
      * {@link #visitArrayField__(Object, String, Object[])} otherwise.
@@ -38,7 +38,8 @@ public interface Traversal__ {
             Object fieldValue);
 
     /**
-     * Visits the specified array field of the specified object.
+     * Visits the specified non-primitive array field of the specified object.
+     * The static type of the field must be a reference array.
      * 
      * @param obj
      *            the object containing the specified field (null in case of a

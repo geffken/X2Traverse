@@ -5,8 +5,8 @@ public class TestBasics {
     
     @de.unifr.acp.runtime.annot.Grant("this.a.*")
     public void m(@de.unifr.acp.runtime.annot.Grant("a.*") TestBasics x) {
-        System.out.println(this.a);
-        System.out.println(x.a);
+       Object o = this.a;
+        o = x.a;
     }
     
     public static void m() {
