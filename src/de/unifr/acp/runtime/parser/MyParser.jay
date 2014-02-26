@@ -3,17 +3,18 @@ package de.unifr.acp.runtime.parser;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import de.unifr.acp.contract.And;
-import de.unifr.acp.contract.Concat;
-import de.unifr.acp.contract.Identifier;
-import de.unifr.acp.contract.Neg;
-import de.unifr.acp.contract.Or;
-import de.unifr.acp.contract.Path;
-import de.unifr.acp.contract.Plus;
-import de.unifr.acp.contract.QMark;
-import de.unifr.acp.contract.QMarkLit;
-import de.unifr.acp.contract.Star;
-import de.unifr.acp.contract.AtLit;
+import de.unifr.acp.runtime.contract.And;
+import de.unifr.acp.runtime.contract.Concat;
+import de.unifr.acp.runtime.contract.Identifier;
+import de.unifr.acp.runtime.contract.Neg;
+import de.unifr.acp.runtime.contract.Or;
+import de.unifr.acp.runtime.contract.Path;
+import de.unifr.acp.runtime.contract.Plus;
+import de.unifr.acp.runtime.contract.QMark;
+import de.unifr.acp.runtime.contract.QMarkLit;
+import de.unifr.acp.runtime.contract.Star;
+import de.unifr.acp.runtime.contract.AtLit;
+import de.unifr.acp.runtime.contract.ArrayDim;
 
 public class MyParser {
 %}
@@ -31,6 +32,7 @@ public class MyParser {
 %type <Path> neg
 %type <Path> quantifier
 %type <Path> path_lit
+//%type <Path> array
 %type <Path> id
 
 %start path_perms
@@ -62,6 +64,9 @@ path_lit : star                    {$$ = new Star(new QMarkLit()); }
   | id                             {$$ = $1; }
   | '(' path_perm ')'              {$$ = $2; }
   
+//array : id                       {$$ = $1; }
+//  | array '[' ']'                {$$ = $1.concatenate(new ArrayDim()); }
+    
 id : identifier                    {$$ = new Identifier($1); }
   | qmark                          {$$ = new QMarkLit(); }
   | '@'                            {$$ = new AtLit(); }
