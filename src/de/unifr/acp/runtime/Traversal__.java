@@ -16,7 +16,7 @@ public interface Traversal__ {
      * @param fieldvalue
      *            the non-primitive value of the field
      */
-    public void visitField__(Object obj, String fieldName, Object fieldvalue);
+    public void visitField__(Object obj, String fieldName, Object fieldvalue, boolean isFlatVisit);
 
     /**
      * Visits the specified reference field of the specified object. Only call
@@ -35,7 +35,7 @@ public interface Traversal__ {
      *            the non-primitive value of the field
      */
     public void visitPotentialRefArrayField__(Object obj, String fieldName,
-            Object fieldValue);
+            Object fieldValue, boolean isFlatVisit);
 
     /**
      * Visits the specified non-primitive array field of the specified object.
@@ -50,7 +50,7 @@ public interface Traversal__ {
      *            the value of the field
      */
     public void visitArrayField__(Object obj, String fieldName,
-            Object[] fieldValue);
+            Object[] fieldValue, boolean isFlatVisit);
 
     /**
      * Overloaded version as fallback (needed due to Javassist method dispatch
@@ -64,7 +64,7 @@ public interface Traversal__ {
      * @see Traversal__#visitArrayField__(Object, String, Object[])
      */
     public void visitArrayField__(Object obj, String fieldName,
-            Object fieldValue);
+            Object fieldValue, boolean isFlatVisit);
 
     /**
      * Overloaded version to speed up array traversal.
@@ -74,7 +74,7 @@ public interface Traversal__ {
      * @see Traversal__#visitArrayField__(Object, String, Object[])
      */
     public void visitArrayField__(Object obj, String fieldName,
-            Object[][] fieldValue);
+            Object[][] fieldValue, boolean isFlatVisit);
 
     /**
      * Overloaded version to speed up array traversal.
@@ -84,7 +84,7 @@ public interface Traversal__ {
      * @see Traversal__#visitArrayField__(Object, String, Object[])
      */
     public void visitArrayField__(Object obj, String fieldName,
-            Object[][][] fieldValue);
+            Object[][][] fieldValue, boolean isFlatVisit);
 
     /**
      * Visits a the specified primitive field of the

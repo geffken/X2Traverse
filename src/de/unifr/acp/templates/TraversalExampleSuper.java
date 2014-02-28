@@ -11,9 +11,9 @@ public class TraversalExampleSuper implements TraversalTarget__ {
         // ...
     }
     
-    @Override
-    public void traverseStatics__(Traversal__ t) {
-        // ...
-    }
+//    @Override
+//    public void traverseStatics__(Traversal__ t) {
+//        // ...
+//    }
 
 }

@@ -11,6 +11,8 @@ public class TreeNode {
     double force;
     TreeNode left;
     TreeNode right;
+    TreeNode next = null;
+    TreeNode parent = null;
 
     TreeNode(double mass, TreeNode left, TreeNode right) {
         this.mass = mass;
@@ -107,6 +109,52 @@ public class TreeNode {
             right.computeForcesUnannotated();
     }
     
+    public void setParentNodes(TreeNode parent) {
+        this.parent = parent;
+
+        if (left != null)
+            left.setParentNodes(this);
+
+        if (right != null)
+            right.setParentNodes(this);
+    }
+    
+    public void computeForcesLoopUnannotated() {
+        TreeNode current = this;
+        TreeNode last = null;
+        boolean down = true;
+        while (true) {
+            /* reads mass writes force */
+            if (down)
+                current.force = current.mass * R_GRAV;
+            TreeNode currentLeft = current.left;
+            if (down && currentLeft != null) {
+                down = true;
+                //current.left.parent = current;
+                last = current;
+                current = currentLeft;
+                continue;
+            }
+            TreeNode currentRight = current.right;
+            if (currentRight != null
+                    && (down || (!down && last != currentRight))) {
+                down = true;
+                //current.right.parent = current;
+                last = current;
+                current = currentRight;
+                continue;
+            }
+            TreeNode currentParent = current.parent;
+            if (currentParent != null) {
+                last = current;
+                current = currentParent;
+                down = false;
+            } else {
+                break;
+            }
+        }
+    }
+    
     @Grant("this.force, this.mass.@")
     public void computeForce() {
         /* reads mass writes force */
@@ -132,41 +180,65 @@ public class TreeNode {
         }
         
         if (args[2].equals("annotated")) {
-            root.computeForces();
+            for (int j = 0; j < 500; j++)
+                root.computeForces();
             long start = System.currentTimeMillis();
             for (int j = 0; j < 100; j++) {
                 root.computeForces();
             }
-            System.out.println("Time: "+(System.currentTimeMillis()-start));
+            long end = System.currentTimeMillis();
+            printTime(end-start);
         } else if (args[2].equals("delegator")) {
-            root.computeForcesDelegator();
+            for (int j = 0; j < 500; j++)
+                root.computeForcesDelegator();
             long start = System.currentTimeMillis();
             for (int j = 0; j < 100; j++) {
                 root.computeForcesDelegator();
             }
-            System.out.println("Time: "+(System.currentTimeMillis()-start));
+            long end = System.currentTimeMillis();
+            printTime(end-start);
         } else if (args[2].equals("unannotated")) {
-            root.computeForcesUnannotated();
+            for (int j = 0; j < 500; j++)
+                root.computeForcesUnannotated();
             long start = System.currentTimeMillis();
             for (int j = 0; j < 100; j++) {
                 root.computeForcesUnannotated();
             }
-            System.out.println("Time: "+(System.currentTimeMillis()-start));
+            long end = System.currentTimeMillis();
+            printTime(end-start);
+        } else if (args[2].equals("loop-unannotated")) {
+            root.setParentNodes(null);
+                for (int j = 0; j < 500; j++)
+                root.computeForcesLoopUnannotated();
+            long start = System.currentTimeMillis();
+            for (int j = 0; j < 100; j++) {
+                root.computeForcesLoopUnannotated();
+            }
+            long end = System.currentTimeMillis();
+            printTime(end-start);
         } else if (args[2].equals("flat")) {
-            root.computeForce();
+            for (int j = 0; j < 500; j++)
+                root.computeForce();
             long start = System.currentTimeMillis();
             for (int j = 0; j < 100; j++) {
                 root.computeForce();
             }
-            System.out.println("Time: "+(System.currentTimeMillis()-start));
+            long end = System.currentTimeMillis();
+            printTime(end-start);
         } else if (args[2].equals("flat-unannotated")) {
-            root.computeForceUnannotated();
+            for (int j = 0; j < 500; j++)
+                root.computeForceUnannotated();
             long start = System.currentTimeMillis();
             for (int j = 0; j < 100; j++) {
                 root.computeForceUnannotated();
             }
-            System.out.println("Time: "+(System.currentTimeMillis()-start));
+            long end = System.currentTimeMillis();
+            printTime(end-start);
         }
+    }
+    
+    private static void printTime(long timeMillis) {
+        System.out.format("Time: %8.3f\n", (((float)timeMillis)/1000));
     }
 
     public static TreeNode genBalancedTree(int n) {

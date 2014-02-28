@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import de.unifr.acp.runtime.ACPException;
 import de.unifr.acp.runtime.TraversalTarget__;
 import de.unifr.acp.test.TestAbstractBase;
 import de.unifr.acp.test.TestArrayClass;
@@ -34,6 +35,7 @@ import de.unifr.acp.test.TestEmptySubclass;
 import de.unifr.acp.test.TestInnerClass;
 import de.unifr.acp.test.TestIntClass;
 import de.unifr.acp.test.TestStatics;
+import de.unifr.acp.test.TestStaticsNeg;
 
 public class TransClassTest {
 
@@ -63,6 +65,8 @@ public class TransClassTest {
     private static final String TEST_INNER_CLASS_NAME = TestInnerClass.class
             .getCanonicalName();
     private static final String TEST_STATICS_NAME = TestStatics.class
+            .getCanonicalName();
+    private static final String TEST_STATICS_NEG_NAME = TestStaticsNeg.class
             .getCanonicalName();
 
     // test data
@@ -110,27 +114,27 @@ public class TransClassTest {
 
     @Test
     public void testDoTransformAndRunBasics() throws Throwable {
-        TransClass.transformSingleClass(defaultPool, TEST_BASICS_NAME, false);
-        // if (target.isModified()) {
-        // target.debugWriteFile("bin");
-        // }
-        javassist.Loader cl = new javassist.Loader(defaultPool);
+//        TransClass.transformSingleClass(defaultPool, TEST_BASICS_NAME, false);
+
+//        javassist.Loader cl = new javassist.Loader(defaultPool);
+        javassist.Loader cl = new APCTransLoader(defaultPool);
 
         // run with javassist's class loader to enable 'reloading' of test class
         cl.run(TEST_BASICS_NAME, new String[] {});
-        TransClass.defrostReachableClasses(defaultPool, TEST_BASICS_NAME);
+//        TransClass.defrostReachableClasses(defaultPool, TEST_BASICS_NAME);
     }
 
     @Test
     public void testDoTransformAndRunArrays() throws Throwable {
-        TransClass.transformSingleClass(defaultPool, TEST_ARRAY_CLASS_NAME,
-                false);
-        javassist.Loader cl = new javassist.Loader(defaultPool);
+//        TransClass.transformSingleClass(defaultPool, TEST_ARRAY_CLASS_NAME,
+//                false);
+//        javassist.Loader cl = new javassist.Loader(defaultPool);
+        javassist.Loader cl = new APCTransLoader(defaultPool);
 
         // run with javassist's class loader to enable 'reloading' of test class
         cl.run(TEST_ARRAY_CLASS_NAME, new String[] {});
 
-        TransClass.defrostReachableClasses(defaultPool, TEST_ARRAY_CLASS_NAME);
+//        TransClass.defrostReachableClasses(defaultPool, TEST_ARRAY_CLASS_NAME);
         CtClass target = defaultPool.get(TraversalTarget__.class
                 .getCanonicalName());
         target.rebuildClassFile();
@@ -141,43 +145,46 @@ public class TransClassTest {
 
     @Test
     public void testDoTransformAndRunConstructor() throws Throwable {
-        TransClass.transformReachableClasses(defaultPool, TEST_CONCONSTRUCTOR_NAME,
-                false);
-        javassist.Loader cl = new javassist.Loader(defaultPool);
+//        TransClass.transformReachableClasses(defaultPool, TEST_CONCONSTRUCTOR_NAME,
+//                false);
+//        javassist.Loader cl = new javassist.Loader(defaultPool);
+        javassist.Loader cl = new APCTransLoader(defaultPool);
 
         // run with javassist's class loader to enable 'reloading' of test class
         // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
         // "output");
         cl.run(TEST_CONCONSTRUCTOR_NAME, new String[] {});
-        TransClass.defrostReachableClasses(defaultPool, TEST_CONCONSTRUCTOR_NAME);
+//        TransClass.defrostReachableClasses(defaultPool, TEST_CONCONSTRUCTOR_NAME);
 
     }
 
     @Test
     public void testDoTransformAndRunConcretSubClass() throws Throwable {
-        TransClass.transformReachableClasses(defaultPool,
-                TEST_CONCRETE_SUB_CLASS_NAME, false);
-        javassist.Loader cl = new javassist.Loader(defaultPool);
+//        TransClass.transformReachableClasses(defaultPool,
+//                TEST_CONCRETE_SUB_CLASS_NAME, false);
+//        javassist.Loader cl = new javassist.Loader(defaultPool);
+        javassist.Loader cl = new APCTransLoader(defaultPool);
         cl.addTranslator(defaultPool, new APCDebugPrintTranslator());
 
         // run with javassist's class loader to enable 'reloading' of test class
         // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
         // "output");
         cl.run(TEST_CONCRETE_SUB_CLASS_NAME, new String[] {});
-        TransClass.defrostReachableClasses(defaultPool, TEST_CONCRETE_SUB_CLASS_NAME);
+//        TransClass.defrostReachableClasses(defaultPool, TEST_CONCRETE_SUB_CLASS_NAME);
     }
 
     @Test
     public void testDoTransformAndRunInnerClass() throws Throwable {
-        TransClass
-                .transformReachableClasses(defaultPool, TEST_INNER_CLASS_NAME, false);
-        javassist.Loader cl = new javassist.Loader(defaultPool);
+//        TransClass
+//                .transformReachableClasses(defaultPool, TEST_INNER_CLASS_NAME, false);
+//        javassist.Loader cl = new javassist.Loader(defaultPool);
+        javassist.Loader cl = new APCTransLoader(defaultPool);
 
         // run with javassist's class loader to enable 'reloading' of test class
         // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
         // "output");
         cl.run(TEST_INNER_CLASS_NAME, new String[] {});
-        TransClass.defrostReachableClasses(defaultPool, TEST_INNER_CLASS_NAME);
+        //TransClass.defrostReachableClasses(defaultPool, TEST_INNER_CLASS_NAME);
     }
 
     @Test
@@ -186,14 +193,23 @@ public class TransClassTest {
 //                .transformReachableClasses(defaultPool, TEST_STATICS_NAME, false);
         //javassist.Loader cl = new javassist.Loader(defaultPool);
         javassist.Loader cl = new APCTransLoader(defaultPool);
-        //javassist.Loader cl = new APCLoader(defaultPool);
         //cl.addTranslator(defaultPool, new APCDebugPrintTranslator());
 
-        // run with javassist's class loader to enable 'reloading' of test class
-        // TransClass.flushClassesToDir(Collections.singleton(defaultPool.get(TEST_CONCONSTRUCTOR_NAME)),
-        // "output");
+        // run with custom class loader to enable 'reloading
+        // and transformation of test class
         cl.run(TEST_STATICS_NAME, new String[] {});
    //     TransClass.defrostReachableClasses(defaultPool, TEST_INNER_CLASS_NAME);
+    }
+    
+    @Test(expected=Exception.class)
+    public void testDoTransformAndRunStaticsNegClass() throws Throwable {
+        javassist.Loader cl = new APCTransLoader(defaultPool);
+
+        // run with custom class loader to enable 'reloading
+        // and transformation of test class
+        //assertEquals(1, 2);
+        Class<?> exceptionClass = cl.loadClass(ACPException.class.getName());
+        cl.run(TEST_STATICS_NEG_NAME, new String[] {});
     }
 
     @Test

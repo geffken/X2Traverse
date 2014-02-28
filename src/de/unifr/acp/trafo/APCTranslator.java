@@ -40,6 +40,10 @@ public class APCTranslator implements Translator {
         } catch (ClassNotFoundException e) {
             throw new NotFoundException(e.getMessage(), e);
         }
+//        catch (CannotCompileException e) {
+//            e.printStackTrace();
+//            System.out.println(e.getMessage());
+//        }
     }
 
     @Override

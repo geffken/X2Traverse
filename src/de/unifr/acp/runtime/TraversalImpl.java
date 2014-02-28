@@ -21,6 +21,10 @@ public class TraversalImpl implements Traversal__ {
      */
     private Set<ObjectAndNFARunner> visitedPairs = new HashSet<>();
     Map<Object, Map<String, Permission>> locPerms;
+    Map<Object, Map<String, Permission>> effectiveLocPerms;
+    @Deprecated
+    Set<Object> effectiveNewObjects;
+    Long effectiveNewObjectGen;
 
     /**
      * Constructor.
@@ -29,11 +33,36 @@ public class TraversalImpl implements Traversal__ {
      *            the FST runner to use for the heap traversal
      * @param locPerms
      *            the location permission to update
+     * @param effectiveLocPerms
+     *            the effective installed location permission is used as the
+     *            maximal location permission for traversed locations
      */
     public TraversalImpl(NFARunner runner,
             Map<Object, Map<String, Permission>> locPerms) {
+        this(runner, locPerms, null, null, null);
+    }
+
+    /**
+     * Constructor.
+     * 
+     * @param runner
+     *            the FST runner to use for the heap traversal
+     * @param locPerms
+     *            the location permission to update
+     * @param effectiveLocPerms
+     *            the maximal location permission for traversed locations (can
+     *            be null in which case the effective installed location
+     *            permission is used)
+     */
+    public TraversalImpl(NFARunner runner,
+            Map<Object, Map<String, Permission>> locPerms,
+            Map<Object, Map<String, Permission>> effectiveLocPerms,
+            @Deprecated Set<Object> effectiveNewObjects,
+            Long effectiveNewObjectGen) {
         this.runner = runner; // initialize automaton state
         this.locPerms = locPerms;
+        this.effectiveNewObjects = effectiveNewObjects;
+        this.effectiveNewObjectGen = effectiveNewObjectGen;
     }
 
     public Map<Object, Map<String, Permission>> getLocationPermissions() {
@@ -44,7 +73,8 @@ public class TraversalImpl implements Traversal__ {
      * {@inheritDoc}
      */
     @Override
-    public void visitField__(Object obj, String fieldName, Object fieldValue) {
+    public void visitField__(Object obj, String fieldName, Object fieldValue,
+            boolean isFlatVisit) {
         try {
             // remember automaton state
             NFARunner currentRunner = this.runner.clone();
@@ -67,17 +97,18 @@ public class TraversalImpl implements Traversal__ {
      */
     @Override
     public void visitPotentialRefArrayField__(Object obj, String fieldName,
-            Object fieldValue) {
+            Object fieldValue, boolean isFlatVisit) {
         try {
-            visitArrayField__(obj, fieldName, (Object[]) fieldValue);
+            visitArrayField__(obj, fieldName, (Object[]) fieldValue,
+                    isFlatVisit);
         } catch (ClassCastException e) {
-            visitField__(obj, fieldName, fieldValue);
+            visitField__(obj, fieldName, fieldValue, isFlatVisit);
         }
     }
 
     @Override
     public void visitArrayField__(Object obj, String fieldName,
-            Object[] fieldValue) {
+            Object[] fieldValue, boolean isFlatVisit) {
         try {
             // remember automaton state
             NFARunner currentRunner = this.runner.clone();
@@ -106,7 +137,7 @@ public class TraversalImpl implements Traversal__ {
      */
     @Override
     public void visitArrayField__(Object obj, String fieldName,
-            Object[][] fieldValue) {
+            Object[][] fieldValue, boolean isFlatVisit) {
         try {
             // remember automaton state
             NFARunner currentRunner = this.runner.clone();
@@ -125,14 +156,14 @@ public class TraversalImpl implements Traversal__ {
 
     @Override
     public void visitArrayField__(Object obj, String fieldName,
-            Object[][][] fieldValue) {
-        visitArrayField__(obj, fieldName, (Object[][]) fieldValue);
+            Object[][][] fieldValue, boolean isFlatVisit) {
+        visitArrayField__(obj, fieldName, (Object[][]) fieldValue, isFlatVisit);
     }
 
     @Override
     public void visitArrayField__(Object obj, String fieldName,
-            Object fieldValue) {
-        visitArrayField__(obj, fieldName, (Object[]) fieldValue);
+            Object fieldValue, boolean isFlatVisit) {
+        visitArrayField__(obj, fieldName, (Object[]) fieldValue, isFlatVisit);
     }
 
     /**
@@ -209,7 +240,6 @@ public class TraversalImpl implements Traversal__ {
     }
 
     // step automaton and save permission for object
-    // TODO: consider static fields
     private void stepAutomatonAndSavePermission(Object obj, String fieldName,
             NFARunner runnerToStep) {
         // get field permissions for object under consideration
@@ -238,7 +268,10 @@ public class TraversalImpl implements Traversal__ {
             resultPerm = Permission.NONE;
         } else {
             resultPerm = intersection(
-                    Global.effectivePermission(obj, fieldName), unionPerm);
+                    effectiveLocPerms == null ? Global.effectivePermission(obj,
+                            fieldName) : Global.effectivePermission(obj,
+                            fieldName, effectiveLocPerms, effectiveNewObjects,
+                            effectiveNewObjectGen), unionPerm);
         }
 
         // save resulting permission

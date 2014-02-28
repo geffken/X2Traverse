@@ -18,14 +18,14 @@
 	
     <target name="lexer" depends="init,build-JLex,parser">
         <java classname="JLex.Main" classpath="bin">
-                 <arg value="src/de/unifr/acp/parser/MyScanner.lex"/>
+                 <arg value="src/de/unifr/acp/runtime/parser/MyScanner.lex"/>
         </java>
-        <move file="src/de/unifr/acp/parser/MyScanner.lex.java" tofile="src/de/unifr/acp/parser/MyScanner.java"/>
+        <move file="src/de/unifr/acp/runtime/parser/MyScanner.lex.java" tofile="src/de/unifr/acp/runtime/parser/MyScanner.java"/>
     </target>
 
     <target name="parser" depends="init">
-        <java fork="true" jar="lib/jay.jar" input="src/de/unifr/acp/parser/skeleton.java" output="src/de/unifr/acp/parser/MyParser.java">
-                 <arg value="src/de/unifr/acp/parser/MyParser.jay"/>
+        <java fork="true" jar="lib/jay.jar" input="src/de/unifr/acp/runtime/parser/skeleton.java" output="src/de/unifr/acp/runtime/parser/MyParser.java">
+                 <arg value="src/de/unifr/acp/runtime/parser/MyParser.jay"/>
         </java>
     </target>
 
@@ -36,8 +36,8 @@
     </target>
 
     <target name="clean" description="Clean-up">
-        <delete quiet="true" file="src/de/unifr/acp/parser/MyParser.java"/>
-    	<delete quiet="true" file="src/de/unifr/acp/parser/MyScanner.java"/>
+        <delete quiet="true" file="src/de/unifr/acp/runtime/parser/MyParser.java"/>
+    	<delete quiet="true" file="src/de/unifr/acp/runtime/parser/MyScanner.java"/>
     	<delete dir="bin"/>
         <delete file="${jarfile}"/>
     </target>
@@ -54,7 +54,7 @@
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}" encoding="utf-8" >
             <src path="src"/>
             <src path="test"/>
-            <exclude name="de/unifr/acp/parser/skeleton.java"/>
+            <exclude name="de/unifr/acp/runtime/parser/skeleton.java"/>
             <classpath refid="X2Traverse.classpath"/>
         </javac>
     </target>

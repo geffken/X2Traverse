@@ -13,7 +13,7 @@ public class ObjectPermissionDequeImpl extends
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (Map<Object, Map<String, Permission>> locPerms : Global.objPermStack) {
+        for (Map<Object, Map<String, Permission>> locPerms : Global.locPermStack) {
             sb.append("----------------------\n");
             for (Map.Entry<Object, Map<String, Permission>> entry : locPerms
                     .entrySet()) {

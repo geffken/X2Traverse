@@ -531,13 +531,11 @@ public class TransClass {
                 CtClass superclass = stack.pop();
 
                 // if this does not hold we might miss some superclass fields
-                assert (transformedClasses.contains(superclass
-                        .getSuperclass()) == toTransform.contains(superclass
-                        .getSuperclass())) : toTransform.contains(superclass
-                        .getSuperclass());
+                assert (transformedClasses.contains(superclass.getSuperclass()) == toTransform
+                        .contains(superclass.getSuperclass())) : toTransform
+                        .contains(superclass.getSuperclass());
                 transformClass(superclass,
-                        transformedClasses.contains(superclass
-                                .getSuperclass()));
+                        transformedClasses.contains(superclass.getSuperclass()));
                 transformedClasses.add(superclass);
             }
         }
@@ -705,8 +703,7 @@ public class TransClass {
      * @throws CannotCompileException
      * @throws ClassNotFoundException
      */
-    public void transformClass(CtClass target,
-            boolean hasTransformedSuperclass)
+    public void transformClass(CtClass target, boolean hasTransformedSuperclass)
             throws NotFoundException, CannotCompileException,
             ClassNotFoundException {
         Object[] params4Logging = new Object[2];
@@ -767,9 +764,20 @@ public class TransClass {
             String traverseStaticsBody = createTraverseStaticsBody(target);
             target.addMethod(CtNewMethod.make(traverseStaticsBody, target));
 
+            /*
+             * Add static initializer code that stores this class' static fields
+             * permissions.
+             */
+            String staticsOnClassLoadTraversal = createStaticsOnClassLoadTraversalBody(target);
+            CtConstructor staticInitializer = target.getClassInitializer();
+            if (staticInitializer == null) {
+                staticInitializer = target.makeClassInitializer();
+            }
+            staticInitializer.insertBefore(staticsOnClassLoadTraversal);
+
             // instrument methods
             for (CtBehavior methodOrCtor : target.getDeclaredBehaviors()) {
-                instrumentMethodOrCtor(methodOrCtor/*, initializedClasses*/);
+                instrumentMethodOrCtor(methodOrCtor/* , initializedClasses */);
             }
 
             // add traversal target interface
@@ -784,8 +792,9 @@ public class TransClass {
         logger.exiting("TransClass", "doTransform");
     }
 
-    private void instrumentMethodOrCtor(final CtBehavior methodOrCtor) throws ClassNotFoundException,
-            NotFoundException, CannotCompileException {
+    private void instrumentMethodOrCtor(final CtBehavior methodOrCtor)
+            throws ClassNotFoundException, NotFoundException,
+            CannotCompileException {
         logger.fine("Consider adding traversal to behavior: "
                 + methodOrCtor.getLongName());
         if ((methodOrCtor.getModifiers() & Modifier.ABSTRACT) != 0) {
@@ -897,7 +906,9 @@ public class TransClass {
 
                 // parameter types indexed by local variable index
                 CtClass[] paramTypes = methodOrCtor.getParameterTypes();
-                if (true/* i == 0 || !paramTypes[i - 1].isArray() */) {
+                
+                // TODO: enable array traversal from parameters
+                if ( i == 0 || !paramTypes[i - 1].isArray()) {
                     // sb.append("System.out.println(\"found traversal target ...\");");
                     sb.append("  " + VISITOR_CLASS_NAME + " visitor = new "
                             + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
@@ -908,13 +919,16 @@ public class TransClass {
                     sb.append("  } catch(java.lang.ClassCastException e) {}");
                     // sb.append("System.out.println(\"traversal ...\");");
                 }
-                
+
                 // handle static fields
                 if (i == 0) {
-                    sb.append(" ClassLoader loader = "+methodOrCtor.getDeclaringClass().getName()+".class.getClassLoader();");
-                    sb.append(GLOBAL_CLASS_NAME + ".traverseInitializedStatics(loader, runner, allLocPerms);");
+                    sb.append(" ClassLoader loader = "
+                            + methodOrCtor.getDeclaringClass().getName()
+                            + ".class.getClassLoader();");
+                    sb.append(GLOBAL_CLASS_NAME
+                            + ".traverseInitializedStatics(loader, runner, allLocPerms);");
                 }
-                
+
                 // TODO: explicit representation of locations and
                 // location permissions (supporting join)
                 // (currently it's all generic maps and implicit joins
@@ -928,7 +942,8 @@ public class TransClass {
             // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
             // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
             // sb.append("System.out.println(\"before push ...\");");
-            sb.append(GLOBAL_CLASS_NAME + ".installPermissions(allLocPerms);");
+            sb.append(GLOBAL_CLASS_NAME
+                    + ".installPermissions(allLocPerms, automata[" + 0 + "]);");
             // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
             // sb.append("System.out.println(\"Push in "
             // + methodOrCtor.getLongName() + "\");");
@@ -942,7 +957,10 @@ public class TransClass {
                 // insert contract installation instrumentation
                 // in constructor before existing new instrumentation
                 // thus accesses to constructor fields are allowed
-                ((CtConstructor) methodOrCtor).insertBeforeBody(header);
+                CtConstructor constructor = (CtConstructor)methodOrCtor;
+                if (!constructor.isClassInitializer()) {
+                    ((CtConstructor) methodOrCtor).insertBeforeBody(header);
+                }
             } else {
                 methodOrCtor.insertBefore(header);
             }
@@ -1096,11 +1114,12 @@ public class TransClass {
         return ((member.getModifiers() & Modifier.STATIC) != 0);
     }
 
-    private static boolean implementsInterface(CtClass clazz, CtClass interf) throws NotFoundException {
+    private static boolean implementsInterface(CtClass clazz, CtClass interf)
+            throws NotFoundException {
         List<CtClass> clazzIfs = Arrays.asList(clazz.getInterfaces());
         return clazzIfs.contains(interf);
     }
-    
+
     private static void addInterface(CtClass clazz, CtClass interf)
             throws NotFoundException {
         List<CtClass> clazzIfs = Arrays.asList(clazz.getInterfaces());
@@ -1216,12 +1235,12 @@ public class TransClass {
                                                     */) {
                 // sb.append("System.out.println(\"Before visitor calls for field "+fname
                 // +"\");");
-                appendVisitorCalls(sb, target, tf, fname, false);
+                appendVisitorCalls(sb, target, tf, fname, false, "false");
                 // sb.append("System.out.println(\"After visitor calls for field "+fname
                 // +"\");");
             }
         }
-        //if (hasTransformedSuperclass) {
+        // if (hasTransformedSuperclass) {
         CtClass superClass = target.getSuperclass();
         CtClass traversalTargetIf = this.cp.get(TRAVERSAL_TARGET_CLASS_NAME);
         if (implementsInterface(superClass, traversalTargetIf)) {
@@ -1231,9 +1250,10 @@ public class TransClass {
         return sb.toString();
     }
 
-    protected static String createTraverseStaticsBody(CtClass target) throws NotFoundException {
+    protected static String createTraverseStaticsBody(CtClass target)
+            throws NotFoundException {
         StringBuilder sb = new StringBuilder();
-        sb.append("public static void traverseStatics__(de.unifr.acp.runtime.Traversal__ t) {\n");
+        sb.append("public static void traverseStatics__(de.unifr.acp.runtime.Traversal__ t, boolean isFlatVisit) {\n");
         for (CtField f : membersMatchingAllModifers(
                 Arrays.asList(target.getDeclaredFields()),
                 javassist.Modifier.STATIC)) {
@@ -1242,7 +1262,7 @@ public class TransClass {
             if (!fname.equals(FST_CACHE_FIELD_NAME)/* && !f.getType().isArray() */) {
                 // sb.append("System.out.println(\"Before visitor calls for field "+fname
                 // +"\");");
-                appendVisitorCalls(sb, target, tf, fname, true);
+                appendVisitorCalls(sb, target, tf, fname, true, "isFlatVisit");
                 // sb.append("System.out.println(\"After visitor calls for field "+fname
                 // +"\");");
             }
@@ -1251,8 +1271,35 @@ public class TransClass {
         return sb.toString();
     }
 
+    protected static String createStaticsOnClassLoadTraversalBody(CtClass target) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("  " + GLOBAL_CLASS_NAME + ".traverseStaticsOnClassLoad(" + target.getName()
+                + ".class);");
+        sb.append('}');
+        return sb.toString();
+    }
+
+    /**
+     * Appends the visitor calls to the specified string builder.
+     * 
+     * @param sb
+     *            the string builder to fill
+     * @param target
+     *            the containing class' type representation
+     * @param tf
+     *            the field type's representation
+     * @param fname
+     *            the field name
+     * @param isStatic
+     *            the field is static
+     * @param isFlatVisitExpr
+     *            generate visitor calls that only consider the respective field
+     *            itself but do not traverse the referenced heap
+     * @throws NotFoundException
+     */
     protected static void appendVisitorCalls(StringBuilder sb, CtClass target,
-            CtClass tf, String fname, boolean isStatic)
+            CtClass tf, String fname, boolean isStatic, String isFlatVisitExpr)
             throws NotFoundException {
         // int nesting = 0;
         // String index = "";
@@ -1320,6 +1367,7 @@ public class TransClass {
             // cast needed
             sb.append(", "/* + (isStatic ? "" : "this.") */);
             sb.append(fname/* + index */);
+            sb.append(", " + isFlatVisitExpr);
         }
         sb.append(");\n");
         sb.append("}\n");
