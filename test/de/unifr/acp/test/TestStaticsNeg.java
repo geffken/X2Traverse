@@ -1,18 +1,20 @@
 package de.unifr.acp.test;
 
+import de.unifr.acp.test.TestStaticsNeg.InnerStatics;
+
 @SuppressWarnings("unused")
-public class TestStatics {
+public class TestStaticsNeg {
     static {
-        System.out.println(TestStatics.class.getCanonicalName()+" initialized.");
+        System.out.println(TestStaticsNeg.class.getCanonicalName()+" initialized.");
     }
     
     Object a = null;
     static Object o = null;
     static Object p = null;
 
-    @de.unifr.acp.runtime.annot.Grant("TestStatics.o.*,InnerStatics.o")
+    @de.unifr.acp.runtime.annot.Grant("TestStatics.o.*")
     public void m() {
-        Object o = TestStatics.o;
+        Object o = TestStaticsNeg.o;
         
         // access field that was not loaded at contract installation time
         o = InnerStatics.o;
@@ -28,8 +30,8 @@ public class TestStatics {
     }
 
     public static void main(String[] args) {
-        new TestStatics().m();
-        TestStatics.ms(new Object());
+        new TestStaticsNeg().m();
+        TestStaticsNeg.ms(new Object());
     }
     
     public static class InnerStatics {
