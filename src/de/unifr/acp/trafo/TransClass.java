@@ -906,18 +906,37 @@ public class TransClass {
 
                 // parameter types indexed by local variable index
                 CtClass[] paramTypes = methodOrCtor.getParameterTypes();
-                
+
                 // TODO: enable array traversal from parameters
-                if ( i == 0 || !paramTypes[i - 1].isArray()) {
+                if (i == 0 || !paramTypes[i - 1].isArray()) {
                     // sb.append("System.out.println(\"found traversal target ...\");");
                     sb.append("  " + VISITOR_CLASS_NAME + " visitor = new "
                             + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
-                    // sb.append("System.out.println(\"got visitor ...\");");
-                    sb.append("  try {");
-                    sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$" + i
-                            + ").traverse__(visitor);");
-                    sb.append("  } catch(java.lang.ClassCastException e) {}");
-                    // sb.append("System.out.println(\"traversal ...\");");
+
+                    // TODO: finish implementation of array parameter traversal
+                    // // extract relevant statically available parameter type
+                    // info
+                    // CtClass tf = (i != 0) ? paramTypes[i - 1] : methodOrCtor
+                    // .getDeclaringClass();
+                    // final CtClass innerComponentType =
+                    // innerComponentTypeOf(tf);
+                    // final boolean isNonPrimitiveArray = tf.isArray()
+                    // && !tf.getComponentType().isPrimitive();
+                    //
+                    // if (isNonPrimitiveArray) {
+                    // sb.append("  " + "visitor.visitArray__($" + i + ")");
+                    // } else if (tf.equals(ClassPool.getDefault().get(
+                    // Object.class.getName()))) {
+                    // sb.append("  " + "visitor.visitPotentialArray__($" + i
+                    // + ")");
+                    // } else
+                    {
+                        sb.append("  try {");
+                        sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$"
+                                + i + ").traverse__(visitor);");
+                        sb.append("  } catch(java.lang.ClassCastException e) {}");
+                        // sb.append("System.out.println(\"traversal ...\");");
+                    }
                 }
 
                 // handle static fields
@@ -957,7 +976,7 @@ public class TransClass {
                 // insert contract installation instrumentation
                 // in constructor before existing new instrumentation
                 // thus accesses to constructor fields are allowed
-                CtConstructor constructor = (CtConstructor)methodOrCtor;
+                CtConstructor constructor = (CtConstructor) methodOrCtor;
                 if (!constructor.isClassInitializer()) {
                     ((CtConstructor) methodOrCtor).insertBeforeBody(header);
                 }
@@ -1274,8 +1293,8 @@ public class TransClass {
     protected static String createStaticsOnClassLoadTraversalBody(CtClass target) {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        sb.append("  " + GLOBAL_CLASS_NAME + ".traverseStaticsOnClassLoad(" + target.getName()
-                + ".class);");
+        sb.append("  " + GLOBAL_CLASS_NAME + ".traverseStaticsOnClassLoad("
+                + target.getName() + ".class);");
         sb.append('}');
         return sb.toString();
     }
@@ -1308,6 +1327,8 @@ public class TransClass {
         final CtClass innerComponentType = innerComponentTypeOf(tf);
         final boolean isNonPrimitiveArray = tf.isArray()
                 && !tf.getComponentType().isPrimitive();
+        final boolean isPrimitiveArray = tf.isArray()
+                && tf.getComponentType().isPrimitive();
 
         // // we might care about the reference values during traversal
         // if (!innerComponentType.isPrimitive()) {
@@ -1352,7 +1373,7 @@ public class TransClass {
             sb.append("t.visitArrayField__(");
         } else if (tf
                 .equals(ClassPool.getDefault().get(Object.class.getName()))) {
-            sb.append("t.visitPotentialRefArrayField__(");
+            sb.append("t.visitPotentialArrayField__(");
         } else {
             sb.append("t.visitField__(");
         }

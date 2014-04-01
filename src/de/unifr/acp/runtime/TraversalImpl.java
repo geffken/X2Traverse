@@ -96,7 +96,7 @@ public class TraversalImpl implements Traversal__ {
      * {@inheritDoc}
      */
     @Override
-    public void visitPotentialRefArrayField__(Object obj, String fieldName,
+    public void visitPotentialArrayField__(Object obj, String fieldName,
             Object fieldValue, boolean isFlatVisit) {
         try {
             visitArrayField__(obj, fieldName, (Object[]) fieldValue,
@@ -166,13 +166,8 @@ public class TraversalImpl implements Traversal__ {
         visitArrayField__(obj, fieldName, (Object[]) fieldValue, isFlatVisit);
     }
 
-    /**
-     * Visits an non-primitive array.
-     * 
-     * @param array
-     *            the array
-     */
-    private void visitArray__(Object[] array/* , boolean isComponentTypeObject */) {
+    @Override
+    public void visitArray__(Object[] array/* , boolean isComponentTypeObject */) {
         try {
             // remember automaton state (probably not needed?)
             NFARunner currentRunner = this.runner.clone();
@@ -211,6 +206,20 @@ public class TraversalImpl implements Traversal__ {
         } catch (CloneNotSupportedException e) {
             // print unexpected exception
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void visitPotentialArray__(Object obj) {
+        try {
+            visitArray__((Object[]) obj);
+        } catch (ClassCastException e) {
+            try {
+                ((TraversalTarget__) obj).traverse__(this);
+            } catch (java.lang.ClassCastException e2) {
+                // we might end up here in case of a primitive array
+                // or non-instrumented type
+            }
         }
     }
 
@@ -279,14 +288,13 @@ public class TraversalImpl implements Traversal__ {
     }
 
     /**
-     * Traverses the specified object. The object's static type is a subtype of
-     * Object. However, the objects's dynamic type is known not to be a
-     * reference array. It might be a one or multidimensional primitive array
-     * but not a primitive.
+     * Traverses the specified object. The object's static type is a proper
+     * subtype of Object. However, the objects's dynamic type is known not to be
+     * a reference array. It might be a one dimensional primitive array but not
+     * a primitive.
      * 
      * @param value
-     *            the object containing the specified field (null in case of a
-     *            static field)
+     *            the object to be traversed
      */
     private void traverseNonRefArrayValue__(Object value) {
         if (value == null) {

@@ -6,7 +6,7 @@ public interface Traversal__ {
      * Visits the specified reference field of the specified object. The field's
      * static type is a proper subtype of Object. However, the field's dynamic
      * value is a known not to be a reference array.
-     * It might be a one or multidimensional primitive array but not a primitive.
+     * It might be a one dimensional primitive array but not a primitive.
      * 
      * @param obj
      *            the object containing the specified field (null in case of a
@@ -21,7 +21,7 @@ public interface Traversal__ {
     /**
      * Visits the specified reference field of the specified object. Only call
      * this method if the dynamic type of the field value can but is not known to
-     * be a reference array (static type is Object). Call
+     * be an array (static type is Object). Call
      * {@link #visitField__(Object, String, Object)},
      * {@link #visitPrimitiveField__(Object, String)}, or
      * {@link #visitArrayField__(Object, String, Object[])} otherwise.
@@ -34,7 +34,7 @@ public interface Traversal__ {
      * @param fieldvalue
      *            the non-primitive value of the field
      */
-    public void visitPotentialRefArrayField__(Object obj, String fieldName,
+    public void visitPotentialArrayField__(Object obj, String fieldName,
             Object fieldValue, boolean isFlatVisit);
 
     /**
@@ -97,4 +97,33 @@ public interface Traversal__ {
      *            the fully qualified field name
      */
     public void visitPrimitiveField__(Object obj, String fieldName);
+    
+    /**
+     * Visits the specified non-primitive array.
+     * 
+     * @param array
+     *            the array
+     */
+    public void visitArray__(Object[] array);
+    
+    /**
+     * Visits the specified object. Only call
+     * this method if the dynamic type of the reference value can but is not known to
+     * be an array (static type is Object). Call
+     * {@link TraversalTarget__#traverse__(Traversal__)},
+     * {@link #visitPrimitiveArray__(Object)} otherwise.
+     * {@link #visitArray__(Object[])} otherwise.
+     */
+    public void visitPotentialArray__(Object obj);
+
+    /**
+     * Visits the specified primitive array. Only call
+     * this method if the static type of the reference value is
+     * a primitive array (static type is int[], float[], ...).
+     * Call 
+     * {@link TraversalTarget__#traverse__(Traversal__)},
+     * {@link #visitPotentialArray__(Object)} otherwise.
+     * {@link #visitArray__(Object[])} otherwise.
+     */
+//    public void visitPrimitiveArray__(Object obj);
 }

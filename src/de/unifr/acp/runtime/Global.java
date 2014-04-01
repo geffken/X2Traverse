@@ -393,6 +393,8 @@ public class Global {
             Vector<?> classes = (Vector<?>) f.get(loader);
             for (int j = 0; j < classes.size(); j++) {
                 Class<?> clazz = (Class<?>) classes.get(j);
+                if (clazz.isInterface())
+                    continue; // TODO: enable traversal of interface fields
                 if (clazz.getName().matches(filterVisitRegex))
                     continue;
                 runner.resetAndStep(clazz.getSimpleName());
