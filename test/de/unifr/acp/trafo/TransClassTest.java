@@ -23,50 +23,50 @@ import org.junit.Test;
 
 import de.unifr.acp.runtime.ACPException;
 import de.unifr.acp.runtime.TraversalTarget__;
-import de.unifr.acp.test.TestAbstractBase;
-import de.unifr.acp.test.TestArrayClass;
-import de.unifr.acp.test.TestBasics;
-import de.unifr.acp.test.TestCompoundClass;
-import de.unifr.acp.test.TestCompoundSubclass;
-import de.unifr.acp.test.TestConcreteSub;
-import de.unifr.acp.test.TestConstructor;
-import de.unifr.acp.test.TestEmptyClass;
+import de.unifr.acp.test.AbstractBase;
+import de.unifr.acp.test.ArrayFields;
+import de.unifr.acp.test.Basics;
+import de.unifr.acp.test.CompoundClass;
+import de.unifr.acp.test.CompoundSubclass;
+import de.unifr.acp.test.ConcreteSub;
+import de.unifr.acp.test.Constructor;
+import de.unifr.acp.test.EmptyClass;
 import de.unifr.acp.test.TestEmptySubclass;
-import de.unifr.acp.test.TestInnerClass;
-import de.unifr.acp.test.TestIntClass;
-import de.unifr.acp.test.TestStatics;
-import de.unifr.acp.test.TestStaticsNeg;
+import de.unifr.acp.test.InnerClass;
+import de.unifr.acp.test.IntClass;
+import de.unifr.acp.test.Statics;
+import de.unifr.acp.test.StaticsNeg;
 
 public class TransClassTest {
 
     private static ClassPool defaultPool = ClassPool.getDefault();
     private static CtClass objectClass;
     private static final boolean verbose = false;
-    private static final String TEST_BASICS_NAME = TestBasics.class
+    private static final String TEST_BASICS_NAME = Basics.class
             .getCanonicalName();
-    private static final String TEST_ARRAY_CLASS_NAME = TestArrayClass.class
+    private static final String TEST_ARRAY_CLASS_NAME = ArrayFields.class
             .getCanonicalName();
-    private static final String TEST_EMPTY_CLASS_NAME = TestEmptyClass.class
+    private static final String TEST_EMPTY_CLASS_NAME = EmptyClass.class
             .getCanonicalName();
     private static final String TEST_EMPTY_SUBCLASS_NAME = TestEmptySubclass.class
             .getCanonicalName();
-    private static final String TEST_INT_CLASS_NAME = TestIntClass.class
+    private static final String TEST_INT_CLASS_NAME = IntClass.class
             .getCanonicalName();
-    private static final String TEST_COMPOUND_CLASS_NAME = TestCompoundClass.class
+    private static final String TEST_COMPOUND_CLASS_NAME = CompoundClass.class
             .getCanonicalName();
-    private static final String TEST_COMPOUND_SUBCLASS_NAME = TestCompoundSubclass.class
+    private static final String TEST_COMPOUND_SUBCLASS_NAME = CompoundSubclass.class
             .getCanonicalName();
-    private static final String TEST_CONCONSTRUCTOR_NAME = TestConstructor.class
+    private static final String TEST_CONCONSTRUCTOR_NAME = Constructor.class
             .getCanonicalName();
-    private static final String TEST_ABSTRACT_BASE_CLASS_NAME = TestAbstractBase.class
+    private static final String TEST_ABSTRACT_BASE_CLASS_NAME = AbstractBase.class
             .getCanonicalName();
-    private static final String TEST_CONCRETE_SUB_CLASS_NAME = TestConcreteSub.class
+    private static final String TEST_CONCRETE_SUB_CLASS_NAME = ConcreteSub.class
             .getCanonicalName();
-    private static final String TEST_INNER_CLASS_NAME = TestInnerClass.class
+    private static final String TEST_INNER_CLASS_NAME = InnerClass.class
             .getCanonicalName();
-    private static final String TEST_STATICS_NAME = TestStatics.class
+    private static final String TEST_STATICS_NAME = Statics.class
             .getCanonicalName();
-    private static final String TEST_STATICS_NEG_NAME = TestStaticsNeg.class
+    private static final String TEST_STATICS_NEG_NAME = StaticsNeg.class
             .getCanonicalName();
 
     // test data
