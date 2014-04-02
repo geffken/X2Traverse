@@ -43,9 +43,9 @@ public class ArrayParams {
         
         ArrayParams arrayParams = new ArrayParams();
         arrayParams.m(ia);
-        //arrayParams.m1(ia2);
-        //arrayParams.m2(oa2);
-        //arrayParams.m3(oa3);
+        arrayParams.m1(ia2);
+        arrayParams.m2(oa2);
+        arrayParams.m3(oa3);
         arrayParams.m4(oa2);
     }
 }
