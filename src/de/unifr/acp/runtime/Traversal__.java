@@ -49,7 +49,7 @@ public interface Traversal__ {
      * @param fieldvalue
      *            the value of the field
      */
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object[] fieldValue, boolean isFlatVisit);
 
     /**
@@ -63,7 +63,7 @@ public interface Traversal__ {
      *            argument's dynamic type is an Object[]
      * @see Traversal__#visitArrayField__(Object, String, Object[])
      */
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object fieldValue, boolean isFlatVisit);
 
     /**
@@ -73,7 +73,7 @@ public interface Traversal__ {
      *            value of the field
      * @see Traversal__#visitArrayField__(Object, String, Object[])
      */
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object[][] fieldValue, boolean isFlatVisit);
 
     /**
@@ -83,7 +83,7 @@ public interface Traversal__ {
      *            value of the field
      * @see Traversal__#visitArrayField__(Object, String, Object[])
      */
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object[][][] fieldValue, boolean isFlatVisit);
 
     /**
@@ -104,7 +104,7 @@ public interface Traversal__ {
      * @param array
      *            the array
      */
-    public void visitArray__(Object[] array);
+    public void visitRefArray__(Object array);
     
     /**
      * Visits the specified object. Only call

@@ -99,7 +99,7 @@ public class TraversalImpl implements Traversal__ {
     public void visitPotentialArrayField__(Object obj, String fieldName,
             Object fieldValue, boolean isFlatVisit) {
         try {
-            visitArrayField__(obj, fieldName, (Object[]) fieldValue,
+            visitRefArrayField__(obj, fieldName, (Object[]) fieldValue,
                     isFlatVisit);
         } catch (ClassCastException e) {
             visitField__(obj, fieldName, fieldValue, isFlatVisit);
@@ -107,7 +107,7 @@ public class TraversalImpl implements Traversal__ {
     }
 
     @Override
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object[] fieldValue, boolean isFlatVisit) {
         try {
             // remember automaton state
@@ -115,7 +115,7 @@ public class TraversalImpl implements Traversal__ {
 
             stepAutomatonAndSavePermission(obj, fieldName, this.runner);
 
-            visitArray__(fieldValue);
+            visitRefArray__(fieldValue);
 
             // backtrack to previous automaton state
             this.runner = currentRunner;
@@ -136,7 +136,7 @@ public class TraversalImpl implements Traversal__ {
      * java.lang.String, java.lang.Object[][])
      */
     @Override
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object[][] fieldValue, boolean isFlatVisit) {
         try {
             // remember automaton state
@@ -155,19 +155,20 @@ public class TraversalImpl implements Traversal__ {
     }
 
     @Override
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object[][][] fieldValue, boolean isFlatVisit) {
-        visitArrayField__(obj, fieldName, (Object[][]) fieldValue, isFlatVisit);
+        visitRefArrayField__(obj, fieldName, (Object[][]) fieldValue, isFlatVisit);
     }
 
     @Override
-    public void visitArrayField__(Object obj, String fieldName,
+    public void visitRefArrayField__(Object obj, String fieldName,
             Object fieldValue, boolean isFlatVisit) {
-        visitArrayField__(obj, fieldName, (Object[]) fieldValue, isFlatVisit);
+        visitRefArrayField__(obj, fieldName, (Object[]) fieldValue, isFlatVisit);
     }
 
     @Override
-    public void visitArray__(Object[] array/* , boolean isComponentTypeObject */) {
+    public void visitRefArray__(Object array/* , boolean isComponentTypeObject */) {
+        Object[] arrayAsArray = (Object[]) array;
         try {
             // remember automaton state (probably not needed?)
             NFARunner currentRunner = this.runner.clone();
@@ -175,14 +176,14 @@ public class TraversalImpl implements Traversal__ {
             // CANDO: step here to distinguish array levels in access control
 
             if (array != null) {
-                for (int i = 0; i < array.length; i++) {
+                for (int i = 0; i < arrayAsArray.length; i++) {
                     // CANDO: step here to distinguish array elements in access
                     // control
 
-                    Object arrayElement = array[i];
+                    Object arrayElement = arrayAsArray[i];
                     // if (isComponentTypeObject) {
                     try {
-                        this.visitArray__((Object[]) arrayElement
+                        this.visitRefArray__((Object[]) arrayElement
                         /* , isComponentTypeObject */);
                     } catch (ClassCastException e) {
                         // if (arrayElement != null) {
@@ -212,7 +213,7 @@ public class TraversalImpl implements Traversal__ {
     @Override
     public void visitPotentialArray__(Object obj) {
         try {
-            visitArray__((Object[]) obj);
+            visitRefArray__((Object[]) obj);
         } catch (ClassCastException e) {
             try {
                 ((TraversalTarget__) obj).traverse__(this);
@@ -236,7 +237,7 @@ public class TraversalImpl implements Traversal__ {
                     // control
 
                     Object[] arrayElement = array[i];
-                    this.visitArray__(arrayElement/* , isComponentTypeObject */);
+                    this.visitRefArray__(arrayElement/* , isComponentTypeObject */);
                 }
             }
 

@@ -908,7 +908,8 @@ public class TransClass {
                 CtClass[] paramTypes = methodOrCtor.getParameterTypes();
 
                 // TODO: enable array traversal from parameters
-                if (i == 0 || !paramTypes[i - 1].isArray()) {
+                //if (i == 0 || !paramTypes[i - 1].isArray()) {
+                if (true) {
                     // sb.append("System.out.println(\"found traversal target ...\");");
                     sb.append("  " + VISITOR_CLASS_NAME + " visitor = new "
                             + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
@@ -916,20 +917,21 @@ public class TransClass {
                     // TODO: finish implementation of array parameter traversal
                     // // extract relevant statically available parameter type
                     // info
-                    // CtClass tf = (i != 0) ? paramTypes[i - 1] : methodOrCtor
-                    // .getDeclaringClass();
-                    // final CtClass innerComponentType =
-                    // innerComponentTypeOf(tf);
-                    // final boolean isNonPrimitiveArray = tf.isArray()
-                    // && !tf.getComponentType().isPrimitive();
-                    //
-                    // if (isNonPrimitiveArray) {
-                    // sb.append("  " + "visitor.visitArray__($" + i + ")");
-                    // } else if (tf.equals(ClassPool.getDefault().get(
-                    // Object.class.getName()))) {
-                    // sb.append("  " + "visitor.visitPotentialArray__($" + i
-                    // + ")");
-                    // } else
+                    CtClass tf = (i != 0) ? paramTypes[i - 1] : methodOrCtor
+                            .getDeclaringClass();
+                    final CtClass innerComponentType = innerComponentTypeOf(tf);
+                    final boolean isNonPrimitiveArray = tf.isArray()
+                            && !tf.getComponentType().isPrimitive();
+                    final boolean isPrimitiveArray = tf.isArray()
+                            && tf.getComponentType().isPrimitive();
+
+                    if (isNonPrimitiveArray) {
+                        sb.append("  " + "visitor.visitRefArray__($" + i + ");");
+                    } else if (tf.equals(ClassPool.getDefault().get(
+                            Object.class.getName()))) {
+                        sb.append("  " + "visitor.visitPotentialArray__($" + i
+                                + ");");
+                    } else if (!isPrimitiveArray)
                     {
                         sb.append("  try {");
                         sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$"
@@ -1370,7 +1372,7 @@ public class TransClass {
         if (tf.isPrimitive()) {
             sb.append("t.visitPrimitiveField__(");
         } else if (isNonPrimitiveArray) {
-            sb.append("t.visitArrayField__(");
+            sb.append("t.visitRefArrayField__(");
         } else if (tf
                 .equals(ClassPool.getDefault().get(Object.class.getName()))) {
             sb.append("t.visitPotentialArrayField__(");
