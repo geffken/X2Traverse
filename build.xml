@@ -70,6 +70,7 @@
 				<exclude name="JLex/*.class"/>
 			</fileset>
 	        <zipfileset src="lib/javassist.jar"/>
+			<zipfileset src="lib/commons-cli-1.2.jar"/>
 			<fileset file="build.xml" />
 		</jar>
 	</target>
