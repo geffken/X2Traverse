@@ -332,6 +332,7 @@ public class NFA {
             if (!states.addAll(brandNewStates)) {
                 break;
             }
+            
             newStates = brandNewStates;
         }
     }

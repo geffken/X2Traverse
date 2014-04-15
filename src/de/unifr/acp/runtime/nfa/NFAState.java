@@ -1,5 +1,6 @@
 package de.unifr.acp.runtime.nfa;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -98,28 +99,36 @@ public class NFAState {
      * 
      * @param inputChar
      *            the input character
-     * @return the resulting non-null state and weight set
+     * @return the resulting non-null state and weight set (unmodifiable)
      */
     public final Set<NFAState> applyTransitionRelation(final String inputChar) {
         Set<NFAState> ret;
-
-        Set<NFAState> states = getTransitionRelation().get(inputChar);
+        Map<String, Set<NFAState>> transRelation = getTransitionRelation();
+        Set<NFAState> states = transRelation.get(inputChar);
 
         if (states != null) {
             ret = new HashSet<>(states);
+            
+            // ? matches every input symbol but epsilon (duplicated for performance)
+            if (!inputChar.equals(MetaCharacters.EPSILON)) {
+                states = transRelation.get(MetaCharacters.QUESTION_MARK);
+                if (states != null) {
+                    ret.addAll(states);
+                }
+            }
         } else {
-            ret = new HashSet<>();
-        }
-
-        // ? matches every input symbol but epsilon
-        if (!inputChar.equals(MetaCharacters.EPSILON)) {
-            states = getTransitionRelation().get(MetaCharacters.QUESTION_MARK);
-            if (states != null) {
-                ret.addAll(states);
+            ret = Collections.EMPTY_SET;
+            
+            // ? matches every input symbol but epsilon  (duplicated for performance)
+            if (!inputChar.equals(MetaCharacters.EPSILON)) {
+                states = transRelation.get(MetaCharacters.QUESTION_MARK);
+                if (states != null) {
+                    ret = states;
+                }
             }
         }
 
-        return ret;
+        return Collections.unmodifiableSet(ret);
     }
 
 }

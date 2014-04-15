@@ -11,7 +11,7 @@ import javassist.NotFoundException;
 public class Main {
 
     /**
-     * Perform an offline transformation of the specified program.
+     * Performs an offline transformation of the specified program.
      * @param args
      * @throws NotFoundException 
      * @throws CannotCompileException 

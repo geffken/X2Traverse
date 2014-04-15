@@ -19,9 +19,11 @@ public class APCTranslator implements Translator {
     private static String filterVisitRegex = Global.FILTER_VISIT_REGEX_DEFAULT;
     TransClass tc = null;
     javassist.Loader loader;
+    final boolean convertExceptions2Warnings;
 
-    public APCTranslator(javassist.Loader loader) {
+    public APCTranslator(javassist.Loader loader, boolean convertExceptions2Warnings) {
         this.loader = loader;
+        this.convertExceptions2Warnings = convertExceptions2Warnings;
     }
 
     /**
@@ -49,7 +51,7 @@ public class APCTranslator implements Translator {
     @Override
     public void start(ClassPool cp) throws NotFoundException,
             CannotCompileException {
-        tc = new TransClass(cp, false);
+        tc = new TransClass(cp, convertExceptions2Warnings);
     }
 
 }

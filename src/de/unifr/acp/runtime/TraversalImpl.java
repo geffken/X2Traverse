@@ -33,9 +33,6 @@ public class TraversalImpl implements Traversal__ {
      *            the FST runner to use for the heap traversal
      * @param locPerms
      *            the location permission to update
-     * @param effectiveLocPerms
-     *            the effective installed location permission is used as the
-     *            maximal location permission for traversed locations
      */
     public TraversalImpl(NFARunner runner,
             Map<Object, Map<String, Permission>> locPerms) {
@@ -53,6 +50,11 @@ public class TraversalImpl implements Traversal__ {
      *            the maximal location permission for traversed locations (can
      *            be null in which case the effective installed location
      *            permission is used)
+     * @param effectiveNewObjects
+     *            the effective the new object set
+     * @param effectiveNewObjectGen
+     *            the effective object generation (determining which objects are
+     *            new)
      */
     public TraversalImpl(NFARunner runner,
             Map<Object, Map<String, Permission>> locPerms,
@@ -61,6 +63,7 @@ public class TraversalImpl implements Traversal__ {
             Long effectiveNewObjectGen) {
         this.runner = runner; // initialize automaton state
         this.locPerms = locPerms;
+        this.effectiveLocPerms = effectiveLocPerms;
         this.effectiveNewObjects = effectiveNewObjects;
         this.effectiveNewObjectGen = effectiveNewObjectGen;
     }
@@ -157,7 +160,8 @@ public class TraversalImpl implements Traversal__ {
     @Override
     public void visitRefArrayField__(Object obj, String fieldName,
             Object[][][] fieldValue, boolean isFlatVisit) {
-        visitRefArrayField__(obj, fieldName, (Object[][]) fieldValue, isFlatVisit);
+        visitRefArrayField__(obj, fieldName, (Object[][]) fieldValue,
+                isFlatVisit);
     }
 
     @Override

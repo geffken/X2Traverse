@@ -44,8 +44,8 @@ public class TraversalExample extends TraversalExampleSuper
         super.traverse__(t);
     }
 
-    public static void traverseStatic__(Traversal__ t) {
-        t.visitField__(null, "publ_s_object", publ_s_object, false);
+    public static void traverseStatics__(Traversal__ t, boolean isFlatVisit) {
+        t.visitField__(null, "publ_s_object", publ_s_object, isFlatVisit);
         t.visitPrimitiveField__(null, "prot_s_int");
     }
 }

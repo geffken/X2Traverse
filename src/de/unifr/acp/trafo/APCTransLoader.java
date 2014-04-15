@@ -31,7 +31,7 @@ public class APCTransLoader extends Loader {
      *            the main class name and arguments
      */
     public static void main(String[] args) throws Throwable {
-        APCTransLoader s = new APCTransLoader(ClassPool.getDefault());
+        APCTransLoader s = new APCTransLoader(ClassPool.getDefault(), false);
         Class<?> c = s.loadClass(args[0]);
 
         String[] appArgs = new String[args.length > 0 ? args.length - 1 : 0];
@@ -47,10 +47,16 @@ public class APCTransLoader extends Loader {
     // //pool.insertClassPath("./class"); // MyApp.class must be there.
     // }
 
+    public APCTransLoader(ClassPool cp, boolean convertExceptions2Warnings)
+            throws NotFoundException, CannotCompileException {
+        super(cp);
+        this.addTranslator(cp, new APCTranslator(this,
+                convertExceptions2Warnings));
+    }
+
     public APCTransLoader(ClassPool cp) throws NotFoundException,
             CannotCompileException {
-        super(cp);
-        this.addTranslator(cp, new APCTranslator(this));
+        this(cp, false);
     }
 
     @Override

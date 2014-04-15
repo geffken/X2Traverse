@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -26,6 +27,7 @@ public class Global {
     // "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
     public final static String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
     private static String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
+    private static Map<Class, Boolean> filterEnabledForClassMap = new HashMap<Class, Boolean>();
 
     static {
         try {
@@ -44,7 +46,7 @@ public class Global {
     private static Logger logger;
     private static FileHandler fh;
 
-    public static final boolean enableDebugOutput = true;
+    public static final boolean enableDebugOutput = false;
 
     public static Deque<NFA> staticPermDeque = new LinkedList<>();
 
@@ -95,82 +97,25 @@ public class Global {
      *            the resolved field's fully qualified field name
      * @return the installed permission for the specified location
      */
-    // public static Permission effectivePermission(Object obj, String
-    // fieldName) {
-    // @Deprecated
-    // Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
-    // Deque<Long> objectGenStack = Global.objectGenStack;
-    // if (enableDebugOutput) {
-    // // System.out.println(newObjectsStack);
-    // // System.out.println(Global.objPermStack);
-    // }
-    //
-    // Set<Object> topNewObjects = newObjectsStack.peek();
-    // Long topObjectGen = objectGenStack.peek();
-    //
-    // assert (topNewObjects != null) == (topObjectGen != null);
-    //
-    // // if there is a permission installed
-    // if (topNewObjects != null) {
-    //
-    // // static fields are not accessed on objects
-    // if (obj != null) {
-    // Long objectGen = newObjectGens.get(obj);
-    //
-    // assert (topNewObjects.contains(obj) == (objectGen != null && objectGen >=
-    // topObjectGen));
-    //
-    // if (objectGen != null && objectGen >= topObjectGen) {
-    // return Permission.READ_WRITE;
-    // }
-    // }
-    //
-    // // consider new objects
-    // // if (topNewObjects.contains(obj)) {
-    // // return Permission.READ_WRITE;
-    // // }
-    //
-    // // consider topmost location permissions;
-    // // access to unmarked locations is forbidden
-    // Map<String, Permission> fieldPerm = Global.locPermStack.peek().get(
-    // obj);
-    //
-    // // handle 'new' static fields
-    // if (obj == null
-    // && (fieldPerm == null || !fieldPerm.containsKey(fieldName))) {
-    // return Permission.READ_WRITE;
-    // }
-    //
-    // // in case there is a field permission map we expect all instance
-    // // fields to have an entry
-    // assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName)
-    // : true);
-    // return (fieldPerm != null) ? (fieldPerm.get(fieldName))
-    // : Permission.NONE;
-    //
-    // } else {
-    // // assert (Global.locPermStack.isEmpty());
-    //
-    // // in case no contract is active resort to R/W permission
-    // return Permission.READ_WRITE;
-    // }
-    // }
     public static Permission effectivePermission(Object obj, String fieldName) {
-        @Deprecated
-        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
+
         Deque<Long> objectGenStack = Global.objectGenStack;
         if (enableDebugOutput) {
             // System.out.println(newObjectsStack);
             // System.out.println(Global.objPermStack);
         }
 
-        Set<Object> topNewObjects = newObjectsStack.peek();
         Long topObjectGen = objectGenStack.peek();
+
+        @Deprecated
+        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
+        @Deprecated
+        Set<Object> topNewObjects = newObjectsStack.peek();
 
         assert (topNewObjects != null) == (topObjectGen != null);
 
         // if there is a permission installed
-        if (topNewObjects != null) {
+        if (topObjectGen != null) {
             return effectivePermission(obj, fieldName,
                     Global.locPermStack.peek(), topNewObjects, topObjectGen);
         } else {
@@ -200,14 +145,12 @@ public class Global {
             // + ")");
             // System.out.println("locPerms: " + locPermStack.peek());
         }
-        @Deprecated
-        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
         Deque<Long> objectGenStack = Global.objectGenStack;
-
-        Set<Object> topNewObjects = newObjectsStack.peek();
         Long topObjectGen = objectGenStack.peek();
 
-        assert (topNewObjects.contains(obj) == (newObjectGens.get(obj) != null && newObjectGens
+        @Deprecated
+        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
+        assert (newObjectsStack.peek().contains(obj) == (newObjectGens.get(obj) != null && newObjectGens
                 .get(obj) >= topObjectGen));
 
         // static fields are not accessed on objects
@@ -240,6 +183,22 @@ public class Global {
                 : Permission.NONE;
     }
 
+    /**
+     * Returns the installed permission for the specified location. Defaults to
+     * {@link Permission#READ_WRITE} if no permissions are enabled.
+     * 
+     * @param locPerms
+     *            the location permission to update
+     * @param LocPerms
+     *            the effective location permission (can be null in which case
+     *            the effective installed location permission is used)
+     * @param newObjects
+     *            the effective the new object set
+     * @param newObjectGen
+     *            the effective object generation (determining which objects are
+     *            new)
+     * @return the installed permission for the specified location
+     */
     public static Permission effectivePermission(Object obj, String fieldName,
             Map<Object, Map<String, Permission>> locPerms,
             @Deprecated Set<Object> newObjects, Long newObjectGen) {
@@ -252,25 +211,16 @@ public class Global {
         assert (obj == null || newObjectGen != null);
         assert (locPerms != null);
 
-        // if there is a permission installed
+        // static fields are not accessed on objects
         if (obj != null) {
+            Long objectGen = newObjectGens.get(obj);
 
-            // static fields are not accessed on objects
-            if (obj != null) {
-                Long objectGen = newObjectGens.get(obj);
+            assert (newObjects.contains(obj) == (objectGen != null && objectGen >= newObjectGen));
 
-                assert (newObjects.contains(obj) == (objectGen != null && objectGen >= newObjectGen));
-
-                if (objectGen != null && objectGen >= newObjectGen) {
-                    return Permission.READ_WRITE;
-                }
+            if (objectGen != null && objectGen >= newObjectGen) {
+                return Permission.READ_WRITE;
             }
         }
-
-        // consider new objects
-        // if (topNewObjects.contains(obj)) {
-        // return Permission.READ_WRITE;
-        // }
 
         // consider topmost location permissions;
         // access to unmarked locations is forbidden
@@ -291,25 +241,47 @@ public class Global {
     }
 
     public static void installPermissions(
-            Map<Object, Map<String, Permission>> objPerms, NFA nfa) {
-        if (enableDebugOutput) {
-            // System.out.println("----------------------");
-            // for (Map.Entry<Object, Map<String, Permission>> entry : objPerms
-            // .entrySet()) {
-            // System.out.println("ENTRY: "
-            // + System.identityHashCode(entry.getKey()) + ", "
-            // + entry.getValue());
-            // }
-        }
+            Map<Object, Map<String, Permission>> objPerms, NFA nfa,
+            String methodName) {
         staticPermDeque.push(nfa);
         locPermStack.push(objPerms);
         newObjectsStack
                 .push(Collections
                         .newSetFromMap(new de.unifr.acp.runtime.util.WeakIdentityHashMap<Object, Boolean>()));
         objectGenStack.push(nextFreshContractGeneration++);
+        if (enableDebugOutput) {
+            System.out.println("----------- installPermissions (" + methodName
+                    + ")-------------");
+
+            // for (Map.Entry<Object, Map<String, Permission>> entry : objPerms
+            // .entrySet()) {
+            // System.out.println("ENTRY: "
+            // + System.identityHashCode(entry.getKey()) + ", "
+            // + entry.getValue());
+            // }
+
+            Iterator<Map<Object, Map<String, Permission>>> it = locPermStack
+                    .iterator();
+            while (it.hasNext()) {
+                Map<Object, Map<String, Permission>> m = it.next();
+                System.out.println("STACK ENTRY " + System.identityHashCode(m)
+                        + ", " + m.hashCode());
+            }
+        }
     }
 
-    public static void uninstallPermissions() {
+    public static void uninstallPermissions(String methodName) {
+        if (enableDebugOutput) {
+            System.out.println("----------- uninstallPermissions ("
+                    + methodName + ")-----------");
+            Iterator<Map<Object, Map<String, Permission>>> it = locPermStack
+                    .iterator();
+            while (it.hasNext()) {
+                Map<Object, Map<String, Permission>> m = it.next();
+                System.out.println("STACK ENTRY " + System.identityHashCode(m)
+                        + ", " + m.hashCode());
+            }
+        }
         staticPermDeque.pop();
         locPermStack.pop();
         Set<Object> newLocSinceInstallation = newObjectsStack.pop();
@@ -347,10 +319,10 @@ public class Global {
             Iterator<Long> objectGenStackIt = objectGenStack
                     .descendingIterator();
 
+            // there was no permission installed before the bottom-most
             Map<Object, Map<String, Permission>> effectiveAllLocPerms = null;
+            @Deprecated
             Set<Object> effectiveNewObjects = Collections.emptySet();
-
-            // effectively no objects are considered as new
             Long effectiveObjectGen = Long.MAX_VALUE;
             while (staticIt.hasNext()) {
                 NFA nfa = staticIt.next();
@@ -386,41 +358,49 @@ public class Global {
 
     public static void traverseInitializedStatics(ClassLoader loader,
             NFARunner runner, Map<Object, Map<String, Permission>> allLocPerms) {
+        Class<?>[] argClassArray = new Class<?>[] {de.unifr.acp.runtime.Traversal__.class, boolean.class};
         try {
             java.lang.reflect.Field f = ClassLoader.class
                     .getDeclaredField("classes");
             f.setAccessible(true);
             Vector<?> classes = (Vector<?>) f.get(loader);
-            for (int j = 0; j < classes.size(); j++) {
+            int numClasses = classes.size();
+            for (int j = 0; j < numClasses; j++) {
                 Class<?> clazz = (Class<?>) classes.get(j);
+                Boolean filterEnabled = filterEnabledForClassMap.get(clazz);
+                if (filterEnabled == null) {
+                    filterEnabled = clazz.getName().matches(filterVisitRegex);
+                    filterEnabledForClassMap.put(clazz, filterEnabled);
+                }
+                if (filterEnabled)
+                    continue;
+                // if (clazz.getName().matches(filterVisitRegex))
+                // continue;
                 if (clazz.isInterface())
                     continue; // TODO: enable traversal of interface fields
-                if (clazz.getName().matches(filterVisitRegex))
-                    continue;
-                runner.resetAndStep(clazz.getSimpleName());
-                TraversalImpl visitorStatics = new TraversalImpl(runner,
-                        allLocPerms);
-                java.lang.reflect.Method m = clazz.getMethod(
-                        "traverseStatics__", new Class[] {
-                                de.unifr.acp.runtime.Traversal__.class,
-                                boolean.class });
-                m.invoke(null, new Object[] { visitorStatics, false });
 
+                try {
+                    java.lang.reflect.Method m = clazz.getMethod(
+                            "traverseStatics__", argClassArray);
+                    runner.resetAndStep(clazz.getSimpleName());
+                    TraversalImpl visitorStatics = new TraversalImpl(runner,
+                            allLocPerms);
+                    m.invoke(null, new Object[] { visitorStatics, false });
+                } catch (java.lang.SecurityException e) {
+                    e.printStackTrace(); // unexpected exception
+                } catch (java.lang.IllegalArgumentException e) {
+                    e.printStackTrace(); // unexpected exception
+                } catch (java.lang.IllegalAccessException e) {
+                    e.printStackTrace(); // unexpected exception
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    e.printStackTrace(); // unexpected exception
+                } catch (java.lang.NoSuchMethodException e) {
+                    e.printStackTrace(); // unexpected exception
+                }
             }
-
-        } catch (java.lang.NoSuchFieldException e) {
-            e.printStackTrace(); // unexpected exception
-        } catch (java.lang.SecurityException e) {
-            e.printStackTrace(); // unexpected exception
-        } catch (java.lang.IllegalArgumentException e) {
-            e.printStackTrace(); // unexpected exception
         } catch (java.lang.IllegalAccessException e) {
             e.printStackTrace(); // unexpected exception
-        } catch (java.lang.NoSuchMethodException e) {
-            e.printStackTrace(); // unexpected exception
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            e.printStackTrace(); // unexpected exception
-        } catch (Exception e) {
+        } catch (java.lang.NoSuchFieldException e) {
             e.printStackTrace(); // unexpected exception
         }
     }

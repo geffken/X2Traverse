@@ -50,9 +50,14 @@ public class TransClass {
     static {
         try {
             logger = Logger.getLogger("de.unifr.acp.trafo.TransClass");
-            fh = new FileHandler("mylog.txt");
-            TransClass.logger.addHandler(TransClass.fh);
-            TransClass.logger.setLevel(Level.ALL);
+            boolean enableLogging = true;
+            if (enableLogging) {
+                fh = new FileHandler("mylog.txt");
+                TransClass.logger.addHandler(TransClass.fh);
+                TransClass.logger.setLevel(Level.ALL);
+            } else {
+                TransClass.logger.setLevel(Level.OFF);
+            }
         } catch (SecurityException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -824,7 +829,7 @@ public class TransClass {
              * We keep method contract and parameter contracts separate.
              */
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder headerSB = new StringBuilder();
 
             // check if automata for this method already exist
 
@@ -834,32 +839,32 @@ public class TransClass {
             // contracts)
 
             // alternatively generate one automata cache field per method
-            sb.append(AUTOMATON_CLASS_NAME + "[] automata;");
-            sb.append("  automata = ((" + AUTOMATON_CLASS_NAME + "[])"
+            headerSB.append(AUTOMATON_CLASS_NAME + "[] automata;");
+            headerSB.append("  automata = ((" + AUTOMATON_CLASS_NAME + "[])"
                     + FST_CACHE_FIELD_NAME + ".get(\"" + longName + "\"));");
 
-            sb.append("if (automata == null) {");
+            headerSB.append("if (automata == null) {");
 
             // build array of FSTs indexed by parameter
-            sb.append("  automata = new " + AUTOMATON_CLASS_NAME + "["
+            headerSB.append("  automata = new " + AUTOMATON_CLASS_NAME + "["
                     + (parameterCountOf(methodOrCtor) + 1) + "];");
             for (int i = 0; i < parameterCountOf(methodOrCtor) + 1; i++) {
                 Grant grant = grantAnno(methodOrCtor, i);
                 if (grant != null) {
-                    sb.append("    automata[" + i + "] = new "
+                    headerSB.append("    automata[" + i + "] = new "
                             + AUTOMATON_CLASS_NAME + "(\"" + grant.value()
                             + "\");");
                 }
             }
 
             // cache generated automata indexed by long method name
-            sb.append("  " + FST_CACHE_FIELD_NAME + ".put(\"" + longName
+            headerSB.append("  " + FST_CACHE_FIELD_NAME + ".put(\"" + longName
                     + "\", automata);");
-            sb.append("}");
+            headerSB.append("}");
 
             // now we expect to have all FSTs available and cached
 
-            sb.append("  Map allLocPerms = new de.unifr.acp.runtime.util.WeakIdentityHashMap();");
+            headerSB.append("  Map allLocPerms = new de.unifr.acp.runtime.util.WeakIdentityHashMap();");
 
             final boolean isMethodOrCtorStatic = isStatic(methodOrCtor);
 
@@ -882,12 +887,12 @@ public class TransClass {
                 // parameterize over i and allPermissions
                 // a location permission is a Map<Object, Map<String,
                 // Permission>>
-                sb.append("{");
+                headerSB.append("{");
                 // sb.append("System.out.println(\"start of traversal ...\");");
                 // sb.append("  " + AUTOMATON_CLASS_NAME
                 // + " nfa = automata[" + i + "];");
                 // sb.append("System.out.println(\"got FST ...\");");
-                sb.append("  " + RUNNER_CLASS_NAME + " runner = new "
+                headerSB.append("  " + RUNNER_CLASS_NAME + " runner = new "
                         + RUNNER_CLASS_NAME + "(automata[" + i + "]);");
                 // sb.append("System.out.println(\"got runner ...\");");
 
@@ -895,7 +900,7 @@ public class TransClass {
                 // anchor object
                 // for explicitly anchored contracts
                 if (i == 0) {
-                    sb.append("  runner.step(\"this\");");
+                    headerSB.append("  runner.step(\"this\");");
                     // sb.append("System.out.println(\"after reset of runner ...\");");
                 }
 
@@ -907,46 +912,40 @@ public class TransClass {
                 // parameter types indexed by local variable index
                 CtClass[] paramTypes = methodOrCtor.getParameterTypes();
 
-                // TODO: enable array traversal from parameters
-                //if (i == 0 || !paramTypes[i - 1].isArray()) {
-                if (true) {
-                    // sb.append("System.out.println(\"found traversal target ...\");");
-                    sb.append("  " + VISITOR_CLASS_NAME + " visitor = new "
-                            + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
+                // sb.append("System.out.println(\"found traversal target ...\");");
+                headerSB.append("  " + VISITOR_CLASS_NAME + " visitor = new "
+                        + VISITOR_CLASS_NAME + "(runner, allLocPerms);");
 
-                    // TODO: finish implementation of array parameter traversal
-                    // // extract relevant statically available parameter type
-                    // info
-                    CtClass tf = (i != 0) ? paramTypes[i - 1] : methodOrCtor
-                            .getDeclaringClass();
-                    final CtClass innerComponentType = innerComponentTypeOf(tf);
-                    final boolean isNonPrimitiveArray = tf.isArray()
-                            && !tf.getComponentType().isPrimitive();
-                    final boolean isPrimitiveArray = tf.isArray()
-                            && tf.getComponentType().isPrimitive();
+                // extract relevant statically available parameter type info
+                CtClass paramType = (i != 0) ? paramTypes[i - 1] : methodOrCtor
+                        .getDeclaringClass();
 
-                    if (isNonPrimitiveArray) {
-                        sb.append("  " + "visitor.visitRefArray__($" + i + ");");
-                    } else if (tf.equals(ClassPool.getDefault().get(
-                            Object.class.getName()))) {
-                        sb.append("  " + "visitor.visitPotentialArray__($" + i
-                                + ");");
-                    } else if (!isPrimitiveArray)
-                    {
-                        sb.append("  try {");
-                        sb.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME + ")$"
-                                + i + ").traverse__(visitor);");
-                        sb.append("  } catch(java.lang.ClassCastException e) {}");
-                        // sb.append("System.out.println(\"traversal ...\");");
-                    }
+                final boolean isNonPrimitiveArray = paramType.isArray()
+                        && !paramType.getComponentType().isPrimitive();
+                // final boolean isPrimitiveArray = paramType.isArray()
+                // && paramType.getComponentType().isPrimitive();
+
+                if (isNonPrimitiveArray) {
+                    headerSB.append("  " + "visitor.visitRefArray__($" + i
+                            + ");");
+                } else if (paramType.equals(ClassPool.getDefault().get(
+                        Object.class.getName()))) {
+                    headerSB.append("  " + "visitor.visitPotentialArray__($"
+                            + i + ");");
+                } else if (!paramType.isArray()) {
+                    headerSB.append("  try {");
+                    headerSB.append("    ((" + TRAVERSAL_TARGET_CLASS_NAME
+                            + ")$" + i + ").traverse__(visitor);");
+                    headerSB.append("  } catch(java.lang.ClassCastException e) {}");
+                    // sb.append("System.out.println(\"traversal ...\");");
                 }
 
                 // handle static fields
                 if (i == 0) {
-                    sb.append(" ClassLoader loader = "
+                    headerSB.append(" ClassLoader loader = "
                             + methodOrCtor.getDeclaringClass().getName()
                             + ".class.getClassLoader();");
-                    sb.append(GLOBAL_CLASS_NAME
+                    headerSB.append(GLOBAL_CLASS_NAME
                             + ".traverseInitializedStatics(loader, runner, allLocPerms);");
                 }
 
@@ -955,7 +954,7 @@ public class TransClass {
                 // (currently it's all generic maps and implicit joins
                 // in visitor similar to Maxine implementation)
                 // sb.append("System.out.println(\"end of traversal ...\");");
-                sb.append("}");
+                headerSB.append("}");
             }
 
             // install allLocPerms and push new objects set on (current
@@ -963,16 +962,28 @@ public class TransClass {
             // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
             // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
             // sb.append("System.out.println(\"before push ...\");");
-            sb.append(GLOBAL_CLASS_NAME
-                    + ".installPermissions(allLocPerms, automata[" + 0 + "]);");
-            // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.util.WeakIdentityHashMap()));");
+            final String methodName = methodOrCtor.getLongName();
+            headerSB.append(GLOBAL_CLASS_NAME
+                    + ".installPermissions(allLocPerms, automata[" + 0
+                    + "], \"" + methodName + "\");");
+            // sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.runtime.util.WeakIdentityHashMap()));");
             // sb.append("System.out.println(\"Push in "
             // + methodOrCtor.getLongName() + "\");");
 
-            // TODO: figure out how to instrument thread start/end and
-            // field access
+            final String header = headerSB.toString();
 
-            final String header = sb.toString();
+            // generate method footer
+            StringBuilder footerSB = new StringBuilder();
+
+            // pop location permissions and new locations entry from
+            // (current thread's) stack
+            // footerSB.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
+            // footerSB.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
+            // footerSB.append("System.out.println(\"Pop in "
+            // + methodOrCtor.getLongName() + "\");");
+            footerSB.append(GLOBAL_CLASS_NAME + ".uninstallPermissions(\""
+                    + methodName + "\");");
+            String footer = footerSB.toString();
 
             if (methodOrCtor instanceof CtConstructor) {
                 // insert contract installation instrumentation
@@ -981,26 +992,15 @@ public class TransClass {
                 CtConstructor constructor = (CtConstructor) methodOrCtor;
                 if (!constructor.isClassInitializer()) {
                     ((CtConstructor) methodOrCtor).insertBeforeBody(header);
+                    methodOrCtor.insertAfter(footer, true);
                 }
             } else {
                 methodOrCtor.insertBefore(header);
+                methodOrCtor.insertAfter(footer, true);
             }
-
-            // generate method footer
-            sb = new StringBuilder();
-
-            // pop location permissions and new locations entry from
-            // (current thread's) stack
-            // sb.append("System.out.println(\"locPermStack: \"+de.unifr.acp.runtime.Global.locPermStack);");
-            // sb.append("System.out.println(\"locPermStack.peek(): \"+de.unifr.acp.runtime.Global.locPermStack.peek());");
-            // sb.append("System.out.println(\"Pop in "
-            // + methodOrCtor.getLongName() + "\");");
-            sb.append(GLOBAL_CLASS_NAME + ".uninstallPermissions();");
-            String footer = sb.toString();
 
             // make sure all method exits are covered (exceptions,
             // multiple returns)
-            methodOrCtor.insertAfter(footer, true);
 
         } // end if (hasMethodGrantAnnotations(methodOrCtor))
     }
