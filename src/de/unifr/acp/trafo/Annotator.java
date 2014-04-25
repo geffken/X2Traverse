@@ -47,7 +47,7 @@ public class Annotator {
 
 	public static void enableLogging() {
 		try {
-			fh = new FileHandler("%h/x2traverse%u.log", true);
+			fh = new FileHandler("%h/x2traverse%u-%g.log", false);
 			logger.addHandler(fh);
 			logger.setLevel(Level.ALL);
 		} catch (SecurityException | IOException e) {
@@ -88,7 +88,7 @@ public class Annotator {
 
 			String className = argList[0];
 			String outputDir = (argList.length >= 2) ? argList[1]
-					: "instrumented_classes";
+					: "annotated_classes";
 			Annotator.defaultAnnotateAndFlushHierarchy(className, outputDir);
 
 		} catch (ParseException e1) {

@@ -32,10 +32,8 @@ public class Global {
     static {
         try {
             Global.logger = Logger.getLogger("de.unifr.acp.templates.Global");
-            fh = new FileHandler("traverse.log");
-            if (Global.enableDebugOutput) {
-                Global.logger.addHandler(Global.fh);
-            }
+            fh = new FileHandler("%h/x2traverse.runner%u-%g.log");
+            Global.logger.addHandler(Global.fh);
             Global.logger.setLevel(Global.enableDebugOutput ? Level.ALL
                     : Level.OFF);
 

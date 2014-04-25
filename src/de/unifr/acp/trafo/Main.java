@@ -3,6 +3,13 @@ package de.unifr.acp.trafo;
 import java.io.IOException;
 import java.io.InvalidClassException;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
@@ -19,43 +26,38 @@ public class Main {
      * @throws ClassNotFoundException 
      */
     public static void main(String[] args) throws NotFoundException, ClassNotFoundException, IOException, CannotCompileException {
-        try {
-            if (args.length < 1) {
-                StringBuilder usage = new StringBuilder();
-                usage.append("Usage: x2traverse class [output directory]\n");
-                usage.append(" (to transform the class hierarchy rootet at a class)\n");
-                usage.append("where options include:\n");
-                usage.append(" \n");
-                System.out.println(usage);
-                System.exit(1);
-            }
-            String className = args[0];
-            String outputDir = (args.length >= 2) ? args[1] : "bin";
+		Options options = new Options();
+
+		Option logOption = new Option("log", false, "enables logging");
+		options.addOption(logOption);
+
+		CommandLineParser parser = new org.apache.commons.cli.GnuParser();
+		try {
+			CommandLine cmd = parser.parse(options, args);
+
+			if (cmd.hasOption("log")) {
+				TransClass.enableLogging();
+			}
+
+			String[] argList = cmd.getArgs();
+
+			if (argList.length < 1) {
+				throw new ParseException("Missing class name argument.");
+			}
+
+			String className = argList[0];
+			String outputDir = (argList.length >= 2) ? argList[1]
+					: "instrumented_classes";
             ClassPool defaultPool = ClassPool.getDefault();
-            CtClass target = defaultPool.get(className);
-            // TransClass.doTransform(target,
-            // !target.getSuperclass().equals(objectClass));
         
             TransClass.transformAndFlushHierarchy(defaultPool, className, outputDir, true);
 
-            // condition needed to avoid bug in writing unmodified class files
-            // causing invalid class files
-            // if (target.isModified()) {
-            // target.writeFile(outputDir);
-            // }
-
-
-        } catch (InvalidClassException e) {
-            e.printStackTrace();
-            System.out.println(e.toString());
-            throw e;
-        } catch (CannotCompileException e) {
-            e.printStackTrace();
-            System.out.println(e.toString());
-            System.out.println(e.getReason());
-            throw e;
-        }
-
+		} catch (ParseException e1) {
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp("Main class [output directory]", "to transform the class hierarchy rootet at a class", options, "",
+					true);
+			System.err.println("Parsing failed.  Reason: " + e1.getMessage());
+		}
     }
 
 }

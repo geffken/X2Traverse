@@ -86,7 +86,7 @@ public class TransClass {
     
 	public static void enableLogging() {
 		try {
-			fh = new FileHandler("%h/x2traverse%u.log", true);
+			fh = new FileHandler("%h/x2traverse%u-%g.log", false);
 			logger.addHandler(fh);
 			logger.setLevel(Level.ALL);
 		} catch (SecurityException | IOException e) {
