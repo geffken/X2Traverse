@@ -1031,7 +1031,7 @@ public class TransClass {
 
                             // get active permission for location to access
                             code.append("if (!" + GLOBAL_CLASS_NAME
-                                    + ".newObjectsStack.isEmpty()) {");
+                                    + ".objectGenStack.isEmpty()) {");
 
                             code.append("de.unifr.acp.runtime.fst.Permission effectivePerm = "
                                     + GLOBAL_CLASS_NAME

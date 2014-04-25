@@ -22,8 +22,8 @@ public class TraversalImpl implements Traversal__ {
     private Set<ObjectAndNFARunner> visitedPairs = new HashSet<>();
     Map<Object, Map<String, Permission>> locPerms;
     Map<Object, Map<String, Permission>> effectiveLocPerms;
-    @Deprecated
-    Set<Object> effectiveNewObjects;
+//    @Deprecated
+//    Set<Object> effectiveNewObjects;
     Long effectiveNewObjectGen;
 
     /**
@@ -36,7 +36,7 @@ public class TraversalImpl implements Traversal__ {
      */
     public TraversalImpl(NFARunner runner,
             Map<Object, Map<String, Permission>> locPerms) {
-        this(runner, locPerms, null, null, null);
+        this(runner, locPerms, null,/* null,*/ null);
     }
 
     /**
@@ -59,12 +59,12 @@ public class TraversalImpl implements Traversal__ {
     public TraversalImpl(NFARunner runner,
             Map<Object, Map<String, Permission>> locPerms,
             Map<Object, Map<String, Permission>> effectiveLocPerms,
-            @Deprecated Set<Object> effectiveNewObjects,
+            //@Deprecated Set<Object> effectiveNewObjects,
             Long effectiveNewObjectGen) {
         this.runner = runner; // initialize automaton state
         this.locPerms = locPerms;
         this.effectiveLocPerms = effectiveLocPerms;
-        this.effectiveNewObjects = effectiveNewObjects;
+        //this.effectiveNewObjects = effectiveNewObjects;
         this.effectiveNewObjectGen = effectiveNewObjectGen;
     }
 
@@ -284,7 +284,7 @@ public class TraversalImpl implements Traversal__ {
             resultPerm = intersection(
                     effectiveLocPerms == null ? Global.effectivePermission(obj,
                             fieldName) : Global.effectivePermission(obj,
-                            fieldName, effectiveLocPerms, effectiveNewObjects,
+                            fieldName, effectiveLocPerms, /*effectiveNewObjects,*/
                             effectiveNewObjectGen), unionPerm);
         }
 

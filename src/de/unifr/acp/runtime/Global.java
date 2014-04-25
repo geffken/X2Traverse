@@ -66,7 +66,8 @@ public class Global {
      * Using an array deque as no null elements are required - for
      * contract-less/ignored methods no new permission is pushed/popped.
      */
-    public static Deque<Set<Object>> newObjectsStack = new NewObjectDequeImpl();
+    //@Deprecated
+    //public static Deque<Set<Object>> newObjectsStack = new NewObjectDequeImpl();
 
     /**
      * A map from new objects to the their generations. Objects that are not in
@@ -107,17 +108,17 @@ public class Global {
 
         Long topObjectGen = objectGenStack.peek();
 
-        @Deprecated
-        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
-        @Deprecated
-        Set<Object> topNewObjects = newObjectsStack.peek();
+//        @Deprecated
+//        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
+//        @Deprecated
+//        Set<Object> topNewObjects = newObjectsStack.peek();
 
-        assert (topNewObjects != null) == (topObjectGen != null);
+//        assert (topNewObjects != null) == (topObjectGen != null);
 
         // if there is a permission installed
         if (topObjectGen != null) {
             return effectivePermission(obj, fieldName,
-                    Global.locPermStack.peek(), topNewObjects, topObjectGen);
+                    Global.locPermStack.peek(), /*topNewObjects,*/ topObjectGen);
         } else {
             // assert (Global.locPermStack.isEmpty());
 
@@ -148,10 +149,10 @@ public class Global {
         Deque<Long> objectGenStack = Global.objectGenStack;
         Long topObjectGen = objectGenStack.peek();
 
-        @Deprecated
-        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
-        assert (newObjectsStack.peek().contains(obj) == (newObjectGens.get(obj) != null && newObjectGens
-                .get(obj) >= topObjectGen));
+//        @Deprecated
+//        Deque<Set<Object>> newObjectsStack = Global.newObjectsStack;
+//        assert (newObjectsStack.peek().contains(obj) == (newObjectGens.get(obj) != null && newObjectGens
+//                .get(obj) >= topObjectGen));
 
         // static fields are not accessed on objects
         if (obj != null) {
@@ -201,13 +202,13 @@ public class Global {
      */
     public static Permission effectivePermission(Object obj, String fieldName,
             Map<Object, Map<String, Permission>> locPerms,
-            @Deprecated Set<Object> newObjects, Long newObjectGen) {
+            /*@Deprecated Set<Object> newObjects,*/ Long newObjectGen) {
         if (enableDebugOutput) {
             // System.out.println(newObjectsStack);
             // System.out.println(Global.objPermStack);
         }
 
-        assert (newObjects != null) == (newObjectGen != null) == (newObjectGens != null);
+//        assert (newObjects != null) == (newObjectGen != null) == (newObjectGens != null);
         assert (obj == null || newObjectGen != null);
         assert (locPerms != null);
 
@@ -215,7 +216,7 @@ public class Global {
         if (obj != null) {
             Long objectGen = newObjectGens.get(obj);
 
-            assert (newObjects.contains(obj) == (objectGen != null && objectGen >= newObjectGen));
+//            assert (newObjects.contains(obj) == (objectGen != null && objectGen >= newObjectGen));
 
             if (objectGen != null && objectGen >= newObjectGen) {
                 return Permission.READ_WRITE;
@@ -245,9 +246,9 @@ public class Global {
             String methodName) {
         staticPermDeque.push(nfa);
         locPermStack.push(objPerms);
-        newObjectsStack
-                .push(Collections
-                        .newSetFromMap(new de.unifr.acp.runtime.util.WeakIdentityHashMap<Object, Boolean>()));
+//        newObjectsStack
+//                .push(Collections
+//                        .newSetFromMap(new de.unifr.acp.runtime.util.WeakIdentityHashMap<Object, Boolean>()));
         objectGenStack.push(nextFreshContractGeneration++);
         if (enableDebugOutput) {
             System.out.println("----------- installPermissions (" + methodName
@@ -284,10 +285,12 @@ public class Global {
         }
         staticPermDeque.pop();
         locPermStack.pop();
-        Set<Object> newLocSinceInstallation = newObjectsStack.pop();
-        if (!newObjectsStack.isEmpty()) {
-            newObjectsStack.peek().addAll(newLocSinceInstallation);
-        }
+        
+//        @Deprecated
+//        Set<Object> newLocSinceInstallation = newObjectsStack.pop();
+//        if (!newObjectsStack.isEmpty()) {
+//            newObjectsStack.peek().addAll(newLocSinceInstallation);
+//        }
         objectGenStack.pop();
     }
 
@@ -300,9 +303,9 @@ public class Global {
             // + System.identityHashCode(obj) + " of type "
             // + ((obj != null) ? obj.getClass().getSimpleName() : ""));
         }
-        if (!newObjectsStack.isEmpty()) {
-            newObjectsStack.peek().add(obj);
-        }
+//        if (!newObjectsStack.isEmpty()) {
+//            newObjectsStack.peek().add(obj);
+//        }
         if (!objectGenStack.isEmpty()) {
             newObjectGens.put(obj, objectGenStack.peek());
         }
@@ -314,15 +317,16 @@ public class Global {
             Iterator<NFA> staticIt = staticPermDeque.descendingIterator();
             Iterator<Map<Object, Map<String, Permission>>> permStackIt = locPermStack
                     .descendingIterator();
-            Iterator<Set<Object>> newObjectsStackIt = newObjectsStack
-                    .descendingIterator();
+//            @Deprecated
+//            Iterator<Set<Object>> newObjectsStackIt = newObjectsStack
+//                    .descendingIterator();
             Iterator<Long> objectGenStackIt = objectGenStack
                     .descendingIterator();
 
             // there was no permission installed before the bottom-most
             Map<Object, Map<String, Permission>> effectiveAllLocPerms = null;
-            @Deprecated
-            Set<Object> effectiveNewObjects = Collections.emptySet();
+//            @Deprecated
+//            Set<Object> effectiveNewObjects = Collections.emptySet();
             Long effectiveObjectGen = Long.MAX_VALUE;
             while (staticIt.hasNext()) {
                 NFA nfa = staticIt.next();
@@ -332,7 +336,7 @@ public class Global {
                 NFARunner runner = new NFARunner(nfa);
                 runner.resetAndStep(clazz.getSimpleName());
                 TraversalImpl visitorStatics = new TraversalImpl(runner,
-                        allLocPerms, effectiveAllLocPerms, effectiveNewObjects,
+                        allLocPerms, effectiveAllLocPerms, /*effectiveNewObjects,*/
                         effectiveObjectGen);
                 java.lang.reflect.Method m = clazz.getMethod(
                         "traverseStatics__", new Class[] {
@@ -342,7 +346,7 @@ public class Global {
                 // traverse static fields only (flat)
                 m.invoke(null, new Object[] { visitorStatics, true });
                 effectiveAllLocPerms = allLocPerms;
-                effectiveNewObjects = newObjectsStackIt.next();
+//                effectiveNewObjects = newObjectsStackIt.next();
                 effectiveObjectGen = objectGenStackIt.next();
             }
         } catch (java.lang.SecurityException e) {

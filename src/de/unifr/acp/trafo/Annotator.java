@@ -194,7 +194,7 @@ public class Annotator {
                         AnnotationsAttribute.visibleTag);
                 Annotation annot = new Annotation(Grant.class.getName(),
                         constpool);
-                annot.addMemberValue("value", new StringMemberValue("this.*",
+                annot.addMemberValue("value", new StringMemberValue("*, this.*",
                         constpool));
                 attr.addAnnotation(annot);
                 methodOrCtor.getMethodInfo().addAttribute(attr);
