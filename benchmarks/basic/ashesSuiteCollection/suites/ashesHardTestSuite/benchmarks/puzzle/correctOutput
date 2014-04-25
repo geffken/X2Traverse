@@ -1,0 +1,23 @@
+Reading in images...
+Starting processing...
+Checking concavity match
+Checking total length match
+There are 27 possible matches left, after length match
+Checking distance of corners match
+There are 12 possible matches left, after corner distance match
+Checking minHoleSize match
+There are 12 possible matches left, after minHoleSize match
+Checking holeSize match
+There are 9 possible matches left, after holeSize match
+Checking cornerToMin match
+Change at 0,7
+Change at 5,15
+There are 7 possible matches left, after cornerToMin match
+
+Edge 2 and 5
+Edge 2 and 14
+Edge 3 and 4
+Edge 3 and 11
+Edge 4 and 14
+Edge 5 and 11
+Edge 11 and 14

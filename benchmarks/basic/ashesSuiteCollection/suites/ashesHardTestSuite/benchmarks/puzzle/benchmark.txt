@@ -1,0 +1,13 @@
+Benchmark: puzzle
+
+Author: Madeleine Mony (maddy@photonics.ece.mcgill.ca)
+
+Packaged by: Raja Vallee-Rai (rvalleerai@sable.mcgill.ca)
+Packaged on: April 6, 1999
+
+Description: This is an image recognition program which attempts to fit four
+dimensional puzzle pieces together.  Its short execution time prevents it from
+being a real benchmark, but it is still a useful test program because it uses
+bizarre constructs such as triple dimension boolean arrays.
+
+
