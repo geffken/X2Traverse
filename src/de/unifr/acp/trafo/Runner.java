@@ -55,7 +55,7 @@ public class Runner {
             
             javassist.Loader cl = new APCTransLoader(defaultPool, true);
 
-            // run with javassist's class loader to enable 'reloading' of test class
+            // run with custom class loader to instrument class at runtime
             cl.run(className, targetArgs);
 
             
