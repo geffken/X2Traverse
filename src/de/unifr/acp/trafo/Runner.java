@@ -40,9 +40,9 @@ public class Runner {
         CommandLineParser parser = new org.apache.commons.cli.GnuParser();
         try {
             CommandLine cmd = parser.parse(options, args);
-            if (cmd.hasOption("jar")) {
-                
-            }
+//            if (cmd.hasOption("jar")) {
+//                
+//            }
             String[] argList = cmd.getArgs();
             
             if (argList.length < 1) {
