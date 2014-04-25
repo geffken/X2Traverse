@@ -40,20 +40,20 @@ import static de.unifr.acp.trafo.TranslationHelper.parameterCountOf;
  */
 public class Annotator {
 
-	static {
+	private static Logger logger = Logger.getLogger("de.unifr.acp.trafo.Annotator");
+	private static FileHandler fh;
+	public final String FILTER_TRANSFORM_REGEX_DEFAULT = "java\\..*";
+	private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
+
+	public static void enableLogging() {
 		try {
-			logger = Logger.getLogger("de.unifr.acp.trafo.Annotator");
-			fh = new FileHandler("mylog.txt");
-			Annotator.logger.addHandler(Annotator.fh);
-			Annotator.logger.setLevel(Level.ALL);
+			fh = new FileHandler("%h/x2traverse%u.log", true);
+			logger.addHandler(fh);
+			logger.setLevel(Level.ALL);
 		} catch (SecurityException | IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
-	private static Logger logger;
-	private static FileHandler fh;
-	public final String FILTER_TRANSFORM_REGEX_DEFAULT = "java\\..*";
-	private String filterTransformRegex = FILTER_TRANSFORM_REGEX_DEFAULT;
 
 	/**
 	 * Start annotator that annotates class files with (default) contracts.
@@ -68,27 +68,33 @@ public class Annotator {
 			ClassNotFoundException, IOException, CannotCompileException {
 		Options options = new Options();
 
-		// add possible options here
+		Option logOption = new Option("log", false, "enables logging");
+		options.addOption(logOption);
 
 		CommandLineParser parser = new org.apache.commons.cli.GnuParser();
 		try {
 			CommandLine cmd = parser.parse(options, args);
 
-			// query possible options here
-			
+			if (cmd.hasOption("log")) {
+				enableLogging();
+				TransClass.enableLogging();
+			}
+
 			String[] argList = cmd.getArgs();
 
 			if (argList.length < 1) {
 				throw new ParseException("Missing class name argument.");
 			}
-			
+
 			String className = argList[0];
-			String outputDir = (argList.length >= 2) ? argList[1] : "instrumented_classes";
+			String outputDir = (argList.length >= 2) ? argList[1]
+					: "instrumented_classes";
 			Annotator.defaultAnnotateAndFlushHierarchy(className, outputDir);
 
 		} catch (ParseException e1) {
 			HelpFormatter formatter = new HelpFormatter();
-			formatter.printHelp("Annotator class [output directory]", options, true);
+			formatter.printHelp("Annotator class [output directory]", options,
+					true);
 			System.err.println("Parsing failed.  Reason: " + e1.getMessage());
 		}
 	}

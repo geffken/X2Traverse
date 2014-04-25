@@ -47,21 +47,6 @@ import de.unifr.acp.runtime.nfa.NFARunner;
 // TODO: consider fully qualified field names
 
 public class TransClass {
-    static {
-        try {
-            logger = Logger.getLogger("de.unifr.acp.trafo.TransClass");
-            boolean enableLogging = true;
-            if (enableLogging) {
-                fh = new FileHandler("mylog.txt");
-                TransClass.logger.addHandler(TransClass.fh);
-                TransClass.logger.setLevel(Level.ALL);
-            } else {
-                TransClass.logger.setLevel(Level.OFF);
-            }
-        } catch (SecurityException | IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
     private static final String AUTOMATON_CLASS_NAME = NFA.class
             .getCanonicalName();
     private static final String RUNNER_CLASS_NAME = NFARunner.class
@@ -73,7 +58,7 @@ public class TransClass {
     private static final String GLOBAL_CLASS_NAME = de.unifr.acp.runtime.Global.class
             .getCanonicalName();
 
-    private static Logger logger;
+    private static Logger logger = Logger.getLogger("de.unifr.acp.trafo.TransClass");
     private static FileHandler fh;
     private static final String FST_CACHE_FIELD_NAME = "$fstMap";
     private final CtClass objectClass = ClassPool.getDefault().get(
@@ -98,6 +83,16 @@ public class TransClass {
     // protected Collection<CtClass> getPending() {
     // return Collections.unmodifiableCollection(pending);
     // }
+    
+	public static void enableLogging() {
+		try {
+			fh = new FileHandler("%h/x2traverse%u.log", true);
+			logger.addHandler(fh);
+			logger.setLevel(Level.ALL);
+		} catch (SecurityException | IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
     /**
      * Transformer class capable of statically adding heap traversal code to
