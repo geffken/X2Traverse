@@ -1,0 +1,10 @@
+Benchmark: decode
+
+Author: Rhodes Brown (rhodesb@cs.mcgill.ca)
+
+Packaged by: Raja Vallee-Rai (rvalleerai@sable.mcgill.ca)
+Packaged on: March 7, 2000
+
+Description: This benchmark implements an algorithm for decoding encrypted messages using
+Shamir's Secret Sharing scheme.
+

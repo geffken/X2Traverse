@@ -1,0 +1,10 @@
+Benchmark: matrix
+
+Author: Zhifeng Xiao
+
+Packaged by: Raja Vallee-Rai (rvalleerai@sable.mcgill.ca)
+Packaged on: March 7, 2000
+
+Description: Matrix inverter.
+
+
