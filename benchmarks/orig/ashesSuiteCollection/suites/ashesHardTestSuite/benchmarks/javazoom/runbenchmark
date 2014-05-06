@@ -1,0 +1,2 @@
+java javazoom.jl.converter.jlc -v -p sample.wav sample.mp3
+

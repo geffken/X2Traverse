@@ -1,0 +1,10 @@
+Benchmark: javazoom
+
+Author: ?
+
+Packaged by: Raja Vallee-Rai (rvalleerai@sable.mcgill.ca)
+Packaged on: March 7, 2000
+
+Description: mp3 to wav converter.
+
+

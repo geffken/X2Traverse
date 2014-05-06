@@ -1,0 +1,11 @@
+Benchmark: LU
+
+Author: Jianlong Zuo
+
+Packaged by: Raja Vallee-Rai (rvalleerai@sable.mcgill.ca)
+Packaged on: March 7, 2000
+
+Description: LU matrix factorization.
+
+
+

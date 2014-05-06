@@ -1,0 +1,11 @@
+Benchmark: fft
+
+Author: Bruce R. Miller bruce.miller@nist.gov
+
+Packaged by: Raja Vallee-Rai (rvalleerai@sable.mcgill.ca)
+Packaged on: March 7, 2000
+
+Description: FFT of complex double precision data.
+
+
+

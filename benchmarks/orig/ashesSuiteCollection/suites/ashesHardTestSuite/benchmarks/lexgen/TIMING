@@ -1,0 +1,14 @@
+classes[329]>time Main
+
+Number of states = 253
+Number of distinct rows = 167
+Approx. memory size of trans. table = 21543 bytes
+4.850u 0.030s 0:10.46 46.6% 0+0k 0+0io 224pf+0w
+
+
+classes[330]>time java Main
+
+Number of states = 253
+Number of distinct rows = 167
+Approx. memory size of trans. table = 21543 bytes
+23.130u 0.210s 0:50.78 45.9% 0+0k 0+0io 3536pf+0w    

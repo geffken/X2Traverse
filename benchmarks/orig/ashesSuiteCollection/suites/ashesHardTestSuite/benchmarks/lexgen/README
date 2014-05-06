@@ -1,0 +1,4 @@
+Run using doit.
+The program reads DATA/ml.lex which is the specification of a lexer for
+SML, and generates DATA/ml.lex.sml which is the SML code for the lexer. 
+The correct answer is in DATA/ml.lex.sml.correct.
