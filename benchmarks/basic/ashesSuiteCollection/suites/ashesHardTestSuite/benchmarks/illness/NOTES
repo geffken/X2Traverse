@@ -1,0 +1,12 @@
+This benchmark could not be compiled due to the inherent
+limitations of Javassist's source-based instrumentation,
+before the Class object being passed to the method
+traverseStaticsOnClassLoad was created using reflection
+(Class.forName).
+
+The problem is the use of the class name
+'boolean' in the benchmark which is legal in Java
+bytecode but an illegal identifier in Java. In particular
+Javassist does not provide any kind of automatic (roundtrip)
+translation into a valid Java identifier that can be used
+in the instrumentation source code.
