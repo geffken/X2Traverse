@@ -1,0 +1,10 @@
+#!/bin/bash
+ASHES_CLASSPATH_EXT=$ASHES_CLASSPATH_EXT:../../../../../../../x2traverse.jar
+
+if [ ! "$ASHES_JVM_CMD" ]
+then
+   ASHES_JVM_CMD='java -ms${ASHES_INITIAL_HEAP}m -mx${ASHES_MAXIMUM_HEAP}m de.unifr.acp.trafo.Runner'
+fi
+
+source run
+
