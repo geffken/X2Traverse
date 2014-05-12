@@ -1,0 +1,3 @@
+Instrumentation causes max method length of 72521 to be exceeded
+in static initializer of class javazoom.jl.decoder.huffcodetab.
+ 
