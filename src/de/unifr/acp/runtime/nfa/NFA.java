@@ -322,7 +322,6 @@ public class NFA {
 	 */
 	public static void transitiveEpsilonClosure(Set<NFAState> states) {
 		
-		// this code has been micro-benchmarked quite a bit
 		Set<NFAState> newStates = states;
 		while (true) {
 			Set<NFAState> brandNewStates = new HashSet<>();
