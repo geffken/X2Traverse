@@ -19,8 +19,6 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.hamcrest.Condition.Step;
-
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtBehavior;
@@ -744,8 +742,7 @@ public class TransClass {
 			// 3. Use insertBefore() and insertAfter() to insert permission
 			// installation/deinstallation code
 
-			// according to tutorial there's no support for generics in
-			// Javassist, thus we use raw types
+			// no support for generics in Javassist, thus we use raw types
 			CtField f = CtField.make("private static java.util.HashMap "
 					+ FST_CACHE_FIELD_NAME + " = new java.util.HashMap();",
 					target);
@@ -831,6 +828,7 @@ public class TransClass {
 
 			StringBuilder headerSB = new StringBuilder();
 			headerSB.append("{");
+			headerSB.append("try {");
 
 			// check if automata for this method already exist
 
@@ -933,7 +931,7 @@ public class TransClass {
 							+ ")$" + i + ").traverse__(visitor);");
 					headerSB.append("    }");
 					headerSB.append("  } catch(java.lang.ClassCastException e) {");
-//					headerSB.append("    e.printStackTrace();");
+					// headerSB.append("    e.printStackTrace();");
 					headerSB.append("  }");
 					// sb.append("System.out.println(\"traversal ...\");");
 				}
@@ -941,16 +939,17 @@ public class TransClass {
 				// handle static fields
 				if (i == 0) {
 					headerSB.append("  try {");
+//					headerSB.append(" ClassLoader loader = "
+//							+ methodOrCtor.getDeclaringClass().getName()
+//							+ ".class.getClassLoader();");
 					headerSB.append(" ClassLoader loader = "
-							+ methodOrCtor.getDeclaringClass().getName()
-							+ ".class.getClassLoader();");
-					// headerSB.append(" ClassLoader loader = "
-					// + "Class.forName(\""
-					// + methodOrCtor.getDeclaringClass().getName()
-					// + "\")" + ".getClassLoader();");
+					 + "Class.forName(\""
+					 + methodOrCtor.getDeclaringClass().getName()
+					 + "\")" + ".getClassLoader();");
 					headerSB.append(GLOBAL_CLASS_NAME
 							+ ".traverseInitializedStatics(loader, runner, allLocPerms);");
 					headerSB.append("  } catch (java.lang.Exception e) {");
+					headerSB.append("    System.out.println(\"UNEXPECTED EXCEPTION\");");
 					headerSB.append("    e.printStackTrace();");
 					headerSB.append("  }");
 				}
@@ -972,6 +971,10 @@ public class TransClass {
 					+ ".installPermissions(allLocPerms, automata[" + 0
 					+ "], \"" + methodName + "\");");
 			// headerSB.append("}");
+			headerSB.append("  } catch (java.lang.Throwable e) {");
+			headerSB.append("    System.out.println(\"UNEXPECTED EXCEPTION\");");
+			headerSB.append("    e.printStackTrace();");
+			headerSB.append("  }");
 			headerSB.append("}");
 			// sb.append("de.unifr.acp.runtime.Global.newObjectsStack.push(Collections.newSetFromMap(new de.unifr.acp.runtime.util.WeakIdentityHashMap()));");
 			// sb.append("System.out.println(\"Push in "
@@ -1045,13 +1048,23 @@ public class TransClass {
 							// get active permission for location to access
 							code.append("if (!" + GLOBAL_CLASS_NAME
 									+ ".objectGenStack.isEmpty()) {");
-
+							code.append("String qualifiedFieldName = \""
+									+ qualifiedFieldName + "\";");
 							code.append("de.unifr.acp.runtime.fst.Permission effectivePerm = "
 									+ GLOBAL_CLASS_NAME
 									+ ".effectivePermissionStackNotEmpty("
 									+ (!expr.isStatic() ? "$0" : "null")
-									+ ", \"" + qualifiedFieldName + "\");");
-
+									+ ", qualifiedFieldName);");
+							
+							if (Global.ENABLE_DEBUG_OUTPUT
+									&& Global.ENABLE_FIELD_DEBUG) {
+								code.append("System.out.println(((Map)de.unifr.acp.runtime.Global.locPermStack.peek()).get("
+										+ (!expr.isStatic() ? "$0" : "null")
+										+ "));");
+								code.append("System.out.println(\"effectivePerm: \"+effectivePerm);");
+								code.append("System.out.println(\"of field \" + qualifiedFieldName);");
+							}
+							
 							// get permission needed for this access
 							code.append("de.unifr.acp.runtime.fst.Permission accessPerm = de.unifr.acp.runtime.fst.Permission."
 									+ (expr.isReader() ? "READ_ONLY"
@@ -1065,7 +1078,7 @@ public class TransClass {
 							code.append("  " + GLOBAL_CLASS_NAME
 									+ ".throwOrPrintViolation("
 									+ (!expr.isStatic() ? "$0" : "null")
-									+ ", \"" + qualifiedFieldName + "\", \""
+									+ ", qualifiedFieldName, \""
 									+ methodOrCtor.getLongName()
 									+ "\",effectivePerm, accessPerm,"
 									+ convertExceptions2Warnings + ");");

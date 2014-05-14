@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.WeakHashMap;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,14 +28,18 @@ public class Global {
 	// "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
 	public final static String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|runtime\\.util)\\..*)";
 	private static String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
-	private static Map<Class, Boolean> filterEnabledForClassMap = new HashMap<Class, Boolean>();
+	
+	/* caching */
+	private static final Class<?>[] argClassArray = new Class<?>[] {
+			de.unifr.acp.runtime.Traversal__.class, boolean.class };
+	private static Map<Class, Boolean> filterEnabledForClassMap = new WeakHashMap<Class, Boolean>();
 
 	static {
 		try {
 			Global.logger = Logger.getLogger("de.unifr.acp.templates.Global");
 			fh = new FileHandler("%h/x2traverse.runner%u-%g.log");
 			Global.logger.addHandler(Global.fh);
-			Global.logger.setLevel(Global.enableDebugOutput ? Level.ALL
+			Global.logger.setLevel(Global.ENABLE_DEBUG_OUTPUT ? Level.ALL
 					: Level.OFF);
 
 		} catch (SecurityException | IOException e) {
@@ -44,10 +49,17 @@ public class Global {
 	private static Logger logger;
 	private static FileHandler fh;
 
-	public static final boolean enableDebugOutput = false;
+	public static final boolean ENABLE_DEBUG_OUTPUT = false;
+	public static final boolean ENABLE_STACK_DEBUG = false;
+	public static final boolean ENABLE_STACK_QUERY_DEBUG = true;
+	public static final boolean ENABLE_ALLOC_DEBUG = false;
+	public static final boolean ENABLE_FIELD_DEBUG = true;
 
+
+	/* permission stacks */
+	
 	public static Deque<NFA> staticPermDeque = new LinkedList<>();
-
+	
 	/**
 	 * A permission stack is a stack of (weak identity) maps from (Object x
 	 * String) to Permission.
@@ -100,7 +112,7 @@ public class Global {
 	public static Permission effectivePermission(Object obj, String fieldName) {
 
 		Deque<Long> objectGenStack = Global.objectGenStack;
-		if (enableDebugOutput) {
+		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_QUERY_DEBUG) {
 			// System.out.println(newObjectsStack);
 			// System.out.println(Global.objPermStack);
 		}
@@ -140,7 +152,7 @@ public class Global {
 	 */
 	public static Permission effectivePermissionStackNotEmpty(Object obj,
 			String fieldName) {
-		if (enableDebugOutput) {
+		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_QUERY_DEBUG) {
 			// System.out.println("installedPermissions(" + obj + ", " +
 			// fieldName
 			// + ")");
@@ -173,6 +185,17 @@ public class Global {
 		Map<String, Permission> fieldPerm = Global.locPermStack.peek().get(obj);
 
 		// handle 'new' static fields
+		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_QUERY_DEBUG) {
+			System.out.println("obj: "
+					+ ((obj == null) ? null : System.identityHashCode(obj)));
+			System.out.println("fieldPerm: "
+					+ ((fieldPerm == null) ? null : System
+							.identityHashCode(fieldPerm)));
+			System.out.println("fieldName: " + fieldName);
+			if (fieldPerm != null)
+				System.out.println("fieldPerm.containsKey(fieldName): "
+						+ fieldPerm.containsKey(obj));
+		}
 		if (obj == null
 				&& (fieldPerm == null || !fieldPerm.containsKey(fieldName))) {
 			return Permission.READ_WRITE;
@@ -181,6 +204,11 @@ public class Global {
 		// in case there is a field permission map we expect all instance
 		// fields to have an entry (once the implementation is completed ;-)
 		assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName) : true);
+		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_QUERY_DEBUG) {
+			System.out.println("return "
+					+ ((fieldPerm != null) ? (fieldPerm.get(fieldName))
+							: Permission.NONE));
+		}
 		return (fieldPerm != null) ? (fieldPerm.get(fieldName))
 				: Permission.NONE;
 	}
@@ -204,7 +232,7 @@ public class Global {
 	public static Permission effectivePermission(Object obj, String fieldName,
 			Map<Object, Map<String, Permission>> locPerms,
 			/* @Deprecated Set<Object> newObjects, */Long newObjectGen) {
-		if (enableDebugOutput) {
+		if (ENABLE_DEBUG_OUTPUT) {
 			// System.out.println(newObjectsStack);
 			// System.out.println(Global.objPermStack);
 		}
@@ -213,6 +241,10 @@ public class Global {
 		// (newObjectGens != null);
 		assert (obj == null || newObjectGen != null);
 		assert (locPerms != null);
+
+		// field permissions from effective location permissions;
+		// access to unmarked locations is forbidden
+		Map<String, Permission> fieldPerm;
 
 		// static fields are not accessed on objects
 		if (obj != null) {
@@ -224,26 +256,26 @@ public class Global {
 			if (objectGen != null && objectGen >= newObjectGen) {
 				return Permission.READ_WRITE;
 			}
+			fieldPerm = locPerms.get(obj);
 		}
 
-		// consider topmost location permissions;
-		// access to unmarked locations is forbidden
-		Map<String, Permission> fieldPerm = locPerms.get(obj);
-
-		// handle 'new' static fields
-		if (obj == null
-				&& (fieldPerm == null || !fieldPerm.containsKey(fieldName))) {
-			return Permission.READ_WRITE;
+		// if (obj != null) {
+		else {
+			// handle 'new' static fields
+			fieldPerm = locPerms.get(obj);
+			if (fieldPerm == null || !fieldPerm.containsKey(fieldName)) {
+				return Permission.READ_WRITE;
+			}
 		}
 
-		// in case there is a field permission map we expect all instance
+		// in case there is a field permission map we expect all (instance)
 		// fields to have an entry
 		assert ((fieldPerm != null) ? fieldPerm.containsKey(fieldName) : true);
 		return (fieldPerm != null) ? (fieldPerm.get(fieldName))
 				: Permission.NONE;
-
 	}
 
+	@SuppressWarnings("unused")
 	public static void installPermissions(
 			Map<Object, Map<String, Permission>> objPerms, NFA nfa,
 			String methodName) {
@@ -254,36 +286,25 @@ public class Global {
 		// .newSetFromMap(new
 		// de.unifr.acp.runtime.util.WeakIdentityHashMap<Object, Boolean>()));
 		objectGenStack.push(nextFreshContractGeneration++);
-		if (enableDebugOutput) {
-			System.out.println("----------- installPermissions (" + methodName
-					+ ")-------------");
+		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_DEBUG) {
+			System.out.println("<installPermissions"
+					+ methodName.replaceAll("\\(", "-").replaceAll("\\)", "-")
+							.replaceAll("\\[\\]", "__").replaceAll(",", "_")
+					+ ">");
 
-			// for (Map.Entry<Object, Map<String, Permission>> entry : objPerms
-			// .entrySet()) {
-			// System.out.println("ENTRY: "
-			// + System.identityHashCode(entry.getKey()) + ", "
-			// + entry.getValue());
-			// }
-
-			Iterator<Map<Object, Map<String, Permission>>> it = locPermStack
-					.iterator();
-			while (it.hasNext()) {
-				Map<Object, Map<String, Permission>> m = it.next();
-				System.out.println("STACK ENTRY " + System.identityHashCode(m));						
-			}
+			printPermissionStack();
 		}
 	}
 
+	@SuppressWarnings("unused")
 	public static void uninstallPermissions(String methodName) {
-		if (enableDebugOutput) {
-			System.out.println("----------- uninstallPermissions ("
-					+ methodName + ")-----------");
-			Iterator<Map<Object, Map<String, Permission>>> it = locPermStack
-					.iterator();
-			while (it.hasNext()) {
-				Map<Object, Map<String, Permission>> m = it.next();
-				System.out.println("STACK ENTRY " + System.identityHashCode(m));
-			}
+		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_DEBUG) {
+			System.out.println("</installPermissions"
+					+ methodName.replaceAll("\\(", "-").replaceAll("\\)", "-")
+							.replaceAll("\\[\\]", "__").replaceAll(",", "_")
+					+ ">");
+
+			printPermissionStack();
 		}
 		staticPermDeque.pop();
 		locPermStack.pop();
@@ -296,8 +317,18 @@ public class Global {
 		objectGenStack.pop();
 	}
 
+	private static void printPermissionStack() {
+		Iterator<Map<Object, Map<String, Permission>>> it = locPermStack
+				.iterator();
+		while (it.hasNext()) {
+			Map<Object, Map<String, Permission>> m = it.next();
+			System.out.println("Stack entry " + System.identityHashCode(m));
+		}
+	}
+
+	@SuppressWarnings("unused")
 	public static void addNewObject(Object obj) {
-		if (enableDebugOutput) {
+		if (ENABLE_DEBUG_OUTPUT && ENABLE_ALLOC_DEBUG) {
 			logger.fine("Adding new object " + System.identityHashCode(obj)
 					+ " of type "
 					+ ((obj != null) ? obj.getClass().getSimpleName() : ""));
@@ -346,7 +377,7 @@ public class Global {
 						"traverseStatics__", new Class[] {
 								de.unifr.acp.runtime.Traversal__.class,
 								boolean.class });
-				
+
 				if (!m.isAccessible()) {
 					m.setAccessible(true);
 				}
@@ -370,8 +401,6 @@ public class Global {
 
 	public static void traverseInitializedStatics(ClassLoader loader,
 			NFARunner runner, Map<Object, Map<String, Permission>> allLocPerms) {
-		Class<?>[] argClassArray = new Class<?>[] {
-				de.unifr.acp.runtime.Traversal__.class, boolean.class };
 		logger.fine("Entering traverseInitializedStatics");
 		try {
 			java.lang.reflect.Field f = ClassLoader.class
@@ -381,6 +410,8 @@ public class Global {
 			int numClasses = classes.size();
 			for (int j = 0; j < numClasses; j++) {
 				Class<?> clazz = (Class<?>) classes.get(j);
+
+				// look class filter status in cache
 				Boolean filterEnabled = filterEnabledForClassMap.get(clazz);
 				if (filterEnabled == null) {
 					filterEnabled = clazz.getName().matches(filterVisitRegex);
@@ -388,8 +419,10 @@ public class Global {
 				}
 				if (filterEnabled)
 					continue;
+
 				// if (clazz.getName().matches(filterVisitRegex))
 				// continue;
+
 				if (clazz.isInterface())
 					continue; // TODO: enable traversal of interface fields
 
