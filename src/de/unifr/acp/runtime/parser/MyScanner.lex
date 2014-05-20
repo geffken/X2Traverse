@@ -70,7 +70,7 @@ import java.io.IOException;
 
 %%
 
-[a-zA-Z_][a-zA-Z_0-9]* {value();return true;}
+[a-zA-Z_$][a-zA-Z_$/0-9]* {value();return true;}
 \.                     {value();return true;}
 ,                      {value();return true;}
 \@                     {value();return true;}

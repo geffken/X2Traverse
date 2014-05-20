@@ -178,7 +178,7 @@ public class NFA {
 		} else if (path instanceof Identifier) {
 			end.setFinal(isFinal);
 			end.setCoaccessible(true); // cache coaccessibility in construction
-			start.addTransition(((Identifier) path).getName(), end);
+			start.addTransition(((Identifier) path).getName().replace('/', '.'), end);
 
 			// recursive cases
 		} else if (path instanceof Concat) {

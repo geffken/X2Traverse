@@ -572,8 +572,8 @@ public class TransClass {
 	 * due to broken/unimplemented field equality.
 	 * 
 	 * @param members
-	 *            the sublist of members that match one or more of the specified
-	 *            modifiers
+	 *            the list of members to check for matches with all of the
+	 *            specified modifiers
 	 * @param modifiers
 	 *            the modifiers to match
 	 * @return the list of members matching one or more of the specified
@@ -596,8 +596,8 @@ public class TransClass {
 	 * broken/unimplemented field equality.
 	 * 
 	 * @param members
-	 *            the sublist of members that match all of the specified
-	 *            modifiers
+	 *            the list of members to check for matches with all of the
+	 *            specified modifiers
 	 * @param modifiers
 	 *            the modifiers to match
 	 * @return the list of members matching all of the specified modifiers
@@ -939,15 +939,15 @@ public class TransClass {
 				// handle static fields
 				if (i == 0) {
 					headerSB.append("  try {");
-//					headerSB.append(" ClassLoader loader = "
-//							+ methodOrCtor.getDeclaringClass().getName()
-//							+ ".class.getClassLoader();");
+					// headerSB.append(" ClassLoader loader = "
+					// + methodOrCtor.getDeclaringClass().getName()
+					// + ".class.getClassLoader();");
 					headerSB.append(" ClassLoader loader = "
-					 + "Class.forName(\""
-					 + methodOrCtor.getDeclaringClass().getName()
-					 + "\")" + ".getClassLoader();");
+							+ "Class.forName(\""
+							+ methodOrCtor.getDeclaringClass().getName()
+							+ "\")" + ".getClassLoader();");
 					headerSB.append(GLOBAL_CLASS_NAME
-							+ ".traverseInitializedStatics(loader, runner, allLocPerms);");
+							+ ".traverseAllStatics(loader, runner, allLocPerms);");
 					headerSB.append("  } catch (java.lang.Exception e) {");
 					headerSB.append("    System.out.println(\"UNEXPECTED EXCEPTION\");");
 					headerSB.append("    e.printStackTrace();");
@@ -1034,6 +1034,20 @@ public class TransClass {
 					try {
 						CtField field = expr.getField();
 
+						// exclude static fields in declaring class of static
+						// initializer from instrumentation
+						CtClass declaringClass = methodOrCtor
+								.getDeclaringClass();
+						CtConstructor staticInitializer = declaringClass
+								.getClassInitializer();
+						if (methodOrCtor.equals(staticInitializer)) {
+							if (expr.isStatic()
+									&& field.getDeclaringClass().equals(
+											declaringClass)) {
+								return;
+							}
+						}
+
 						// NOTE: this does field name resolution such that the
 						// qualified field name represents the resolved field
 						String qualifiedFieldName = field.getDeclaringClass()
@@ -1047,7 +1061,7 @@ public class TransClass {
 
 							// get active permission for location to access
 							code.append("if (!" + GLOBAL_CLASS_NAME
-									+ ".objectGenStack.isEmpty()) {");
+									+ ".objGens.isEmpty()) {");
 							code.append("String qualifiedFieldName = \""
 									+ qualifiedFieldName + "\";");
 							code.append("de.unifr.acp.runtime.fst.Permission effectivePerm = "
@@ -1055,7 +1069,7 @@ public class TransClass {
 									+ ".effectivePermissionStackNotEmpty("
 									+ (!expr.isStatic() ? "$0" : "null")
 									+ ", qualifiedFieldName);");
-							
+
 							if (Global.ENABLE_DEBUG_OUTPUT
 									&& Global.ENABLE_FIELD_DEBUG) {
 								code.append("System.out.println(((Map)de.unifr.acp.runtime.Global.locPermStack.peek()).get("
@@ -1064,7 +1078,7 @@ public class TransClass {
 								code.append("System.out.println(\"effectivePerm: \"+effectivePerm);");
 								code.append("System.out.println(\"of field \" + qualifiedFieldName);");
 							}
-							
+
 							// get permission needed for this access
 							code.append("de.unifr.acp.runtime.fst.Permission accessPerm = de.unifr.acp.runtime.fst.Permission."
 									+ (expr.isReader() ? "READ_ONLY"

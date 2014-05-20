@@ -27,7 +27,7 @@ public class ACPException extends RuntimeException {
         sb.append("Required permission: " + requiredPerm + "\n");
         sb.append("in method " + methodName + "\n");
 //        sb.append(Global.newObjectsStack+"\n");
-        sb.append(Global.newObjectGens+"\n");
+        sb.append(Global.objGenMap+"\n");
         sb.append(Global.locPermStack+"\n");
         sb.append("\n");
         return sb.toString();

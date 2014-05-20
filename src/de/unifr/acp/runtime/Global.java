@@ -16,9 +16,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.unifr.acp.runtime.ACPException;
+import de.unifr.acp.runtime.fst.MetaCharacters;
 import de.unifr.acp.runtime.fst.Permission;
 import de.unifr.acp.runtime.nfa.NFA;
 import de.unifr.acp.runtime.nfa.NFARunner;
+import de.unifr.acp.runtime.nfa.NFAState;
 import de.unifr.acp.runtime.util.WeakIdentityHashMap;
 
 public class Global {
@@ -28,7 +30,7 @@ public class Global {
 	// "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|util)\\..*)";
 	public final static String FILTER_VISIT_REGEX_DEFAULT = "(java\\..*)|(de\\.unifr\\.acp\\.(runtime|templates|contracts|runtime\\.util)\\..*)";
 	private static String filterVisitRegex = FILTER_VISIT_REGEX_DEFAULT;
-	
+
 	/* caching */
 	private static final Class<?>[] argClassArray = new Class<?>[] {
 			de.unifr.acp.runtime.Traversal__.class, boolean.class };
@@ -55,11 +57,10 @@ public class Global {
 	public static final boolean ENABLE_ALLOC_DEBUG = false;
 	public static final boolean ENABLE_FIELD_DEBUG = true;
 
-
 	/* permission stacks */
-	
-	public static Deque<NFA> staticPermDeque = new LinkedList<>();
-	
+
+	public static Deque<NFA> automata = new LinkedList<>();
+
 	/**
 	 * A permission stack is a stack of (weak identity) maps from (Object x
 	 * String) to Permission.
@@ -84,12 +85,12 @@ public class Global {
 	 * A map from new objects to the their generations. Objects that are not in
 	 * the map are considered as untracked objects.
 	 */
-	public static Map<Object, Long> newObjectGens = new de.unifr.acp.runtime.util.WeakIdentityHashMap<>();
+	public static Map<Object, Long> objGenMap = new de.unifr.acp.runtime.util.WeakIdentityHashMap<>();
 
 	/**
 	 * A stack for representing the generation of the installed contracts.
 	 */
-	public static Deque<Long> objectGenStack = new ArrayDeque<>();
+	public static Deque<Long> objGens = new ArrayDeque<>();
 
 	/*
 	 * The next fresh generation to be used by the next installed contract.
@@ -111,7 +112,7 @@ public class Global {
 	 */
 	public static Permission effectivePermission(Object obj, String fieldName) {
 
-		Deque<Long> objectGenStack = Global.objectGenStack;
+		Deque<Long> objectGenStack = Global.objGens;
 		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_QUERY_DEBUG) {
 			// System.out.println(newObjectsStack);
 			// System.out.println(Global.objPermStack);
@@ -158,7 +159,7 @@ public class Global {
 			// + ")");
 			// System.out.println("locPerms: " + locPermStack.peek());
 		}
-		Deque<Long> objectGenStack = Global.objectGenStack;
+		Deque<Long> objectGenStack = Global.objGens;
 		Long topObjectGen = objectGenStack.peek();
 
 		// @Deprecated
@@ -169,7 +170,7 @@ public class Global {
 
 		// static fields are not accessed on objects
 		if (obj != null) {
-			Long objectGen = newObjectGens.get(obj);
+			Long objectGen = objGenMap.get(obj);
 			if (objectGen != null && objectGen >= topObjectGen) {
 				return Permission.READ_WRITE;
 			}
@@ -196,9 +197,18 @@ public class Global {
 				System.out.println("fieldPerm.containsKey(fieldName): "
 						+ fieldPerm.containsKey(obj));
 		}
+		
+		// 'new' static field are allowed in static initializers
+		// of the declaring class only - handled by not instrumenting
+		// these field accesses
+		
+		// handle 'new' static fields
+		// (can happen if we avoid triggering class initialization
+		//  on contract installation or permission was installed for
+		// the field)
 		if (obj == null
 				&& (fieldPerm == null || !fieldPerm.containsKey(fieldName))) {
-			return Permission.READ_WRITE;
+			return Permission.NONE;
 		}
 
 		// in case there is a field permission map we expect all instance
@@ -248,7 +258,7 @@ public class Global {
 
 		// static fields are not accessed on objects
 		if (obj != null) {
-			Long objectGen = newObjectGens.get(obj);
+			Long objectGen = objGenMap.get(obj);
 
 			// assert (newObjects.contains(obj) == (objectGen != null &&
 			// objectGen >= newObjectGen));
@@ -257,14 +267,20 @@ public class Global {
 				return Permission.READ_WRITE;
 			}
 			fieldPerm = locPerms.get(obj);
-		}
-
-		// if (obj != null) {
+		} // if (obj != null) {
 		else {
-			// handle 'new' static fields
 			fieldPerm = locPerms.get(obj);
+			
+			// 'new' static field are allowed in static initializers
+			// of the declaring class only - handled by not instrumenting
+			// these field accesses
+			
+			// handle 'new' static fields
+			// (can happen if we avoid triggering class initialization
+			//  on contract installation or permission was installed for
+			// the field)
 			if (fieldPerm == null || !fieldPerm.containsKey(fieldName)) {
-				return Permission.READ_WRITE;
+				return Permission.NONE;
 			}
 		}
 
@@ -279,13 +295,13 @@ public class Global {
 	public static void installPermissions(
 			Map<Object, Map<String, Permission>> objPerms, NFA nfa,
 			String methodName) {
-		staticPermDeque.push(nfa);
+		automata.push(nfa);
 		locPermStack.push(objPerms);
 		// newObjectsStack
 		// .push(Collections
 		// .newSetFromMap(new
 		// de.unifr.acp.runtime.util.WeakIdentityHashMap<Object, Boolean>()));
-		objectGenStack.push(nextFreshContractGeneration++);
+		objGens.push(nextFreshContractGeneration++);
 		if (ENABLE_DEBUG_OUTPUT && ENABLE_STACK_DEBUG) {
 			System.out.println("<installPermissions"
 					+ methodName.replaceAll("\\(", "-").replaceAll("\\)", "-")
@@ -306,7 +322,7 @@ public class Global {
 
 			printPermissionStack();
 		}
-		staticPermDeque.pop();
+		automata.pop();
 		locPermStack.pop();
 
 		// @Deprecated
@@ -314,7 +330,7 @@ public class Global {
 		// if (!newObjectsStack.isEmpty()) {
 		// newObjectsStack.peek().addAll(newLocSinceInstallation);
 		// }
-		objectGenStack.pop();
+		objGens.pop();
 	}
 
 	private static void printPermissionStack() {
@@ -339,22 +355,21 @@ public class Global {
 		// if (!newObjectsStack.isEmpty()) {
 		// newObjectsStack.peek().add(obj);
 		// }
-		if (!objectGenStack.isEmpty()) {
-			newObjectGens.put(obj, objectGenStack.peek());
+		if (!objGens.isEmpty()) {
+			objGenMap.put(obj, objGens.peek());
 		}
 
 	}
 
 	public static void traverseStaticsOnClassLoad(Class<?> clazz) {
 		try {
-			Iterator<NFA> staticIt = staticPermDeque.descendingIterator();
+			Iterator<NFA> staticIt = automata.descendingIterator();
 			Iterator<Map<Object, Map<String, Permission>>> permStackIt = locPermStack
 					.descendingIterator();
 			// @Deprecated
 			// Iterator<Set<Object>> newObjectsStackIt = newObjectsStack
 			// .descendingIterator();
-			Iterator<Long> objectGenStackIt = objectGenStack
-					.descendingIterator();
+			Iterator<Long> objectGenStackIt = objGens.descendingIterator();
 
 			// there was no permission installed before the bottom-most
 			Map<Object, Map<String, Permission>> effectiveAllLocPerms = null;
@@ -399,9 +414,73 @@ public class Global {
 		}
 	}
 
+	public static void traverseAllStatics(ClassLoader loader, NFARunner runner,
+			Map<Object, Map<String, Permission>> allLocPerms) {
+		logger.entering("Global", "traverseAllStatics");
+		runner.reset();
+		for (NFAState state : runner.getStatusQuo()) {
+			for (String potentialClassName : state.getTransitionRelation()
+					.keySet()) {
+				if (!potentialClassName.equals("this")
+						&& !potentialClassName.equals(MetaCharacters.EPSILON)) {
+					if (potentialClassName.equals(MetaCharacters.QUESTION_MARK)) {
+						traverseInitializedStatics(loader, runner, allLocPerms);
+					} else {
+						final String className = potentialClassName;
+						try {
+							Class clazz = Class.forName(className);
+							// look class filter status in cache
+							Boolean filterEnabled = filterEnabledForClassMap.get(clazz);
+							if (filterEnabled == null) {
+								filterEnabled = className.matches(filterVisitRegex);
+								filterEnabledForClassMap.put(clazz, filterEnabled);
+							}
+							if (filterEnabled)
+								continue;
+
+							if (clazz.isInterface())
+								continue; // TODO: enable traversal of interface fields
+
+							try {
+								java.lang.reflect.Method m = clazz.getMethod(
+										"traverseStatics__", argClassArray);
+								m.setAccessible(true);
+
+								runner.resetAndStep(className);
+								TraversalImpl visitorStatics = new TraversalImpl(runner,
+										allLocPerms);
+								m.invoke(null, new Object[] { visitorStatics, false });
+							} catch (java.lang.SecurityException e) {
+								e.printStackTrace(); // unexpected exception
+							} catch (java.lang.IllegalArgumentException e) {
+								e.printStackTrace(); // unexpected exception
+							} catch (java.lang.IllegalAccessException e) {
+								e.printStackTrace(); // unexpected exception
+							} catch (java.lang.reflect.InvocationTargetException e) {
+								e.printStackTrace(); // unexpected exception
+								System.out.println(e.getCause());
+							} catch (java.lang.NoSuchMethodException e) {
+								e.printStackTrace(); // unexpected exception
+							}
+						} catch (ClassNotFoundException e) {
+							// unfortunately this can happen in
+							// dynamically-checked contracts
+							// we do not grant any permission for
+							// "classname"
+							break;
+						}
+						runner.resetAndStep(className);
+					}
+				}
+			}
+		}
+
+		logger.exiting("Global", "traverseAllStatics");
+	}
+
 	public static void traverseInitializedStatics(ClassLoader loader,
 			NFARunner runner, Map<Object, Map<String, Permission>> allLocPerms) {
-		logger.fine("Entering traverseInitializedStatics");
+		logger.entering("Global", "traverseInitializedStatics");
 		try {
 			java.lang.reflect.Field f = ClassLoader.class
 					.getDeclaredField("classes");
@@ -420,18 +499,14 @@ public class Global {
 				if (filterEnabled)
 					continue;
 
-				// if (clazz.getName().matches(filterVisitRegex))
-				// continue;
-
 				if (clazz.isInterface())
 					continue; // TODO: enable traversal of interface fields
 
 				try {
 					java.lang.reflect.Method m = clazz.getMethod(
 							"traverseStatics__", argClassArray);
-					if (!m.isAccessible()) {
-						m.setAccessible(true);
-					}
+					m.setAccessible(true);
+
 					runner.resetAndStep(clazz.getSimpleName());
 					TraversalImpl visitorStatics = new TraversalImpl(runner,
 							allLocPerms);
@@ -454,7 +529,7 @@ public class Global {
 		} catch (java.lang.NoSuchFieldException e) {
 			e.printStackTrace(); // unexpected exception
 		}
-		logger.fine("Leaving traverseInitializedStatics");
+		logger.exiting("Global", "traverseInitializedStatics");
 	}
 
 	public static void throwOrPrintViolation(Object obj,
